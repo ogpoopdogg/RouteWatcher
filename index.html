@@ -1914,6 +1914,7 @@
             updateArrowMarkers(driverId);
         }
 
+        // ===== FIXED: updateArrowMarkers with proper timestamp capture =====
         function updateArrowMarkers(driverId) {
             if (!driverModalMap) return;
             // Remove old arrow markers
@@ -1924,7 +1925,6 @@
             const track = driverTracks[driverId] || [];
             if (track.length < 2) return;
 
-            // Sub-sample using distance
             let lastArrowDist = 0;
             const arrowSpacing = 35; // meters
 
@@ -1966,14 +1966,18 @@
                     zIndex: 10
                 });
 
-                // Store timestamp for click
-                const timestamp = current.timestamp;
-                marker.addListener('click', function() {
-                    const timeStr = new Date(timestamp).toLocaleTimeString();
-                    const content = `<div style="padding:4px 8px; font-family:Inter; font-weight:600;">Arrived at ${timeStr}</div>`;
-                    driverModalMap._infoWindow.setContent(content);
-                    driverModalMap._infoWindow.open(driverModalMap, marker);
-                });
+                // Capture the timestamp in a closure to avoid referencing loop variable issues
+                (function(markerInstance, ts) {
+                    markerInstance.addListener('click', function() {
+                        let timeStr = 'Unknown time';
+                        if (ts) {
+                            timeStr = new Date(ts).toLocaleTimeString();
+                        }
+                        const content = `<div style="padding:4px 8px; font-family:Inter; font-weight:600;">Arrived at ${timeStr}</div>`;
+                        driverModalMap._infoWindow.setContent(content);
+                        driverModalMap._infoWindow.open(driverModalMap, markerInstance);
+                    });
+                })(marker, current.timestamp);
 
                 arrowMarkers.push(marker);
             }
