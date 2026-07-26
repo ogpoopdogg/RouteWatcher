@@ -1533,6 +1533,7 @@
         let searchQuery = '';
         let proximityRadius = 50;
         let currentRouteKeys = [];
+        let dashboardLoaded = false;
 
         // Track history per driver: { driverId: [ {lat, lng, timestamp}, ... ] }
         let driverTracks = {};
@@ -1805,6 +1806,7 @@
                 renderStopList();
                 if (activeModalDriverId === driverId) renderDriverStops(driverId);
                 updateMapMarkers();
+                saveDashboardState();
             }
         }
 
@@ -2492,6 +2494,7 @@
                 renderDriverBadges();
                 // Update each driver modal if open
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+                saveDashboardState();
             });
         }
 
@@ -2507,6 +2510,7 @@
             updateMapMarkers();
             renderDriverBadges();
             if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+            saveDashboardState();
         }
 
         // ===== RENDER STOP LIST =====
@@ -2963,6 +2967,53 @@
             closeSettings();
         }
 
+        // ===== PERSISTENCE FUNCTIONS =====
+        function saveDashboardState() {
+            // Save loadedStops
+            db.ref('developer/dispatch_dashboard/loaded_stops').set(loadedStops);
+            // Save route meta
+            db.ref('developer/dispatch_dashboard/route_meta').set({
+                currentRouteKeys: currentRouteKeys,
+                driverEtaData: driverEtaData
+            });
+        }
+
+        function loadSavedDashboardState() {
+            // Read from Firebase and restore
+            db.ref('developer/dispatch_dashboard/loaded_stops').once('value').then(snap => {
+                const stops = snap.val();
+                if (stops && typeof stops === 'object') {
+                    // Merge or replace? We'll assign loadedStops = stops;
+                    loadedStops = stops;
+                    // Also need to validate assigned drivers exist; if not, set to null.
+                    for (let id in loadedStops) {
+                        if (loadedStops[id].assignedDriver && !drivers[loadedStops[id].assignedDriver]) {
+                            loadedStops[id].assignedDriver = null;
+                        }
+                    }
+                    // Then read route meta
+                    return db.ref('developer/dispatch_dashboard/route_meta').once('value');
+                } else {
+                    // No stops, but we still need to read route_meta? Not necessary.
+                    return null;
+                }
+            }).then(snapMeta => {
+                if (snapMeta) {
+                    const meta = snapMeta.val();
+                    if (meta) {
+                        currentRouteKeys = meta.currentRouteKeys || [];
+                        driverEtaData = meta.driverEtaData || {};
+                    }
+                }
+                // After restoring, update UI
+                renderStopList();
+                updateMapMarkers();
+                renderDriverBadges();
+                if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+                updateMapDriverControl();
+            }).catch(err => console.warn('Failed to load saved dashboard state:', err));
+        }
+
         // ===== INIT =====
         function initApp() {
             getDriversRef().on('value', snap => {
@@ -2973,6 +3024,10 @@
                 renderStopList();
                 updateMapDriverControl();
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+                if (!dashboardLoaded) {
+                    dashboardLoaded = true;
+                    loadSavedDashboardState();
+                }
             });
 
             getMasterRef().once('value').then(snap => {
