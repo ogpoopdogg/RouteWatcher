@@ -327,8 +327,9 @@
             border-radius: 40px;
             border-left: 4px solid;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 2px;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
@@ -336,6 +337,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             user-select: none;
+            min-width: 120px;
         }
         .driver-badge:hover {
             background: rgba(30, 30, 50, 0.95);
@@ -380,6 +382,42 @@
             font-weight: 400;
             color: var(--muted);
             margin-left: 2px;
+        }
+        .driver-badge .badge-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px 8px;
+            width: 100%;
+        }
+        .driver-badge .eta-line {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+            text-align: center;
+        }
+        .driver-badge .battery {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .driver-badge .odometer {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .driver-badge .alarm-badge {
+            animation: blink 1s infinite;
+            background: #e74c3c;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
         }
 
         .manifest-panel {
@@ -1283,6 +1321,11 @@
             border: 1px solid #000 !important;
             color: #000 !important;
         }
+
+        /* additional styles for battery color */
+        .battery-high { color: #2ecc71; }
+        .battery-mid { color: #f1c40f; }
+        .battery-low { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -1376,6 +1419,21 @@
                 <span id="driverStopCount" style="font-weight:600;">0 stops</span>
             </div>
             <div id="driverAddress" style="font-size:13px; color:var(--muted); padding:4px 0;"></div>
+            <!-- Extra info: battery, odometer, alarm -->
+            <div id="driverExtraInfo" style="display:flex; flex-wrap:wrap; gap:10px; padding:4px 0; font-size:13px; align-items:center;">
+                <span id="modalBattery">🔋 --%</span>
+                <span id="modalOdometer">📏 -- km</span>
+                <span id="modalAlarm" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
+            </div>
+            <!-- History query -->
+            <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                <label style="font-size:12px; color:var(--muted);">From:</label>
+                <input type="datetime-local" id="historyStart" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
+                <label style="font-size:12px; color:var(--muted);">To:</label>
+                <input type="datetime-local" id="historyEnd" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
+                <button onclick="calculateHistoricalDistance()" style="background:var(--accent); color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">Calculate Distance</button>
+                <span id="historyResult" style="font-size:13px; color:var(--muted);"></span>
+            </div>
             <div class="modal-stops" id="driverModalStops"></div>
         </div>
     </div>
@@ -1517,6 +1575,7 @@
         let searchQuery = '';
         let proximityRadius = 50;
         let currentRouteKeys = [];
+        let dashboardLoaded = false;
 
         // Track history per driver: { driverId: [ {lat, lng, timestamp}, ... ] }
         let driverTracks = {};
@@ -1533,6 +1592,9 @@
 
         let deviceStatuses = {};
         let lastDateUnix = {};
+
+        // ETA/distance data per driver
+        let driverEtaData = {};
 
         function getDriversRef() { return db.ref('developer/dispatch_dashboard/drivers'); }
 
@@ -1665,6 +1727,13 @@
                     }
 
                     const lastPoint = deviceData.lastPoint || null;
+                    // Extract new fields from lastPoint (battery, direction) and deviceStatus (alarms)
+                    const battery = lastPoint?.battery ?? lastPoint?.battery_level ?? 0;
+                    const heading = lastPoint?.direction ?? null;
+                    // Alarm flags (if present in deviceStatus)
+                    const hasAlarm = !!(deviceStatus.movementAlarm || deviceStatus.tiltAlarm || deviceStatus.removeAlarm || deviceStatus.sosAlarm);
+                    const odometer = deviceStatus.totalDistance || deviceStatus.odometer || 0;
+
                     if (lastPoint && lastPoint.lat !== undefined && lastPoint.lng !== undefined) {
                         const lat = lastPoint.lat;
                         const lng = lastPoint.lng;
@@ -1678,7 +1747,17 @@
                                 const drvDeviceId = drv.deviceId ? String(drv.deviceId).trim() : '';
                                 if (drvDeviceId && drvDeviceId === String(devId)) {
                                     drv.lastLocation = { lat, lng, updatedAt: pajTimestamp };
-                                    getDriversRef().child(did).update({ lastLocation: drv.lastLocation });
+                                    drv.battery = battery;
+                                    drv.heading = heading;
+                                    drv.hasAlarm = hasAlarm;
+                                    drv.odometer = odometer;
+                                    getDriversRef().child(did).update({ 
+                                        lastLocation: drv.lastLocation,
+                                        battery: battery,
+                                        heading: heading,
+                                        hasAlarm: hasAlarm,
+                                        odometer: odometer
+                                    });
                                     // Process GPS tracking for this driver
                                     processGPSUpdate(did, lat, lng, pajTimestamp);
                                     break;
@@ -1786,6 +1865,7 @@
                 renderStopList();
                 if (activeModalDriverId === driverId) renderDriverStops(driverId);
                 updateMapMarkers();
+                saveDashboardState();
             }
         }
 
@@ -1811,6 +1891,11 @@
                 driverModalMap._trackPolyline.setMap(null);
                 driverModalMap._trackPolyline = null;
             }
+            // Remove old arrow markers
+            if (driverModalMap._arrowMarkers) {
+                driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
+                driverModalMap._arrowMarkers = [];
+            }
 
             const path = track.map(p => ({ lat: p.lat, lng: p.lng }));
             driverModalMap._trackPolyline = new google.maps.Polyline({
@@ -1824,6 +1909,76 @@
 
             // Also update stop events markers (clickable for duration)
             updateStopEventMarkers(driverId);
+
+            // Draw arrow markers along the track
+            updateArrowMarkers(driverId);
+        }
+
+        function updateArrowMarkers(driverId) {
+            if (!driverModalMap) return;
+            // Remove old arrow markers
+            if (driverModalMap._arrowMarkers) {
+                driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
+                driverModalMap._arrowMarkers = [];
+            }
+            const track = driverTracks[driverId] || [];
+            if (track.length < 2) return;
+
+            // Sub-sample using distance
+            let lastArrowDist = 0;
+            const arrowSpacing = 35; // meters
+
+            // Create a reusable info window if not exists
+            if (!driverModalMap._infoWindow) {
+                driverModalMap._infoWindow = new google.maps.InfoWindow();
+            }
+
+            const arrowMarkers = [];
+
+            for (let i = 0; i < track.length - 1; i++) {
+                const current = track[i];
+                const next = track[i + 1];
+                const dist = haversineDistance(current.lat, current.lng, next.lat, next.lng);
+                lastArrowDist += dist;
+                if (lastArrowDist < arrowSpacing) continue;
+                lastArrowDist = 0;
+
+                // Calculate heading using computeHeading
+                const heading = google.maps.geometry.spherical.computeHeading(
+                    new google.maps.LatLng(current.lat, current.lng),
+                    new google.maps.LatLng(next.lat, next.lng)
+                );
+
+                // Create arrow marker
+                const marker = new google.maps.Marker({
+                    position: { lat: current.lat, lng: current.lng },
+                    map: driverModalMap,
+                    icon: {
+                        path: 'M -6,-4 L 6,0 L -6,4 Z',
+                        fillColor: '#00d4ff',
+                        fillOpacity: 1,
+                        strokeColor: '#00d4ff',
+                        strokeWeight: 1,
+                        rotation: heading,
+                        scale: 0.8,
+                        anchor: new google.maps.Point(0, 0)
+                    },
+                    zIndex: 10
+                });
+
+                // Store timestamp for click
+                const timestamp = current.timestamp;
+                marker.addListener('click', function() {
+                    const timeStr = new Date(timestamp).toLocaleTimeString();
+                    const content = `<div style="padding:4px 8px; font-family:Inter; font-weight:600;">Arrived at ${timeStr}</div>`;
+                    driverModalMap._infoWindow.setContent(content);
+                    driverModalMap._infoWindow.open(driverModalMap, marker);
+                });
+
+                arrowMarkers.push(marker);
+            }
+
+            driverModalMap._arrowMarkers = arrowMarkers;
         }
 
         function updateStopEventMarkers(driverId) {
@@ -1900,6 +2055,10 @@
                         driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                         driverModalMap._stopMarkers = [];
                     }
+                    if (driverModalMap._arrowMarkers) {
+                        driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
+                        driverModalMap._arrowMarkers = [];
+                    }
                 }
                 // Also remove from the modal view
                 renderDriverStops(activeModalDriverId);
@@ -1924,6 +2083,10 @@
                         driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                         driverModalMap._stopMarkers = [];
                     }
+                    if (driverModalMap._arrowMarkers) {
+                        driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
+                        driverModalMap._arrowMarkers = [];
+                    }
                 }
                 renderDriverStops(activeModalDriverId);
                 return;
@@ -1946,6 +2109,10 @@
                 if (driverModalMap._stopMarkers) {
                     driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                     driverModalMap._stopMarkers = [];
+                }
+                if (driverModalMap._arrowMarkers) {
+                    driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
+                    driverModalMap._arrowMarkers = [];
                 }
                 // Redraw
                 updateDriverModalTrack(activeModalDriverId);
@@ -2058,7 +2225,7 @@
                 if (!drv.lastLocation) continue;
                 const pos = drv.lastLocation;
                 const color = drv.color || '#f7c948';
-                const icon = getDriverIcon(drv.name || 'Driver', color);
+                const icon = getDriverIcon(drv.name || 'Driver', color, drv.heading);
                 const marker = new google.maps.Marker({
                     position: { lat: pos.lat, lng: pos.lng },
                     map: map,
@@ -2146,14 +2313,15 @@
             });
         }
 
-        function getDriverIcon(name, color) {
+        function getDriverIcon(name, color, heading = null) {
             const safeName = name.replace(/'/g, "\\'");
             const svg =
                 `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="60"><text x="25" y="14" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${safeName}</text><circle cx="25" cy="40" r="12" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
             return {
                 url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
                 anchor: new google.maps.Point(25, 40),
-                scaledSize: new google.maps.Size(50, 60)
+                scaledSize: new google.maps.Size(50, 60),
+                rotation: heading || 0
             };
         }
 
@@ -2315,7 +2483,8 @@
                 return;
             }
 
-            // Now assign stops
+            // Now assign stops and accumulate ETA/distance per driver
+            let driverTotals = {};
             let stopIdCounter = 0;
             keys.forEach(key => {
                 const route = availableRoutes[key];
@@ -2329,6 +2498,11 @@
                     }
                 }
                 if (!driverId) return; // shouldn't happen
+
+                // Accumulate ETA and distance for this driver
+                if (!driverTotals[driverId]) driverTotals[driverId] = { etaMinutes: 0, km: 0 };
+                driverTotals[driverId].etaMinutes += (route.etaTotalMinutes || 0);
+                driverTotals[driverId].km += (route.etaTotalKm || 0);
 
                 route.stops.forEach((stop, idx) => {
                     const id = 'stop_' + (stopIdCounter++);
@@ -2352,6 +2526,9 @@
                     };
                 });
             });
+
+            // Store ETA/distance data
+            driverEtaData = driverTotals;
 
             // Geocode all stops
             const geocoder = new google.maps.Geocoder();
@@ -2377,6 +2554,7 @@
                 renderDriverBadges();
                 // Update each driver modal if open
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+                saveDashboardState();
             });
         }
 
@@ -2387,9 +2565,12 @@
             if (!confirm(`Clear all ${count} stops from the manifest? This will not delete saved routes.`)) return;
             loadedStops = {};
             currentRouteKeys = [];
+            driverEtaData = {};
             renderStopList();
             updateMapMarkers();
+            renderDriverBadges();
             if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+            saveDashboardState();
         }
 
         // ===== RENDER STOP LIST =====
@@ -2486,8 +2667,14 @@
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 let lastUpdateText = '—';
                 if (drv.lastLocation?.updatedAt) {
-                    const mins = ((Date.now() - drv.lastLocation.updatedAt) / 60000).toFixed(0);
-                    lastUpdateText = `${mins}m`;
+                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = Math.round(totalMinutes % 60);
+                    let formatted = '';
+                    if (hours > 0) formatted += `${hours} H`;
+                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
+                    if (!formatted) formatted = '0 Min';
+                    lastUpdateText = formatted;
                 }
                 // Count assigned stops
                 const assignedCount = Object.values(loadedStops).filter(s => s.assignedDriver === id && s.status !== 'completed')
@@ -2495,12 +2682,46 @@
                 const completedCount = Object.values(loadedStops).filter(s => s.assignedDriver === id && s.status === 'completed')
                     .length;
 
+                // ETA/distance line
+                let etaLine = '';
+                if (driverEtaData[id] && (driverEtaData[id].etaMinutes > 0 || driverEtaData[id].km > 0)) {
+                    const eta = driverEtaData[id].etaMinutes;
+                    const km = driverEtaData[id].km;
+                    const hours = Math.floor(eta / 60);
+                    const minutes = Math.round(eta % 60);
+                    let parts = [];
+                    if (hours > 0) parts.push(`${hours} H`);
+                    if (minutes > 0) parts.push(`${minutes} M`);
+                    let distPart = (km > 0) ? `Distance ${Math.round(km)} KM` : '';
+                    let etaStr = parts.join(' ');
+                    let fullStr = etaStr + (distPart ? ' ' + distPart : '');
+                    if (fullStr) {
+                        etaLine = `<div class="eta-line">ETA ${fullStr}</div>`;
+                    }
+                }
+
+                // Battery display with color
+                let batteryVal = drv.battery || 0;
+                let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
+                let batteryHtml = `<span class="battery ${batteryColor}">🔋 ${batteryVal}%</span>`;
+                let odometerHtml = `<span class="odometer">📏 ${drv.odometer || 0} km</span>`;
+                let alarmHtml = '';
+                if (drv.hasAlarm) {
+                    alarmHtml = `<span class="alarm-badge">⚠️ ALARM</span>`;
+                }
+
                 badge.innerHTML = `
-              <span class="dot" style="background:${drv.color || '#f7c948'}"></span>
-              ${drv.name || 'Driver'} 
-              <span style="font-size:11px; color:var(--muted);">${assignedCount} stops</span>
-              <span class="status-indicator ${status.class}">${status.label}</span>
-              <span class="last-update">${lastUpdateText}</span>
+              <div class="badge-row">
+                <span class="dot" style="background:${drv.color || '#f7c948'}"></span>
+                ${drv.name || 'Driver'} 
+                <span style="font-size:11px; color:var(--muted);">${assignedCount} stops</span>
+                ${batteryHtml}
+                ${odometerHtml}
+                ${alarmHtml}
+                <span class="status-indicator ${status.class}">${status.label}</span>
+                <span class="last-update">${lastUpdateText}</span>
+              </div>
+              ${etaLine}
             `;
                 badge.addEventListener('click', function() {
                     openDriverModal(id);
@@ -2519,6 +2740,20 @@
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
+
+            // Update modal extra info
+            if (drv) {
+                let batteryVal = drv.battery || 0;
+                let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
+                document.getElementById('modalBattery').textContent = `🔋 ${batteryVal}%`;
+                document.getElementById('modalBattery').className = batteryColor;
+                document.getElementById('modalOdometer').textContent = `📏 ${drv.odometer || 0} km`;
+                if (drv.hasAlarm) {
+                    document.getElementById('modalAlarm').style.display = 'inline';
+                } else {
+                    document.getElementById('modalAlarm').style.display = 'none';
+                }
+            }
 
             setTimeout(() => {
                 const container = document.getElementById('driver-map');
@@ -2561,7 +2796,7 @@
                 // Driver marker
                 if (drv?.lastLocation) {
                     const color = drv.color || '#f7c948';
-                    const icon = getDriverIcon(drv.name || 'Driver', color);
+                    const icon = getDriverIcon(drv.name || 'Driver', color, drv.heading);
                     const mk = new google.maps.Marker({
                         position: { lat: drv.lastLocation.lat, lng: drv.lastLocation.lng },
                         map: driverModalMap,
@@ -2633,10 +2868,37 @@
 
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
-                const lastUp = drv?.lastLocation ? ((Date.now() - drv.lastLocation.updatedAt) / 60000).toFixed(0) : '—';
+                let lastUp = '—';
+                if (drv?.lastLocation?.updatedAt) {
+                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = Math.round(totalMinutes % 60);
+                    let formatted = '';
+                    if (hours > 0) formatted += `${hours} H`;
+                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
+                    if (!formatted) formatted = '0 Min';
+                    lastUp = formatted;
+                }
                 document.getElementById('driverLastUpdate').textContent =
-                    `Status: ${status.label} · Last update: ${lastUp}m ago`;
-                document.getElementById('driverStopCount').textContent = `${assigned.length} stops`;
+                    `Status: ${status.label} · Last update: ${lastUp} ago`;
+
+                // Update stop count with ETA/distance if available
+                let stopCountText = `${assigned.length} stops`;
+                if (driverEtaData[driverId] && (driverEtaData[driverId].etaMinutes > 0 || driverEtaData[driverId].km > 0)) {
+                    const eta = driverEtaData[driverId].etaMinutes;
+                    const km = driverEtaData[driverId].km;
+                    const hours = Math.floor(eta / 60);
+                    const minutes = Math.round(eta % 60);
+                    let parts = [];
+                    if (hours > 0) parts.push(`${hours} H`);
+                    if (minutes > 0) parts.push(`${minutes} M`);
+                    let etaStr = parts.join(' ');
+                    let distStr = (km > 0) ? ` ${Math.round(km)} KM` : '';
+                    if (etaStr || distStr) {
+                        stopCountText += ` · ETA ${etaStr}${distStr}`;
+                    }
+                }
+                document.getElementById('driverStopCount').textContent = stopCountText;
 
             }, 200);
         }
@@ -2677,6 +2939,16 @@
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
             document.getElementById('stop-tooltip').style.display = 'none';
+            // Clean up arrow markers and info window
+            if (driverModalMap) {
+                if (driverModalMap._arrowMarkers) {
+                    driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
+                    driverModalMap._arrowMarkers = [];
+                }
+                if (driverModalMap._infoWindow) {
+                    driverModalMap._infoWindow.close();
+                }
+            }
         }
 
         function renderDriverStops(driverId) {
@@ -2718,6 +2990,79 @@
                     else reject('Unable to get address');
                 });
             });
+        }
+
+        // ===== HISTORICAL DISTANCE =====
+        async function calculateHistoricalDistance() {
+            if (!activeModalDriverId) return;
+            const drv = drivers[activeModalDriverId];
+            if (!drv || !drv.deviceId) { alert('No device ID for this driver.'); return; }
+            const startInput = document.getElementById('historyStart');
+            const endInput = document.getElementById('historyEnd');
+            const startDate = new Date(startInput.value);
+            const endDate = new Date(endInput.value);
+            if (isNaN(startDate) || isNaN(endDate) || startDate >= endDate) {
+                alert('Please select valid start and end dates.');
+                return;
+            }
+            const fromUnix = Math.floor(startDate.getTime() / 1000);
+            const toUnix = Math.floor(endDate.getTime() / 1000);
+            const resultEl = document.getElementById('historyResult');
+            resultEl.textContent = 'Loading...';
+
+            try {
+                // Try the new endpoint with GET and query parameters
+                let response = await fetch(`${PAJ_BASE}/trackerdata/getalllastpositions?deviceId=${drv.deviceId}&from=${fromUnix}&to=${toUnix}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${pajToken}`
+                    }
+                });
+                if (!response.ok) {
+                    // Fallback to POST /device/history
+                    response = await fetch(`${PAJ_BASE}/device/history`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${pajToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            deviceId: parseInt(drv.deviceId, 10),
+                            fromDate: fromUnix,
+                            toDate: toUnix
+                        })
+                    });
+                }
+                if (!response.ok) throw new Error('API error');
+                const data = await response.json();
+                let points = data.points || data.track || data.data || data.success || [];
+                if (!Array.isArray(points) && typeof points === 'object') {
+                    // Sometimes the response might have points inside an object
+                    points = Object.values(points);
+                }
+                let totalDist = 0;
+                if (!points || points.length < 2) {
+                    resultEl.textContent = 'No track data for this period.';
+                    return;
+                }
+                for (let i = 1; i < points.length; i++) {
+                    const p1 = points[i-1];
+                    const p2 = points[i];
+                    // Try to find lat/lng in various possible keys
+                    const lat1 = p1.lat || p1.latitude || p1.latitud || 0;
+                    const lng1 = p1.lng || p1.longitude || p1.lon || 0;
+                    const lat2 = p2.lat || p2.latitude || p2.latitud || 0;
+                    const lng2 = p2.lng || p2.longitude || p2.lon || 0;
+                    if (lat1 && lng1 && lat2 && lng2) {
+                        totalDist += haversineDistance(lat1, lng1, lat2, lng2);
+                    }
+                }
+                const km = totalDist / 1000;
+                const mi = totalDist / 1609;
+                resultEl.textContent = `Distance: ${km.toFixed(1)} km (${mi.toFixed(1)} mi)`;
+            } catch (e) {
+                resultEl.textContent = 'Error: ' + e.message;
+            }
         }
 
         // ===== SETTINGS =====
@@ -2798,6 +3143,53 @@
             closeSettings();
         }
 
+        // ===== PERSISTENCE FUNCTIONS =====
+        function saveDashboardState() {
+            // Save loadedStops
+            db.ref('developer/dispatch_dashboard/loaded_stops').set(loadedStops);
+            // Save route meta
+            db.ref('developer/dispatch_dashboard/route_meta').set({
+                currentRouteKeys: currentRouteKeys,
+                driverEtaData: driverEtaData
+            });
+        }
+
+        function loadSavedDashboardState() {
+            // Read from Firebase and restore
+            db.ref('developer/dispatch_dashboard/loaded_stops').once('value').then(snap => {
+                const stops = snap.val();
+                if (stops && typeof stops === 'object') {
+                    // Merge or replace? We'll assign loadedStops = stops;
+                    loadedStops = stops;
+                    // Also need to validate assigned drivers exist; if not, set to null.
+                    for (let id in loadedStops) {
+                        if (loadedStops[id].assignedDriver && !drivers[loadedStops[id].assignedDriver]) {
+                            loadedStops[id].assignedDriver = null;
+                        }
+                    }
+                    // Then read route meta
+                    return db.ref('developer/dispatch_dashboard/route_meta').once('value');
+                } else {
+                    // No stops, but we still need to read route_meta? Not necessary.
+                    return null;
+                }
+            }).then(snapMeta => {
+                if (snapMeta) {
+                    const meta = snapMeta.val();
+                    if (meta) {
+                        currentRouteKeys = meta.currentRouteKeys || [];
+                        driverEtaData = meta.driverEtaData || {};
+                    }
+                }
+                // After restoring, update UI
+                renderStopList();
+                updateMapMarkers();
+                renderDriverBadges();
+                if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+                updateMapDriverControl();
+            }).catch(err => console.warn('Failed to load saved dashboard state:', err));
+        }
+
         // ===== INIT =====
         function initApp() {
             getDriversRef().on('value', snap => {
@@ -2808,6 +3200,10 @@
                 renderStopList();
                 updateMapDriverControl();
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+                if (!dashboardLoaded) {
+                    dashboardLoaded = true;
+                    loadSavedDashboardState();
+                }
             });
 
             getMasterRef().once('value').then(snap => {
