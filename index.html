@@ -2607,8 +2607,14 @@
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 let lastUpdateText = '—';
                 if (drv.lastLocation?.updatedAt) {
-                    const mins = ((Date.now() - drv.lastLocation.updatedAt) / 60000).toFixed(0);
-                    lastUpdateText = `${mins}m`;
+                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = Math.round(totalMinutes % 60);
+                    let formatted = '';
+                    if (hours > 0) formatted += `${hours} H`;
+                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
+                    if (!formatted) formatted = '0 Min';
+                    lastUpdateText = formatted;
                 }
                 // Count assigned stops
                 const assignedCount = Object.values(loadedStops).filter(s => s.assignedDriver === id && s.status !== 'completed')
@@ -2775,9 +2781,19 @@
 
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
-                const lastUp = drv?.lastLocation ? ((Date.now() - drv.lastLocation.updatedAt) / 60000).toFixed(0) : '—';
+                let lastUp = '—';
+                if (drv?.lastLocation?.updatedAt) {
+                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = Math.round(totalMinutes % 60);
+                    let formatted = '';
+                    if (hours > 0) formatted += `${hours} H`;
+                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
+                    if (!formatted) formatted = '0 Min';
+                    lastUp = formatted;
+                }
                 document.getElementById('driverLastUpdate').textContent =
-                    `Status: ${status.label} · Last update: ${lastUp}m ago`;
+                    `Status: ${status.label} · Last update: ${lastUp} ago`;
 
                 // Update stop count with ETA/distance if available
                 let stopCountText = `${assigned.length} stops`;
