@@ -397,6 +397,28 @@
             margin-top: 2px;
             text-align: center;
         }
+        .driver-badge .battery {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .driver-badge .odometer {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .driver-badge .alarm-badge {
+            animation: blink 1s infinite;
+            background: #e74c3c;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
 
         .manifest-panel {
             background: var(--card);
@@ -1299,6 +1321,11 @@
             border: 1px solid #000 !important;
             color: #000 !important;
         }
+
+        /* additional styles for battery color */
+        .battery-high { color: #2ecc71; }
+        .battery-mid { color: #f1c40f; }
+        .battery-low { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -1392,6 +1419,21 @@
                 <span id="driverStopCount" style="font-weight:600;">0 stops</span>
             </div>
             <div id="driverAddress" style="font-size:13px; color:var(--muted); padding:4px 0;"></div>
+            <!-- Extra info: battery, odometer, alarm -->
+            <div id="driverExtraInfo" style="display:flex; flex-wrap:wrap; gap:10px; padding:4px 0; font-size:13px; align-items:center;">
+                <span id="modalBattery">🔋 --%</span>
+                <span id="modalOdometer">📏 -- km</span>
+                <span id="modalAlarm" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
+            </div>
+            <!-- History query -->
+            <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                <label style="font-size:12px; color:var(--muted);">From:</label>
+                <input type="datetime-local" id="historyStart" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
+                <label style="font-size:12px; color:var(--muted);">To:</label>
+                <input type="datetime-local" id="historyEnd" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
+                <button onclick="calculateHistoricalDistance()" style="background:var(--accent); color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">Calculate Distance</button>
+                <span id="historyResult" style="font-size:13px; color:var(--muted);"></span>
+            </div>
             <div class="modal-stops" id="driverModalStops"></div>
         </div>
     </div>
@@ -1684,6 +1726,12 @@
                         deviceStatuses[devId] = connectionStatus;
                     }
 
+                    // Extract new fields
+                    const battery = deviceStatus.battery || 0;
+                    const heading = (deviceData.lastPoint && deviceData.lastPoint.course) || deviceStatus.heading || null;
+                    const hasAlarm = !!(deviceStatus.movementAlarm || deviceStatus.tiltAlarm || deviceStatus.removeAlarm || deviceStatus.sosAlarm);
+                    const odometer = deviceStatus.totalDistance || deviceStatus.odometer || 0;
+
                     const lastPoint = deviceData.lastPoint || null;
                     if (lastPoint && lastPoint.lat !== undefined && lastPoint.lng !== undefined) {
                         const lat = lastPoint.lat;
@@ -1698,7 +1746,17 @@
                                 const drvDeviceId = drv.deviceId ? String(drv.deviceId).trim() : '';
                                 if (drvDeviceId && drvDeviceId === String(devId)) {
                                     drv.lastLocation = { lat, lng, updatedAt: pajTimestamp };
-                                    getDriversRef().child(did).update({ lastLocation: drv.lastLocation });
+                                    drv.battery = battery;
+                                    drv.heading = heading;
+                                    drv.hasAlarm = hasAlarm;
+                                    drv.odometer = odometer;
+                                    getDriversRef().child(did).update({ 
+                                        lastLocation: drv.lastLocation,
+                                        battery: battery,
+                                        heading: heading,
+                                        hasAlarm: hasAlarm,
+                                        odometer: odometer
+                                    });
                                     // Process GPS tracking for this driver
                                     processGPSUpdate(did, lat, lng, pajTimestamp);
                                     break;
@@ -2166,7 +2224,7 @@
                 if (!drv.lastLocation) continue;
                 const pos = drv.lastLocation;
                 const color = drv.color || '#f7c948';
-                const icon = getDriverIcon(drv.name || 'Driver', color);
+                const icon = getDriverIcon(drv.name || 'Driver', color, drv.heading);
                 const marker = new google.maps.Marker({
                     position: { lat: pos.lat, lng: pos.lng },
                     map: map,
@@ -2254,14 +2312,15 @@
             });
         }
 
-        function getDriverIcon(name, color) {
+        function getDriverIcon(name, color, heading = null) {
             const safeName = name.replace(/'/g, "\\'");
             const svg =
                 `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="60"><text x="25" y="14" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${safeName}</text><circle cx="25" cy="40" r="12" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
             return {
                 url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
                 anchor: new google.maps.Point(25, 40),
-                scaledSize: new google.maps.Size(50, 60)
+                scaledSize: new google.maps.Size(50, 60),
+                rotation: heading || 0
             };
         }
 
@@ -2640,11 +2699,24 @@
                     }
                 }
 
+                // Battery display with color
+                let batteryVal = drv.battery || 0;
+                let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
+                let batteryHtml = `<span class="battery ${batteryColor}">🔋 ${batteryVal}%</span>`;
+                let odometerHtml = `<span class="odometer">📏 ${drv.odometer || 0} km</span>`;
+                let alarmHtml = '';
+                if (drv.hasAlarm) {
+                    alarmHtml = `<span class="alarm-badge">⚠️ ALARM</span>`;
+                }
+
                 badge.innerHTML = `
               <div class="badge-row">
                 <span class="dot" style="background:${drv.color || '#f7c948'}"></span>
                 ${drv.name || 'Driver'} 
                 <span style="font-size:11px; color:var(--muted);">${assignedCount} stops</span>
+                ${batteryHtml}
+                ${odometerHtml}
+                ${alarmHtml}
                 <span class="status-indicator ${status.class}">${status.label}</span>
                 <span class="last-update">${lastUpdateText}</span>
               </div>
@@ -2667,6 +2739,20 @@
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
+
+            // Update modal extra info
+            if (drv) {
+                let batteryVal = drv.battery || 0;
+                let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
+                document.getElementById('modalBattery').textContent = `🔋 ${batteryVal}%`;
+                document.getElementById('modalBattery').className = batteryColor;
+                document.getElementById('modalOdometer').textContent = `📏 ${drv.odometer || 0} km`;
+                if (drv.hasAlarm) {
+                    document.getElementById('modalAlarm').style.display = 'inline';
+                } else {
+                    document.getElementById('modalAlarm').style.display = 'none';
+                }
+            }
 
             setTimeout(() => {
                 const container = document.getElementById('driver-map');
@@ -2709,7 +2795,7 @@
                 // Driver marker
                 if (drv?.lastLocation) {
                     const color = drv.color || '#f7c948';
-                    const icon = getDriverIcon(drv.name || 'Driver', color);
+                    const icon = getDriverIcon(drv.name || 'Driver', color, drv.heading);
                     const mk = new google.maps.Marker({
                         position: { lat: drv.lastLocation.lat, lng: drv.lastLocation.lng },
                         map: driverModalMap,
@@ -2903,6 +2989,57 @@
                     else reject('Unable to get address');
                 });
             });
+        }
+
+        // ===== HISTORICAL DISTANCE =====
+        async function calculateHistoricalDistance() {
+            if (!activeModalDriverId) return;
+            const drv = drivers[activeModalDriverId];
+            if (!drv || !drv.deviceId) { alert('No device ID for this driver.'); return; }
+            const startInput = document.getElementById('historyStart');
+            const endInput = document.getElementById('historyEnd');
+            const startDate = new Date(startInput.value);
+            const endDate = new Date(endInput.value);
+            if (isNaN(startDate) || isNaN(endDate) || startDate >= endDate) {
+                alert('Please select valid start and end dates.');
+                return;
+            }
+            const fromUnix = Math.floor(startDate.getTime() / 1000);
+            const toUnix = Math.floor(endDate.getTime() / 1000);
+            try {
+                const response = await fetch(`${PAJ_BASE}/device/history`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${pajToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        deviceId: parseInt(drv.deviceId, 10),
+                        fromDate: fromUnix,
+                        toDate: toUnix
+                    })
+                });
+                if (!response.ok) throw new Error('API error');
+                const data = await response.json();
+                let points = data.points || data.track || data.data || [];
+                let totalDist = 0;
+                if (points.length < 2) {
+                    document.getElementById('historyResult').textContent = 'No track data for this period.';
+                    return;
+                }
+                for (let i = 1; i < points.length; i++) {
+                    const p1 = points[i-1];
+                    const p2 = points[i];
+                    if (p1.lat && p1.lng && p2.lat && p2.lng) {
+                        totalDist += haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+                    }
+                }
+                const km = totalDist / 1000;
+                const mi = totalDist / 1609;
+                document.getElementById('historyResult').textContent = `Distance: ${km.toFixed(1)} km (${mi.toFixed(1)} mi)`;
+            } catch (e) {
+                document.getElementById('historyResult').textContent = 'Error: ' + e.message;
+            }
         }
 
         // ===== SETTINGS =====
