@@ -1084,6 +1084,55 @@
             font-weight: 700;
         }
 
+        /* Simplify slider styling */
+        .simplify-slider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        .simplify-slider label {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .simplify-slider input[type="range"] {
+            flex: 1;
+            min-width: 80px;
+            accent-color: var(--accent);
+            background: transparent;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            border-radius: 2px;
+            outline: none;
+        }
+        .simplify-slider input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+        .simplify-slider input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+        }
+        .simplify-slider .tolerance-value {
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+            color: var(--text);
+        }
+
         @media (min-width: 900px) {
             .app-grid {
                 flex-direction: row;
@@ -1182,6 +1231,12 @@
             .stop-item .info .addr {
                 flex: 1 1 auto;
                 text-align: right;
+            }
+            .simplify-slider {
+                flex-wrap: wrap;
+            }
+            .simplify-slider input[type="range"] {
+                min-width: 60px;
             }
         }
 
@@ -1425,16 +1480,25 @@
                 <span id="modalOdometer">📏 -- km</span>
                 <span id="modalAlarm" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
             </div>
-            <!-- History query with both Calculate Distance and Show Track buttons -->
-            <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                <label style="font-size:12px; color:var(--muted);">From:</label>
-                <input type="datetime-local" id="historyStart" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
-                <label style="font-size:12px; color:var(--muted);">To:</label>
-                <input type="datetime-local" id="historyEnd" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
-                <button onclick="calculateHistoricalDistance()" style="background:var(--accent); color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">Calculate Distance</button>
-                <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">📊 Show Track</button>
-                <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">✕ Clear Historical</button>
-                <span id="historyResult" style="font-size:13px; color:var(--muted);"></span>
+            <!-- History query with both Calculate Distance and Show Track buttons + simplification slider -->
+            <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <label style="font-size:12px; color:var(--muted);">From:</label>
+                    <input type="datetime-local" id="historyStart" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
+                    <label style="font-size:12px; color:var(--muted);">To:</label>
+                    <input type="datetime-local" id="historyEnd" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
+                    <button onclick="calculateHistoricalDistance()" style="background:var(--accent); color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">Calculate Distance</button>
+                    <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">📊 Show Track</button>
+                    <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">✕ Clear Historical</button>
+                    <span id="historyResult" style="font-size:13px; color:var(--muted);"></span>
+                </div>
+                <!-- Simplification tolerance slider -->
+                <div class="simplify-slider">
+                    <label for="simplifyTolerance">Simplify:</label>
+                    <input type="range" id="simplifyTolerance" min="0" max="50" value="15" step="1">
+                    <span class="tolerance-value" id="toleranceDisplay">15m</span>
+                    <span style="font-size:11px; color:var(--muted);">(0 = off)</span>
+                </div>
             </div>
             <div class="modal-stops" id="driverModalStops"></div>
         </div>
@@ -1890,6 +1954,54 @@
             return R * c;
         }
 
+        // ===== DOUGLAS-PEUCKER SIMPLIFICATION =====
+        function douglasPeuckerSimplify(points, tolerance) {
+            if (tolerance <= 0 || points.length <= 2) return points.slice();
+
+            // Find the point with the maximum distance from the line between first and last
+            let dmax = 0;
+            let index = 0;
+            const first = points[0];
+            const last = points[points.length - 1];
+            for (let i = 1; i < points.length - 1; i++) {
+                const d = perpendicularDistance(points[i], first, last);
+                if (d > dmax) {
+                    dmax = d;
+                    index = i;
+                }
+            }
+
+            // If max distance is greater than tolerance, recursively simplify
+            if (dmax > tolerance) {
+                const recResults1 = douglasPeuckerSimplify(points.slice(0, index + 1), tolerance);
+                const recResults2 = douglasPeuckerSimplify(points.slice(index), tolerance);
+                // Combine (remove duplicate point at junction)
+                const combined = recResults1.slice(0, recResults1.length - 1).concat(recResults2);
+                return combined;
+            } else {
+                return [first, last];
+            }
+        }
+
+        function perpendicularDistance(p, a, b) {
+            // Calculate the perpendicular distance from point p to line segment a-b
+            const dx = b.lat - a.lat;
+            const dy = b.lng - a.lng;
+            // If the line segment is a point, return distance to that point
+            if (dx === 0 && dy === 0) {
+                return Math.sqrt((p.lat - a.lat) ** 2 + (p.lng - a.lng) ** 2);
+            }
+            // Use the formula for distance from point to line in 2D (in degrees, but it's fine for small distances)
+            const numerator = Math.abs(dy * p.lat - dx * p.lng + (a.lng * dx - a.lat * dy));
+            const denominator = Math.sqrt(dx * dx + dy * dy);
+            return numerator / denominator;
+        }
+
+        // Convert tolerance from meters to degrees (approximate: 1 degree ~ 111 km)
+        function metersToDegrees(meters) {
+            return meters / 111000;
+        }
+
         // ===== DRIVER MODAL TRACK =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
@@ -2027,16 +2139,6 @@
             driverModalMap._arrowMarkers = arrowMarkers;
         }
 
-        // Legacy function (kept for compatibility, but now we use the unified one)
-        function updateArrowMarkers(driverId) {
-            // This is now handled by updateDriverModalTrack, but keep as a wrapper
-            if (isHistoricalMode[driverId] && historicalTracks[driverId]) {
-                updateArrowMarkersForTrack(driverId, historicalTracks[driverId]);
-            } else {
-                updateArrowMarkersForTrack(driverId, driverTracks[driverId] || []);
-            }
-        }
-
         function updateStopEventMarkers(driverId) {
             // Now handled inside updateDriverModalTrack
             // Keep for compatibility
@@ -2156,6 +2258,11 @@
             const resultEl = document.getElementById('historyResult');
             resultEl.textContent = 'Loading track...';
 
+            // Get simplification tolerance from slider
+            const toleranceSlider = document.getElementById('simplifyTolerance');
+            const toleranceMeters = parseFloat(toleranceSlider.value);
+            document.getElementById('toleranceDisplay').textContent = toleranceMeters + 'm';
+
             try {
                 const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${fromUnix}&dateEnd=${toUnix}&wifi=1&gps=1`;
                 const response = await fetch(url, {
@@ -2164,20 +2271,29 @@
                 });
                 if (!response.ok) throw new Error('API error');
                 const data = await response.json();
-                const points = data.success || [];
+                let points = data.success || [];
                 if (points.length < 2) {
                     resultEl.textContent = 'No track data for this period.';
                     return;
                 }
                 // Sort by time
                 points.sort((a, b) => a.dateunix - b.dateunix);
-                // Build historical track
-                const track = points.map(p => ({
+                // Build track array
+                let rawTrack = points.map(p => ({
                     lat: p.lat,
                     lng: p.lng,
                     timestamp: p.dateunix * 1000
                 }));
-                // Compute stops
+
+                // Apply simplification if tolerance > 0
+                let track = rawTrack;
+                if (toleranceMeters > 0) {
+                    const toleranceDeg = metersToDegrees(toleranceMeters);
+                    track = douglasPeuckerSimplify(rawTrack, toleranceDeg);
+                    console.log(`Simplified from ${rawTrack.length} to ${track.length} points (tolerance: ${toleranceMeters}m)`);
+                }
+
+                // Compute stops from the simplified track
                 const stops = [];
                 let stopStart = null;
                 for (let i = 1; i < track.length; i++) {
@@ -3470,6 +3586,11 @@
                         }
                     }
                 }
+            });
+
+            // Update tolerance display on slider change
+            document.getElementById('simplifyTolerance').addEventListener('input', function() {
+                document.getElementById('toleranceDisplay').textContent = this.value + 'm';
             });
 
             getMasterRef().once('value').then(snap => {
