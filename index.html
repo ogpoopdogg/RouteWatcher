@@ -3046,6 +3046,158 @@
             }
         }
 
+        // ===== PERSISTENCE: fetch historical data since last fetch =====
+        async function fetchHistoricalDataSince(driverId, sinceTimestamp) {
+            if (!pajToken) return;
+            const drv = drivers[driverId];
+            if (!drv || !drv.deviceId) return;
+            const now = Math.floor(Date.now() / 1000);
+            // If no sinceTimestamp, default to 24 hours ago
+            const from = sinceTimestamp || (now - 86400);
+            if (from >= now) return;
+
+            try {
+                const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${from}&dateEnd=${now}&wifi=1&gps=1`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${pajToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch historical data');
+                const data = await response.json();
+                const points = data.success || [];
+                if (points.length === 0) return;
+
+                // Process points: add to driverTracks and detect stops
+                if (!driverTracks[driverId]) driverTracks[driverId] = [];
+                if (!driverStopEvents[driverId]) driverStopEvents[driverId] = [];
+
+                // Sort points by dateunix (oldest first)
+                points.sort((a, b) => a.dateunix - b.dateunix);
+
+                // Filter out points that are already in the track (prevent duplicates)
+                const existingTimestamps = new Set(driverTracks[driverId].map(p => p.timestamp));
+                const newPoints = points.filter(p => {
+                    const ts = p.dateunix * 1000;
+                    return !existingTimestamps.has(ts);
+                });
+
+                if (newPoints.length === 0) return;
+
+                // Add new points to track
+                for (const p of newPoints) {
+                    const lat = p.lat;
+                    const lng = p.lng;
+                    const ts = p.dateunix * 1000;
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        driverTracks[driverId].push({ lat, lng, timestamp: ts });
+                        // Also update lastLocation for this driver if this is the newest point
+                        if (!drv.lastLocation || ts > drv.lastLocation.updatedAt) {
+                            drv.lastLocation = { lat, lng, updatedAt: ts };
+                        }
+                    }
+                }
+
+                // Re-sort tracks by timestamp
+                driverTracks[driverId].sort((a, b) => a.timestamp - b.timestamp);
+
+                // Re-detect stop events from the entire track (simplified: run stop detection on all points)
+                // We'll just scan the track and build stop events
+                // For simplicity, we'll use the existing stop detection logic by processing points sequentially
+                // Reset stop state for this driver to avoid interference
+                driverStopState[driverId] = null;
+                // We'll reprocess all points to build stop events (more accurate)
+                // But to avoid O(n^2) we'll just clear and rebuild from scratch for this driver
+                // Given that tracks are typically not huge, this is acceptable.
+                const fullTrack = driverTracks[driverId];
+                // Clear existing stop events for this driver
+                driverStopEvents[driverId] = [];
+                // Re-run stop detection on the full track
+                for (let i = 0; i < fullTrack.length; i++) {
+                    const pt = fullTrack[i];
+                    // Simulate the same logic as in processGPSUpdate but without adding new points
+                    // We'll call a helper that processes a point for stop detection
+                    // For simplicity, we'll just use the existing checkStopDetection logic in a loop.
+                    // But we need to adapt: we'll call a function that mimics the detection.
+                    // We'll implement a separate function that rebuilds stops from track.
+                }
+                // For now, we'll just clear stop events and rebuild using a simple algorithm:
+                // Group consecutive points where distance < 5m and duration > threshold
+                // We'll implement a simple rebuild function.
+                rebuildStopEvents(driverId);
+
+                // Update UI
+                if (activeModalDriverId === driverId) {
+                    updateDriverModalTrack(driverId);
+                    renderDriverStops(driverId);
+                }
+                renderDriverBadges();
+                updateMapMarkers();
+
+                // Update lastTrackFetchTime in Firebase
+                const newFetchTime = now;
+                getDriversRef().child(driverId).update({ lastTrackFetchTime: newFetchTime });
+                // Also update local driver object
+                drv.lastTrackFetchTime = newFetchTime;
+
+            } catch (e) {
+                console.warn('Historical fetch error for driver', driverId, e);
+            }
+        }
+
+        // Helper to rebuild stop events from track
+        function rebuildStopEvents(driverId) {
+            const track = driverTracks[driverId] || [];
+            if (track.length < 2) {
+                driverStopEvents[driverId] = [];
+                return;
+            }
+            const events = [];
+            let stopStart = null;
+            let stopStartIndex = 0;
+            for (let i = 1; i < track.length; i++) {
+                const prev = track[i-1];
+                const curr = track[i];
+                const dist = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
+                if (dist < 5) {
+                    // Still stopped or starting a stop
+                    if (!stopStart) {
+                        stopStart = prev;
+                        stopStartIndex = i-1;
+                    }
+                } else {
+                    // Movement detected; if we had a stop, close it
+                    if (stopStart) {
+                        const duration = (prev.timestamp - stopStart.timestamp) / 1000;
+                        if (duration >= STOP_DETECTION_THRESHOLD) {
+                            events.push({
+                                lat: stopStart.lat,
+                                lng: stopStart.lng,
+                                startTime: stopStart.timestamp,
+                                endTime: prev.timestamp,
+                                duration: duration
+                            });
+                        }
+                        stopStart = null;
+                    }
+                }
+            }
+            // Check if we are still in a stop at the end
+            if (stopStart) {
+                const last = track[track.length - 1];
+                const duration = (last.timestamp - stopStart.timestamp) / 1000;
+                if (duration >= STOP_DETECTION_THRESHOLD) {
+                    events.push({
+                        lat: stopStart.lat,
+                        lng: stopStart.lng,
+                        startTime: stopStart.timestamp,
+                        endTime: last.timestamp,
+                        duration: duration
+                    });
+                }
+            }
+            driverStopEvents[driverId] = events;
+        }
+
         // ===== SETTINGS =====
         function openSettings() {
             document.getElementById('settingsModal').style.display = 'flex';
@@ -3184,6 +3336,15 @@
                 if (!dashboardLoaded) {
                     dashboardLoaded = true;
                     loadSavedDashboardState();
+                    // After loading saved state, fetch historical data for each driver with deviceId
+                    if (pajToken) {
+                        for (let [id, drv] of Object.entries(drivers)) {
+                            if (drv.deviceId && String(drv.deviceId).trim() !== '') {
+                                const lastFetch = drv.lastTrackFetchTime || null;
+                                fetchHistoricalDataSince(id, lastFetch);
+                            }
+                        }
+                    }
                 }
             });
 
