@@ -3011,35 +3011,17 @@
             resultEl.textContent = 'Loading...';
 
             try {
-                // Try the new endpoint with GET and query parameters
-                let response = await fetch(`${PAJ_BASE}/trackerdata/getalllastpositions?deviceId=${drv.deviceId}&from=${fromUnix}&to=${toUnix}`, {
+                // Use the correct endpoint with GET
+                const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${fromUnix}&dateEnd=${toUnix}&wifi=1&gps=1`;
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${pajToken}`
                     }
                 });
-                if (!response.ok) {
-                    // Fallback to POST /device/history
-                    response = await fetch(`${PAJ_BASE}/device/history`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${pajToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            deviceId: parseInt(drv.deviceId, 10),
-                            fromDate: fromUnix,
-                            toDate: toUnix
-                        })
-                    });
-                }
                 if (!response.ok) throw new Error('API error');
                 const data = await response.json();
-                let points = data.points || data.track || data.data || data.success || [];
-                if (!Array.isArray(points) && typeof points === 'object') {
-                    // Sometimes the response might have points inside an object
-                    points = Object.values(points);
-                }
+                let points = data.success || [];
                 let totalDist = 0;
                 if (!points || points.length < 2) {
                     resultEl.textContent = 'No track data for this period.';
@@ -3048,13 +3030,8 @@
                 for (let i = 1; i < points.length; i++) {
                     const p1 = points[i-1];
                     const p2 = points[i];
-                    // Try to find lat/lng in various possible keys
-                    const lat1 = p1.lat || p1.latitude || p1.latitud || 0;
-                    const lng1 = p1.lng || p1.longitude || p1.lon || 0;
-                    const lat2 = p2.lat || p2.latitude || p2.latitud || 0;
-                    const lng2 = p2.lng || p2.longitude || p2.lon || 0;
-                    if (lat1 && lng1 && lat2 && lng2) {
-                        totalDist += haversineDistance(lat1, lng1, lat2, lng2);
+                    if (p1.lat !== undefined && p1.lng !== undefined && p2.lat !== undefined && p2.lng !== undefined) {
+                        totalDist += haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
                     }
                 }
                 const km = totalDist / 1000;
