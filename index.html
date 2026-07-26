@@ -327,8 +327,9 @@
             border-radius: 40px;
             border-left: 4px solid;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 2px;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
@@ -336,6 +337,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             user-select: none;
+            min-width: 120px;
         }
         .driver-badge:hover {
             background: rgba(30, 30, 50, 0.95);
@@ -380,6 +382,20 @@
             font-weight: 400;
             color: var(--muted);
             margin-left: 2px;
+        }
+        .driver-badge .badge-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px 8px;
+            width: 100%;
+        }
+        .driver-badge .eta-line {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+            text-align: center;
         }
 
         .manifest-panel {
@@ -1534,6 +1550,9 @@
         let deviceStatuses = {};
         let lastDateUnix = {};
 
+        // ETA/distance data per driver
+        let driverEtaData = {};
+
         function getDriversRef() { return db.ref('developer/dispatch_dashboard/drivers'); }
 
         function getMasterRef() { return db.ref('developer/dispatch_dashboard/master_config'); }
@@ -2402,7 +2421,8 @@
                 return;
             }
 
-            // Now assign stops
+            // Now assign stops and accumulate ETA/distance per driver
+            let driverTotals = {};
             let stopIdCounter = 0;
             keys.forEach(key => {
                 const route = availableRoutes[key];
@@ -2416,6 +2436,11 @@
                     }
                 }
                 if (!driverId) return; // shouldn't happen
+
+                // Accumulate ETA and distance for this driver
+                if (!driverTotals[driverId]) driverTotals[driverId] = { etaMinutes: 0, km: 0 };
+                driverTotals[driverId].etaMinutes += (route.etaTotalMinutes || 0);
+                driverTotals[driverId].km += (route.etaTotalKm || 0);
 
                 route.stops.forEach((stop, idx) => {
                     const id = 'stop_' + (stopIdCounter++);
@@ -2439,6 +2464,9 @@
                     };
                 });
             });
+
+            // Store ETA/distance data
+            driverEtaData = driverTotals;
 
             // Geocode all stops
             const geocoder = new google.maps.Geocoder();
@@ -2474,8 +2502,10 @@
             if (!confirm(`Clear all ${count} stops from the manifest? This will not delete saved routes.`)) return;
             loadedStops = {};
             currentRouteKeys = [];
+            driverEtaData = {};
             renderStopList();
             updateMapMarkers();
+            renderDriverBadges();
             if (activeModalDriverId) renderDriverStops(activeModalDriverId);
         }
 
@@ -2582,12 +2612,33 @@
                 const completedCount = Object.values(loadedStops).filter(s => s.assignedDriver === id && s.status === 'completed')
                     .length;
 
+                // ETA/distance line
+                let etaLine = '';
+                if (driverEtaData[id] && (driverEtaData[id].etaMinutes > 0 || driverEtaData[id].km > 0)) {
+                    const eta = driverEtaData[id].etaMinutes;
+                    const km = driverEtaData[id].km;
+                    const hours = Math.floor(eta / 60);
+                    const minutes = Math.round(eta % 60);
+                    let parts = [];
+                    if (hours > 0) parts.push(`${hours} H`);
+                    if (minutes > 0) parts.push(`${minutes} M`);
+                    let distPart = (km > 0) ? `Distance ${Math.round(km)} KM` : '';
+                    let etaStr = parts.join(' ');
+                    let fullStr = etaStr + (distPart ? ' ' + distPart : '');
+                    if (fullStr) {
+                        etaLine = `<div class="eta-line">ETA ${fullStr}</div>`;
+                    }
+                }
+
                 badge.innerHTML = `
-              <span class="dot" style="background:${drv.color || '#f7c948'}"></span>
-              ${drv.name || 'Driver'} 
-              <span style="font-size:11px; color:var(--muted);">${assignedCount} stops</span>
-              <span class="status-indicator ${status.class}">${status.label}</span>
-              <span class="last-update">${lastUpdateText}</span>
+              <div class="badge-row">
+                <span class="dot" style="background:${drv.color || '#f7c948'}"></span>
+                ${drv.name || 'Driver'} 
+                <span style="font-size:11px; color:var(--muted);">${assignedCount} stops</span>
+                <span class="status-indicator ${status.class}">${status.label}</span>
+                <span class="last-update">${lastUpdateText}</span>
+              </div>
+              ${etaLine}
             `;
                 badge.addEventListener('click', function() {
                     openDriverModal(id);
@@ -2723,7 +2774,24 @@
                 const lastUp = drv?.lastLocation ? ((Date.now() - drv.lastLocation.updatedAt) / 60000).toFixed(0) : '—';
                 document.getElementById('driverLastUpdate').textContent =
                     `Status: ${status.label} · Last update: ${lastUp}m ago`;
-                document.getElementById('driverStopCount').textContent = `${assigned.length} stops`;
+
+                // Update stop count with ETA/distance if available
+                let stopCountText = `${assigned.length} stops`;
+                if (driverEtaData[driverId] && (driverEtaData[driverId].etaMinutes > 0 || driverEtaData[driverId].km > 0)) {
+                    const eta = driverEtaData[driverId].etaMinutes;
+                    const km = driverEtaData[driverId].km;
+                    const hours = Math.floor(eta / 60);
+                    const minutes = Math.round(eta % 60);
+                    let parts = [];
+                    if (hours > 0) parts.push(`${hours} H`);
+                    if (minutes > 0) parts.push(`${minutes} M`);
+                    let etaStr = parts.join(' ');
+                    let distStr = (km > 0) ? ` ${Math.round(km)} KM` : '';
+                    if (etaStr || distStr) {
+                        stopCountText += ` · ETA ${etaStr}${distStr}`;
+                    }
+                }
+                document.getElementById('driverStopCount').textContent = stopCountText;
 
             }, 200);
         }
