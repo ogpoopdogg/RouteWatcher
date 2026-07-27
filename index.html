@@ -2278,27 +2278,19 @@
                 }
                 // Sort by time
                 points.sort((a, b) => a.dateunix - b.dateunix);
-                // Build track array
-                let rawTrack = points.map(p => ({
+                // Build raw track array (unsimplified)
+                const rawTrack = points.map(p => ({
                     lat: p.lat,
                     lng: p.lng,
                     timestamp: p.dateunix * 1000
                 }));
 
-                // Apply simplification if tolerance > 0
-                let track = rawTrack;
-                if (toleranceMeters > 0) {
-                    const toleranceDeg = metersToDegrees(toleranceMeters);
-                    track = douglasPeuckerSimplify(rawTrack, toleranceDeg);
-                    console.log(`Simplified from ${rawTrack.length} to ${track.length} points (tolerance: ${toleranceMeters}m)`);
-                }
-
-                // Compute stops from the simplified track
+                // ---- DETECT STOPS ON RAW TRACK ----
                 const stops = [];
                 let stopStart = null;
-                for (let i = 1; i < track.length; i++) {
-                    const prev = track[i-1];
-                    const curr = track[i];
+                for (let i = 1; i < rawTrack.length; i++) {
+                    const prev = rawTrack[i-1];
+                    const curr = rawTrack[i];
                     const dist = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
                     if (dist < 5) {
                         if (!stopStart) stopStart = prev;
@@ -2319,7 +2311,7 @@
                     }
                 }
                 if (stopStart) {
-                    const last = track[track.length - 1];
+                    const last = rawTrack[rawTrack.length - 1];
                     const duration = (last.timestamp - stopStart.timestamp) / 1000;
                     if (duration >= STOP_DETECTION_THRESHOLD) {
                         stops.push({
@@ -2330,6 +2322,14 @@
                             duration: duration
                         });
                     }
+                }
+
+                // ---- SIMPLIFY TRACK (if tolerance > 0) ----
+                let track = rawTrack;
+                if (toleranceMeters > 0) {
+                    const toleranceDeg = metersToDegrees(toleranceMeters);
+                    track = douglasPeuckerSimplify(rawTrack, toleranceDeg);
+                    console.log(`Simplified from ${rawTrack.length} to ${track.length} points (tolerance: ${toleranceMeters}m)`);
                 }
 
                 // Store in historical variables
@@ -2347,7 +2347,7 @@
                 }
                 const km = totalDist / 1000;
                 const mi = totalDist / 1609;
-                resultEl.textContent = `Track loaded: ${track.length} points, ${km.toFixed(1)} km (${mi.toFixed(1)} mi)`;
+                resultEl.textContent = `Track loaded: ${track.length} points, ${km.toFixed(1)} km (${mi.toFixed(1)} mi) — ${stops.length} stops detected`;
             } catch (e) {
                 resultEl.textContent = 'Error: ' + e.message;
             }
