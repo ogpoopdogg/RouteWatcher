@@ -2005,7 +2005,7 @@
             return meters / 111000;
         }
 
-        // ===== DRIVER MODAL TRACK (no arrows, only stops) =====
+        // ===== DRIVER MODAL TRACK (no arrows, only stops with hover tooltip) =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
             // Determine which track to use: historical if active, else live
@@ -2037,7 +2037,7 @@
                 map: driverModalMap
             });
 
-            // Draw stop markers (yellow circles) – no default title
+            // Draw stop markers (yellow circles) with hover tooltip
             driverModalMap._stopMarkers = [];
             stops.forEach(event => {
                 const marker = new google.maps.Marker({
@@ -2052,9 +2052,15 @@
                         strokeWeight: 2
                     }
                 });
-                marker.addListener('click', function(e) {
-                    e.stopPropagation(); // prevent global click from hiding tooltip
-                    showStopTooltip(event, this.getPosition());
+                // Use hover (mouseover/mouseout) to show tooltip
+                google.maps.event.addListener(marker, 'mouseover', function() {
+                    const pos = this.getPosition();
+                    showStopTooltip(event, pos);
+                });
+                google.maps.event.addListener(marker, 'mouseout', function() {
+                    const tooltip = document.getElementById('stop-tooltip');
+                    tooltip.style.display = 'none';
+                    if (tooltip._hideTimeout) clearTimeout(tooltip._hideTimeout);
                 });
                 driverModalMap._stopMarkers.push(marker);
             });
@@ -2067,7 +2073,7 @@
             }
         }
 
-        // Custom tooltip showing clock time and duration in minutes/seconds
+        // Show tooltip with clock time and duration in minutes/seconds
         function showStopTooltip(event, position) {
             const tooltip = document.getElementById('stop-tooltip');
             const timeEl = document.getElementById('tooltipTime');
@@ -2087,7 +2093,7 @@
             timeEl.textContent = timeStr;
             durationEl.textContent = durStr;
 
-            // Position near the marker
+            // Position near the marker using map projection
             const latLng = position;
             const point = driverModalMap.getProjection().fromLatLngToPoint(latLng);
             const mapDiv = document.getElementById('driver-map');
@@ -2098,7 +2104,7 @@
             tooltip.style.top = Math.max(10, y) + 'px';
             tooltip.style.display = 'flex';
 
-            // Auto-hide after 4 seconds
+            // Auto-hide after 4 seconds (if user doesn't move mouse away)
             if (tooltip._hideTimeout) clearTimeout(tooltip._hideTimeout);
             tooltip._hideTimeout = setTimeout(() => {
                 tooltip.style.display = 'none';
@@ -3545,15 +3551,6 @@
             }, 15000);
             setTimeout(() => { if (pajToken) fetchAllDevicePositions(); }, 3000);
         }
-
-        // ===== GLOBAL CLICK TO HIDE TOOLTIP =====
-        document.addEventListener('click', function(e) {
-            // Only hide if the click is not on a stop marker (handled by stopPropagation)
-            // The tooltip will be hidden by its own timeout, but we keep this as fallback
-            const tooltip = document.getElementById('stop-tooltip');
-            // We don't immediately hide; let the timeout handle it.
-            // But we can hide if clicked outside the tooltip area – we'll keep it simple.
-        });
 
         console.log('✅ E&C Dispatch Tracker loaded.');
         console.log('📋 Use "Load Routes" to import routes from routeplanner.');
