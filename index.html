@@ -1858,7 +1858,7 @@
                 }
             }
 
-            // Check auto-completion
+            // Check auto-completion (live)
             checkAutoComplete(driverId, lat, lng);
         }
 
@@ -1966,6 +1966,37 @@
         // Convert tolerance from meters to degrees (approximate: 1 degree ~ 111 km)
         function metersToDegrees(meters) {
             return meters / 111000;
+        }
+
+        // ===== HISTORICAL AUTO-COMPLETE (runs on historical points) =====
+        function processHistoricalAutoComplete(driverId, points) {
+            if (!points || points.length === 0) return;
+            let updated = false;
+            // Get pending stops for this driver
+            const stopsToCheck = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId && s.status !== 'completed');
+            if (stopsToCheck.length === 0) return;
+
+            for (const p of points) {
+                if (p.lat === undefined || p.lng === undefined) continue;
+                for (const [stopId, stop] of stopsToCheck) {
+                    if (stop.status === 'completed') continue;
+                    const dist = haversineDistance(p.lat, p.lng, stop.lat, stop.lng);
+                    if (dist <= proximityRadius) {
+                        stop.status = 'completed';
+                        stop.completedAt = p.timestamp || Date.now();
+                        updated = true;
+                    }
+                }
+            }
+            if (updated) {
+                // Update UI and save state
+                renderStopList();
+                updateMapMarkers();
+                saveDashboardState();
+                if (activeModalDriverId === driverId) {
+                    renderDriverStops(driverId);
+                }
+            }
         }
 
         // ===== DRIVER MODAL TRACK (no arrows, only stops with InfoWindow) =====
@@ -3215,6 +3246,9 @@
 
                 // Re-sort tracks by timestamp
                 driverTracks[driverId].sort((a, b) => a.timestamp - b.timestamp);
+
+                // Run historical auto-complete on the new points before rebuilding stops
+                processHistoricalAutoComplete(driverId, newPoints);
 
                 // Re-detect stop events from the entire track (simplified: run stop detection on all points)
                 // We'll just scan the track and build stop events
