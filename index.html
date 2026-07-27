@@ -596,26 +596,30 @@
         .driver-modal {
             display: none;
             position: fixed;
-            inset: 0;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(0, 0, 0, 0.85);
             z-index: 999;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: 0 16px 16px 16px;
             backdrop-filter: blur(4px);
         }
         .driver-modal .modal-card {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 28px;
-            max-width: 900px;
+            border-radius: 20px;
+            max-width: 100%;
             width: 100%;
-            max-height: 90vh;
+            max-height: calc(100vh - 70px - 32px);
             overflow-y: auto;
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 16px;
+            margin: 0;
         }
         .driver-modal .modal-header {
             display: flex;
@@ -1071,25 +1075,25 @@
             flex: 1;
             min-width: 80px;
             accent-color: var(--accent);
-            background: transparent;
-            height: 4px;
+            background: var(--border);
+            height: 8px;
             -webkit-appearance: none;
             appearance: none;
-            border-radius: 2px;
+            border-radius: 4px;
             outline: none;
         }
         .simplify-slider input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 14px;
-            height: 14px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: var(--accent);
             cursor: pointer;
         }
         .simplify-slider input[type="range"]::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: var(--accent);
             cursor: pointer;
@@ -1452,24 +1456,26 @@
             </div>
             <!-- History query with both Calculate Distance and Show Track buttons + simplification slider -->
             <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                    <label style="font-size:12px; color:var(--muted);">From:</label>
-                    <input type="datetime-local" id="historyStart" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
-                    <label style="font-size:12px; color:var(--muted);">To:</label>
-                    <input type="datetime-local" id="historyEnd" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px;">
-                    <button onclick="calculateHistoricalDistance()" style="background:var(--accent); color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">Calculate Distance</button>
-                    <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">📊 Show Track</button>
-                    <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer;">✕ Clear Historical</button>
-                    <span id="historyResult" style="font-size:13px; color:var(--muted);"></span>
+                <div style="display:flex; flex-wrap:nowrap; gap:8px; align-items:center; overflow-x:auto;">
+                    <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
+                    <input type="datetime-local" id="historyStart" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px; flex:0 1 auto; min-width:80px;">
+                    <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
+                    <input type="datetime-local" id="historyEnd" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px; flex:0 1 auto; min-width:80px;">
+                    <button onclick="calculateHistoricalDistance()" style="background:var(--accent); color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">Calculate Distance</button>
+                    <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">📊 Show Track</button>
+                    <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Historical</button>
+                    <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
                 </div>
                 <!-- Simplification tolerance slider -->
                 <div class="simplify-slider">
-                    <label for="simplifyTolerance">Simplify:</label>
+                    <label for="simplifyTolerance">Number of Meters per GPS Point</label>
                     <input type="range" id="simplifyTolerance" min="0" max="50" value="15" step="1">
                     <span class="tolerance-value" id="toleranceDisplay">15m</span>
                     <span style="font-size:11px; color:var(--muted);">(0 = off)</span>
                 </div>
             </div>
+            <!-- Historical stop list -->
+            <div id="historicalStopList" style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 0;"></div>
             <div class="modal-stops" id="driverModalStops"></div>
         </div>
     </div>
@@ -2112,6 +2118,8 @@
                     }
                 }
                 renderDriverStops(activeModalDriverId);
+                // Clear historical stop list
+                renderHistoricalStops(activeModalDriverId);
             }
         }
 
@@ -2151,6 +2159,8 @@
                 updateDriverModalTrack(activeModalDriverId);
             }
             renderDriverStops(activeModalDriverId);
+            // Clear historical stop list
+            renderHistoricalStops(activeModalDriverId);
         }
 
         // ===== HISTORICAL TRACK FUNCTIONS =====
@@ -2253,6 +2263,9 @@
                 // Update the modal map (no arrows)
                 updateDriverModalTrack(activeModalDriverId);
 
+                // Render the historical stop list
+                renderHistoricalStops(activeModalDriverId);
+
                 // Calculate distance
                 let totalDist = 0;
                 for (let i = 1; i < track.length; i++) {
@@ -2275,8 +2288,47 @@
                 // Redraw with live track
                 updateDriverModalTrack(activeModalDriverId);
                 document.getElementById('historyResult').textContent = 'Historical track cleared.';
+                // Clear the stop list
+                renderHistoricalStops(activeModalDriverId);
             } else {
                 document.getElementById('historyResult').textContent = 'No historical track to clear.';
+            }
+        }
+
+        // ===== RENDER HISTORICAL STOP LIST =====
+        function renderHistoricalStops(driverId) {
+            const container = document.getElementById('historicalStopList');
+            if (!container) return;
+            const events = historicalStopEvents[driverId] || [];
+            container.innerHTML = '';
+            if (events.length === 0) {
+                container.innerHTML = '<div style="color:var(--muted); font-size:12px;">No stops detected.</div>';
+                return;
+            }
+            events.forEach((event, index) => {
+                const div = document.createElement('div');
+                div.style.cssText = 'display:inline-flex; align-items:center; gap:4px; background:var(--card2); padding:4px 10px; border-radius:12px; border:1px solid var(--border); cursor:pointer; font-size:12px;';
+                const mins = Math.floor(event.duration / 60);
+                const secs = Math.round(event.duration % 60);
+                let durStr = '';
+                if (mins > 0) durStr += `${mins}m `;
+                durStr += `${secs}s`;
+                div.innerHTML = `⏸ ${durStr}`;
+                div.addEventListener('click', function() {
+                    zoomToHistoricalStop(driverId, index);
+                });
+                container.appendChild(div);
+            });
+        }
+
+        function zoomToHistoricalStop(driverId, index) {
+            const events = historicalStopEvents[driverId] || [];
+            if (index < 0 || index >= events.length) return;
+            const event = events[index];
+            if (!event) return;
+            if (driverModalMap) {
+                driverModalMap.panTo({ lat: event.lat, lng: event.lng });
+                driverModalMap.setZoom(18);
             }
         }
 
@@ -3059,6 +3111,9 @@
                     }
                 }
                 document.getElementById('driverStopCount').textContent = stopCountText;
+
+                // Render historical stop list (if any)
+                renderHistoricalStops(driverId);
 
             }, 200);
         }
