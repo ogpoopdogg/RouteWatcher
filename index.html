@@ -1426,7 +1426,7 @@
                 <div class="panel-header">
                     <h2>Manifest <span id="stopCount" style="font-size:14px; font-weight:400; color:var(--muted);"></span></h2>
                     <div class="actions-row">
-                        <button class="load-btn" onclick="openRouteSelector()">📋 Load Routes</button>
+                        <button class="load-btn" onclick="openRouteSelector()">Load Routes</button>
                         <button class="clear-btn" onclick="clearAllStops()">✕ Clear List</button>
                     </div>
                 </div>
@@ -2519,6 +2519,14 @@
             const stop = loadedStops[stopId];
             if (!stop || !stop.lat || !stop.lng) return;
             if (map) {
+                // Ensure map is visible
+                const wrapper = document.getElementById('mainMapWrapper');
+                if (wrapper.classList.contains('hidden')) {
+                    wrapper.classList.remove('hidden');
+                    document.getElementById('mapToggleBtn').classList.add('map-open');
+                    localStorage.setItem('ec_map_visible', 'true');
+                    setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
+                }
                 map.panTo({ lat: stop.lat, lng: stop.lng });
                 map.setZoom(14);
             }
