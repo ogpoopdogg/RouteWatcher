@@ -2002,7 +2002,7 @@
             return meters / 111000;
         }
 
-        // ===== DRIVER MODAL TRACK =====
+        // ===== DRIVER MODAL TRACK (no arrows) =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
             // Determine which track to use: historical if active, else live
@@ -2014,11 +2014,6 @@
             if (driverModalMap._trackPolyline) {
                 driverModalMap._trackPolyline.setMap(null);
                 driverModalMap._trackPolyline = null;
-            }
-            // Remove old arrow markers
-            if (driverModalMap._arrowMarkers) {
-                driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
-                driverModalMap._arrowMarkers = [];
             }
             // Remove old stop markers
             if (driverModalMap._stopMarkers) {
@@ -2061,9 +2056,6 @@
                 driverModalMap._stopMarkers.push(marker);
             });
 
-            // Draw arrow markers along the track
-            updateArrowMarkersForTrack(driverId, track);
-
             // Fit bounds to track
             if (track.length > 0) {
                 const bounds = new google.maps.LatLngBounds();
@@ -2072,77 +2064,7 @@
             }
         }
 
-        // Helper to draw arrows for a given track (used for both live and historical)
-        function updateArrowMarkersForTrack(driverId, track) {
-            if (!driverModalMap) return;
-            // Remove old arrow markers if any (they are already cleared in updateDriverModalTrack)
-            if (driverModalMap._arrowMarkers) {
-                driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
-                driverModalMap._arrowMarkers = [];
-            }
-            if (track.length < 2) return;
-
-            let lastArrowDist = 0;
-            const arrowSpacing = 35; // meters
-
-            if (!driverModalMap._infoWindow) {
-                driverModalMap._infoWindow = new google.maps.InfoWindow();
-            }
-
-            const arrowMarkers = [];
-
-            for (let i = 0; i < track.length - 1; i++) {
-                const current = track[i];
-                const next = track[i + 1];
-                const dist = haversineDistance(current.lat, current.lng, next.lat, next.lng);
-                lastArrowDist += dist;
-                if (lastArrowDist < arrowSpacing) continue;
-                lastArrowDist = 0;
-
-                const heading = google.maps.geometry.spherical.computeHeading(
-                    new google.maps.LatLng(current.lat, current.lng),
-                    new google.maps.LatLng(next.lat, next.lng)
-                );
-
-                const marker = new google.maps.Marker({
-                    position: { lat: current.lat, lng: current.lng },
-                    map: driverModalMap,
-                    icon: {
-                        path: 'M -6,-4 L 6,0 L -6,4 Z',
-                        fillColor: '#00d4ff',
-                        fillOpacity: 1,
-                        strokeColor: '#00d4ff',
-                        strokeWeight: 1,
-                        rotation: heading,
-                        scale: 0.8,
-                        anchor: new google.maps.Point(0, 0)
-                    },
-                    zIndex: 10
-                });
-
-                // Capture timestamp
-                (function(markerInstance, ts) {
-                    markerInstance.addListener('click', function() {
-                        let timeStr = 'Unknown time';
-                        if (ts) {
-                            timeStr = new Date(ts).toLocaleTimeString();
-                        }
-                        const content = `<div style="padding:4px 8px; font-family:Inter; font-weight:600;">Arrived at ${timeStr}</div>`;
-                        driverModalMap._infoWindow.setContent(content);
-                        driverModalMap._infoWindow.open(driverModalMap, markerInstance);
-                    });
-                })(marker, current.timestamp);
-
-                arrowMarkers.push(marker);
-            }
-
-            driverModalMap._arrowMarkers = arrowMarkers;
-        }
-
-        function updateStopEventMarkers(driverId) {
-            // Now handled inside updateDriverModalTrack
-            // Keep for compatibility
-        }
+        // No arrow markers anymore – removed entirely.
 
         function showStopTooltip(event, position) {
             const tooltip = document.getElementById('stop-tooltip');
@@ -2152,7 +2074,17 @@
             let durStr = '';
             if (mins > 0) durStr += `${mins}m `;
             durStr += `${secs}s`;
-            durationEl.textContent = durStr;
+
+            // Format the start time as clock time
+            const startTime = new Date(event.startTime);
+            const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            // Build tooltip content with clock time and duration
+            const content = `<div style="padding:4px 8px; font-family:Inter; font-weight:600;">
+                <div>🕒 ${timeStr}</div>
+                <div style="color:#2ecc71;">⏸ ${durStr}</div>
+            </div>`;
+            durationEl.textContent = ''; // we'll set content differently
 
             // Position near the marker
             const latLng = position;
@@ -2164,6 +2096,10 @@
             tooltip.style.left = Math.max(10, Math.min(x, window.innerWidth - 220)) + 'px';
             tooltip.style.top = Math.max(10, y) + 'px';
             tooltip.style.display = 'block';
+
+            // Use innerHTML for the tooltip
+            document.querySelector('#stop-tooltip .tooltip-title').textContent = '⏸ Stopped';
+            document.querySelector('#stop-tooltip .tooltip-duration').innerHTML = content;
 
             if (tooltip._hideTimeout) clearTimeout(tooltip._hideTimeout);
             tooltip._hideTimeout = setTimeout(() => {
@@ -2192,10 +2128,6 @@
                     if (driverModalMap._stopMarkers) {
                         driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                         driverModalMap._stopMarkers = [];
-                    }
-                    if (driverModalMap._arrowMarkers) {
-                        driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
-                        driverModalMap._arrowMarkers = [];
                     }
                 }
                 renderDriverStops(activeModalDriverId);
@@ -2230,10 +2162,6 @@
                 if (driverModalMap._stopMarkers) {
                     driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                     driverModalMap._stopMarkers = [];
-                }
-                if (driverModalMap._arrowMarkers) {
-                    driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
-                    driverModalMap._arrowMarkers = [];
                 }
                 updateDriverModalTrack(activeModalDriverId);
             }
@@ -2337,7 +2265,7 @@
                 historicalStopEvents[activeModalDriverId] = stops;
                 isHistoricalMode[activeModalDriverId] = true;
 
-                // Update the modal map
+                // Update the modal map (no arrows)
                 updateDriverModalTrack(activeModalDriverId);
 
                 // Calculate distance
@@ -3108,7 +3036,7 @@
                     }
                 });
 
-                // Draw track (uses historical if active)
+                // Draw track (uses historical if active) – no arrows
                 updateDriverModalTrack(driverId);
 
                 renderDriverStops(driverId);
@@ -3187,15 +3115,6 @@
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
             document.getElementById('stop-tooltip').style.display = 'none';
-            if (driverModalMap) {
-                if (driverModalMap._arrowMarkers) {
-                    driverModalMap._arrowMarkers.forEach(m => m.setMap(null));
-                    driverModalMap._arrowMarkers = [];
-                }
-                if (driverModalMap._infoWindow) {
-                    driverModalMap._infoWindow.close();
-                }
-            }
         }
 
         function renderDriverStops(driverId) {
