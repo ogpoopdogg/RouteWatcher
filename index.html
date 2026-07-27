@@ -2002,7 +2002,7 @@
             return meters / 111000;
         }
 
-        // ===== DRIVER MODAL TRACK (no arrows) =====
+        // ===== DRIVER MODAL TRACK (no arrows, only stops) =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
             // Determine which track to use: historical if active, else live
@@ -2034,7 +2034,7 @@
                 map: driverModalMap
             });
 
-            // Draw stop markers
+            // Draw stop markers (yellow circles) – no default title
             driverModalMap._stopMarkers = [];
             stops.forEach(event => {
                 const marker = new google.maps.Marker({
@@ -2047,8 +2047,8 @@
                         fillOpacity: 1,
                         strokeColor: '#fff',
                         strokeWeight: 2
-                    },
-                    title: `Stopped for ${Math.round(event.duration)}s`
+                    }
+                    // No 'title' attribute – we use custom click handler below
                 });
                 marker.addListener('click', function() {
                     showStopTooltip(event, this.getPosition());
@@ -2064,27 +2064,30 @@
             }
         }
 
-        // No arrow markers anymore – removed entirely.
-
+        // Custom tooltip showing clock time and duration in minutes/seconds
         function showStopTooltip(event, position) {
             const tooltip = document.getElementById('stop-tooltip');
             const durationEl = document.getElementById('tooltipDuration');
+
+            // Duration in minutes and seconds
             const mins = Math.floor(event.duration / 60);
             const secs = Math.round(event.duration % 60);
             let durStr = '';
             if (mins > 0) durStr += `${mins}m `;
             durStr += `${secs}s`;
 
-            // Format the start time as clock time
+            // Clock time when stop started
             const startTime = new Date(event.startTime);
             const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            // Build tooltip content with clock time and duration
+            // Build tooltip content
             const content = `<div style="padding:4px 8px; font-family:Inter; font-weight:600;">
                 <div>🕒 ${timeStr}</div>
                 <div style="color:#2ecc71;">⏸ ${durStr}</div>
             </div>`;
-            durationEl.textContent = ''; // we'll set content differently
+            // Update the tooltip elements
+            document.querySelector('#stop-tooltip .tooltip-title').textContent = '⏸ Stopped';
+            durationEl.innerHTML = content;
 
             // Position near the marker
             const latLng = position;
@@ -2097,10 +2100,7 @@
             tooltip.style.top = Math.max(10, y) + 'px';
             tooltip.style.display = 'block';
 
-            // Use innerHTML for the tooltip
-            document.querySelector('#stop-tooltip .tooltip-title').textContent = '⏸ Stopped';
-            document.querySelector('#stop-tooltip .tooltip-duration').innerHTML = content;
-
+            // Auto-hide after 4 seconds
             if (tooltip._hideTimeout) clearTimeout(tooltip._hideTimeout);
             tooltip._hideTimeout = setTimeout(() => {
                 tooltip.style.display = 'none';
