@@ -1355,6 +1355,27 @@
         .battery-high { color: #2ecc71; }
         .battery-mid { color: #f1c40f; }
         .battery-low { color: #e74c3c; }
+
+        /* Style for date inputs */
+        .date-picker {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            flex: 0 1 auto;
+            min-width: 160px;
+            outline: none;
+        }
+        .date-picker:focus {
+            border-color: var(--accent);
+        }
+        body.light-mode .date-picker {
+            background: #fff;
+            border: 1px solid #000;
+            color: #000;
+        }
     </style>
 </head>
 <body>
@@ -1451,17 +1472,15 @@
             <!-- Extra info: battery, odometer, alarm -->
             <div id="driverExtraInfo" style="display:flex; flex-wrap:wrap; gap:10px; padding:4px 0; font-size:13px; align-items:center;">
                 <span id="modalBattery">🔋 --%</span>
-                <span id="modalOdometer">📏 -- km</span>
                 <span id="modalAlarm" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
             </div>
             <!-- History query with both Calculate Distance and Show Track buttons + simplification slider -->
             <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; flex-direction:column; gap:8px;">
                 <div style="display:flex; flex-wrap:nowrap; gap:8px; align-items:center; overflow-x:auto;">
                     <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
-                    <input type="datetime-local" id="historyStart" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px; flex:0 1 auto; min-width:80px;">
+                    <input type="datetime-local" id="historyStart" class="date-picker">
                     <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
-                    <input type="datetime-local" id="historyEnd" style="background:var(--card2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:12px; flex:0 1 auto; min-width:80px;">
-                    <button onclick="calculateHistoricalDistance()" style="background:var(--accent); color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">Calculate Distance</button>
+                    <input type="datetime-local" id="historyEnd" class="date-picker">
                     <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">📊 Show Track</button>
                     <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Historical</button>
                     <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
@@ -1614,6 +1633,7 @@
         let proximityRadius = 50;
         let currentRouteKeys = [];
         let dashboardLoaded = false;
+        let autoLoaded = false; // flag to prevent auto-load multiple times
 
         // Track history per driver: { driverId: [ {lat, lng, timestamp}, ... ] }
         let driverTracks = {};
@@ -1729,7 +1749,7 @@
         async function fetchAllDevicePositions() {
             if (!pajToken) return;
             const deviceEntries = Object.entries(drivers).filter(([id, drv]) => drv.deviceId && String(drv.deviceId).trim() !==
-            '');
+                '');
             if (deviceEntries.length === 0) return;
 
             const deviceIds = deviceEntries.map(([did, drv]) => parseInt(String(drv.deviceId).trim(), 10));
@@ -2307,7 +2327,11 @@
             }
             events.forEach((event, index) => {
                 const div = document.createElement('div');
-                div.style.cssText = 'display:inline-flex; align-items:center; gap:4px; background:var(--card2); padding:4px 10px; border-radius:12px; border:1px solid var(--border); cursor:pointer; font-size:12px;';
+                let bgColor = 'var(--card2)';
+                if (event.duration >= 1800) bgColor = 'rgba(255,0,0,0.25)';
+                else if (event.duration >= 600) bgColor = 'rgba(255,165,0,0.25)';
+                else if (event.duration >= 300) bgColor = 'rgba(255,255,0,0.25)';
+                div.style.cssText = `display:inline-flex; align-items:center; gap:4px; background:${bgColor}; padding:4px 10px; border-radius:12px; border:1px solid var(--border); cursor:pointer; font-size:12px;`;
                 const mins = Math.floor(event.duration / 60);
                 const secs = Math.round(event.duration % 60);
                 let durStr = '';
@@ -2916,7 +2940,6 @@
                 let batteryVal = drv.battery || 0;
                 let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
                 let batteryHtml = `<span class="battery ${batteryColor}">🔋 ${batteryVal}%</span>`;
-                let odometerHtml = `<span class="odometer">📏 ${drv.odometer || 0} km</span>`;
                 let alarmHtml = '';
                 if (drv.hasAlarm) {
                     alarmHtml = `<span class="alarm-badge">⚠️ ALARM</span>`;
@@ -2928,7 +2951,6 @@
                 ${drv.name || 'Driver'} 
                 <span style="font-size:11px; color:var(--muted);">${assignedCount} stops</span>
                 ${batteryHtml}
-                ${odometerHtml}
                 ${alarmHtml}
                 <span class="status-indicator ${status.class}">${status.label}</span>
                 <span class="last-update">${lastUpdateText}</span>
@@ -2953,13 +2975,23 @@
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
 
+            // Set default date range for today 6am-6pm
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0);
+            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
+            // Adjust for timezone offset to get local datetime string
+            const offset = now.getTimezoneOffset() * 60000;
+            const localStart = new Date(todayStart.getTime() - offset);
+            const localEnd = new Date(todayEnd.getTime() - offset);
+            document.getElementById('historyStart').value = localStart.toISOString().slice(0,16);
+            document.getElementById('historyEnd').value = localEnd.toISOString().slice(0,16);
+
             // Update modal extra info
             if (drv) {
                 let batteryVal = drv.battery || 0;
                 let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
                 document.getElementById('modalBattery').textContent = `🔋 ${batteryVal}%`;
                 document.getElementById('modalBattery').className = batteryColor;
-                document.getElementById('modalOdometer').textContent = `📏 ${drv.odometer || 0} km`;
                 if (drv.hasAlarm) {
                     document.getElementById('modalAlarm').style.display = 'inline';
                 } else {
@@ -3203,49 +3235,8 @@
 
         // ===== HISTORICAL DISTANCE (standalone) =====
         async function calculateHistoricalDistance() {
-            if (!activeModalDriverId) return;
-            const drv = drivers[activeModalDriverId];
-            if (!drv || !drv.deviceId) { alert('No device ID for this driver.'); return; }
-            const startInput = document.getElementById('historyStart');
-            const endInput = document.getElementById('historyEnd');
-            const startDate = new Date(startInput.value);
-            const endDate = new Date(endInput.value);
-            if (isNaN(startDate) || isNaN(endDate) || startDate >= endDate) {
-                alert('Please select valid start and end dates.');
-                return;
-            }
-            const fromUnix = Math.floor(startDate.getTime() / 1000);
-            const toUnix = Math.floor(endDate.getTime() / 1000);
-            const resultEl = document.getElementById('historyResult');
-            resultEl.textContent = 'Loading...';
-
-            try {
-                const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${fromUnix}&dateEnd=${toUnix}&wifi=1&gps=1`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${pajToken}` }
-                });
-                if (!response.ok) throw new Error('API error');
-                const data = await response.json();
-                const points = data.success || [];
-                let totalDist = 0;
-                if (points.length < 2) {
-                    resultEl.textContent = 'No track data for this period.';
-                    return;
-                }
-                for (let i = 1; i < points.length; i++) {
-                    const p1 = points[i-1];
-                    const p2 = points[i];
-                    if (p1.lat !== undefined && p1.lng !== undefined && p2.lat !== undefined && p2.lng !== undefined) {
-                        totalDist += haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
-                    }
-                }
-                const km = totalDist / 1000;
-                const mi = totalDist / 1609;
-                resultEl.textContent = `Distance: ${km.toFixed(1)} km (${mi.toFixed(1)} mi)`;
-            } catch (e) {
-                resultEl.textContent = 'Error: ' + e.message;
-            }
+            // Function kept for backward compatibility but no longer used.
+            // Automatically calculated in loadHistoricalTrack.
         }
 
         // ===== PERSISTENCE: fetch historical data since last fetch =====
@@ -3481,6 +3472,46 @@
             closeSettings();
         }
 
+        // ===== AUTO-LOAD MATCHING ROUTES =====
+        function autoLoadMatchingRoutes() {
+            if (autoLoaded) return;
+            if (!availableRoutes || Object.keys(availableRoutes).length === 0) return;
+            if (Object.keys(drivers).length === 0) return;
+
+            const matchingKeys = [];
+            for (const key of Object.keys(availableRoutes)) {
+                const route = availableRoutes[key];
+                if (!route || !route.label) continue;
+                const driverName = route.label.toLowerCase().trim();
+                for (const [id, drv] of Object.entries(drivers)) {
+                    if (drv.name && drv.name.toLowerCase().trim() === driverName) {
+                        matchingKeys.push(key);
+                        break;
+                    }
+                }
+            }
+
+            if (matchingKeys.length === 0) return;
+
+            // Only auto-load if no stops are currently loaded
+            if (Object.keys(loadedStops).length > 0) {
+                // If stops already loaded, check if the matching keys are already loaded
+                const allLoaded = matchingKeys.every(k => currentRouteKeys.includes(k));
+                if (allLoaded) {
+                    autoLoaded = true;
+                    return;
+                }
+                // If not all loaded, we could still load but we avoid clearing existing stops.
+                // For safety, we skip auto-load if any stops exist.
+                return;
+            }
+
+            // Load the matching routes
+            console.log('Auto-loading routes for drivers:', matchingKeys);
+            loadRoutes(matchingKeys);
+            autoLoaded = true;
+        }
+
         // ===== PERSISTENCE FUNCTIONS =====
         function saveDashboardState() {
             // Save loadedStops
@@ -3530,6 +3561,15 @@
 
         // ===== INIT =====
         function initApp() {
+            // Fetch saved routes first to have them ready for auto-load
+            getSavedRoutesRef().once('value').then(snap => {
+                availableRoutes = snap.val() || {};
+                // After routes are loaded, trigger auto-load if drivers already loaded
+                if (Object.keys(drivers).length > 0) {
+                    autoLoadMatchingRoutes();
+                }
+            }).catch(err => console.warn('Failed to load saved routes:', err));
+
             getDriversRef().on('value', snap => {
                 drivers = snap.val() || {};
                 renderDriverBadges();
@@ -3549,6 +3589,10 @@
                                 fetchHistoricalDataSince(id, lastFetch);
                             }
                         }
+                    }
+                    // Try auto-load matching routes if not already done
+                    if (Object.keys(availableRoutes).length > 0) {
+                        autoLoadMatchingRoutes();
                     }
                 }
             });
