@@ -1054,39 +1054,6 @@
             background: #27ae60;
         }
 
-        /* Stop tooltip for stop duration */
-        #stop-tooltip {
-            display: none;
-            position: fixed;
-            pointer-events: none;
-            z-index: 99999;
-            background: rgba(0, 0, 0, 0.92);
-            backdrop-filter: blur(6px);
-            color: #fff;
-            padding: 10px 18px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            border: 2px solid var(--accent);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-            max-width: 300px;
-            line-height: 1.5;
-            font-family: 'Inter', sans-serif;
-            display: none;
-            flex-direction: column;
-            gap: 2px;
-        }
-        #stop-tooltip .tooltip-time {
-            font-weight: 700;
-            font-size: 15px;
-            color: var(--accent);
-        }
-        #stop-tooltip .tooltip-duration {
-            color: #2ecc71;
-            font-size: 18px;
-            font-weight: 700;
-        }
-
         /* Simplify slider styling */
         .simplify-slider {
             display: flex;
@@ -1549,11 +1516,7 @@
         </div>
     </div>
 
-    <!-- Stop Tooltip -->
-    <div id="stop-tooltip">
-        <div class="tooltip-time" id="tooltipTime">--:--:--</div>
-        <div class="tooltip-duration" id="tooltipDuration">--</div>
-    </div>
+    <!-- No more custom tooltip – we use InfoWindow now -->
 
     <!-- Firebase + Google Maps -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2005,7 +1968,7 @@
             return meters / 111000;
         }
 
-        // ===== DRIVER MODAL TRACK (no arrows, only stops with hover tooltip) =====
+        // ===== DRIVER MODAL TRACK (no arrows, only stops with InfoWindow) =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
             // Determine which track to use: historical if active, else live
@@ -2023,6 +1986,11 @@
                 driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                 driverModalMap._stopMarkers = [];
             }
+            // Close any open InfoWindow
+            if (driverModalMap._infoWindow) {
+                driverModalMap._infoWindow.close();
+                driverModalMap._infoWindow = null;
+            }
 
             if (track.length < 2) return;
 
@@ -2037,7 +2005,11 @@
                 map: driverModalMap
             });
 
-            // Draw stop markers (yellow circles) with hover tooltip
+            // Create a single InfoWindow for all stop markers (reused)
+            const infoWindow = new google.maps.InfoWindow();
+            driverModalMap._infoWindow = infoWindow;
+
+            // Draw stop markers (yellow circles) with click listener
             driverModalMap._stopMarkers = [];
             stops.forEach(event => {
                 const marker = new google.maps.Marker({
@@ -2052,15 +2024,23 @@
                         strokeWeight: 2
                     }
                 });
-                // Use hover (mouseover/mouseout) to show tooltip
-                google.maps.event.addListener(marker, 'mouseover', function() {
-                    const pos = this.getPosition();
-                    showStopTooltip(event, pos);
-                });
-                google.maps.event.addListener(marker, 'mouseout', function() {
-                    const tooltip = document.getElementById('stop-tooltip');
-                    tooltip.style.display = 'none';
-                    if (tooltip._hideTimeout) clearTimeout(tooltip._hideTimeout);
+                // Add click listener that opens InfoWindow with time and duration
+                google.maps.event.addListener(marker, 'click', function() {
+                    const mins = Math.floor(event.duration / 60);
+                    const secs = Math.round(event.duration % 60);
+                    let durStr = '';
+                    if (mins > 0) durStr += `${mins}m `;
+                    durStr += `${secs}s`;
+                    const startTime = new Date(event.startTime);
+                    const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const content = `
+                        <div style="font-family:Inter; padding:4px 8px; font-weight:600;">
+                            <div style="font-size:15px; color:#f7c948;">🕒 ${timeStr}</div>
+                            <div style="font-size:18px; color:#2ecc71;">⏸ ${durStr}</div>
+                        </div>
+                    `;
+                    infoWindow.setContent(content);
+                    infoWindow.open(driverModalMap, marker);
                 });
                 driverModalMap._stopMarkers.push(marker);
             });
@@ -2071,44 +2051,6 @@
                 track.forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
                 driverModalMap.fitBounds(bounds);
             }
-        }
-
-        // Show tooltip with clock time and duration in minutes/seconds
-        function showStopTooltip(event, position) {
-            const tooltip = document.getElementById('stop-tooltip');
-            const timeEl = document.getElementById('tooltipTime');
-            const durationEl = document.getElementById('tooltipDuration');
-
-            // Duration in minutes and seconds
-            const mins = Math.floor(event.duration / 60);
-            const secs = Math.round(event.duration % 60);
-            let durStr = '';
-            if (mins > 0) durStr += `${mins}m `;
-            durStr += `${secs}s`;
-
-            // Clock time when stop started
-            const startTime = new Date(event.startTime);
-            const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-            timeEl.textContent = timeStr;
-            durationEl.textContent = durStr;
-
-            // Position near the marker using map projection
-            const latLng = position;
-            const point = driverModalMap.getProjection().fromLatLngToPoint(latLng);
-            const mapDiv = document.getElementById('driver-map');
-            const rect = mapDiv.getBoundingClientRect();
-            const x = rect.left + (point.x * rect.width) - 80;
-            const y = rect.top + (point.y * rect.height) - 60;
-            tooltip.style.left = Math.max(10, Math.min(x, window.innerWidth - 220)) + 'px';
-            tooltip.style.top = Math.max(10, y) + 'px';
-            tooltip.style.display = 'flex';
-
-            // Auto-hide after 4 seconds (if user doesn't move mouse away)
-            if (tooltip._hideTimeout) clearTimeout(tooltip._hideTimeout);
-            tooltip._hideTimeout = setTimeout(() => {
-                tooltip.style.display = 'none';
-            }, 4000);
         }
 
         // ===== CLEAR TRACK / NEW TRACK =====
@@ -2132,6 +2074,10 @@
                     if (driverModalMap._stopMarkers) {
                         driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                         driverModalMap._stopMarkers = [];
+                    }
+                    if (driverModalMap._infoWindow) {
+                        driverModalMap._infoWindow.close();
+                        driverModalMap._infoWindow = null;
                     }
                 }
                 renderDriverStops(activeModalDriverId);
@@ -2166,6 +2112,10 @@
                 if (driverModalMap._stopMarkers) {
                     driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                     driverModalMap._stopMarkers = [];
+                }
+                if (driverModalMap._infoWindow) {
+                    driverModalMap._infoWindow.close();
+                    driverModalMap._infoWindow = null;
                 }
                 updateDriverModalTrack(activeModalDriverId);
             }
@@ -3118,7 +3068,10 @@
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
-            document.getElementById('stop-tooltip').style.display = 'none';
+            if (driverModalMap && driverModalMap._infoWindow) {
+                driverModalMap._infoWindow.close();
+                driverModalMap._infoWindow = null;
+            }
         }
 
         function renderDriverStops(driverId) {
