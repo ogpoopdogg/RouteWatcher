@@ -1462,32 +1462,24 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h2 id="driverModalTitle">Driver</h2>
-                <div class="track-actions">
-                    <button class="clear-track" onclick="clearTrack()">🗑 Clear Track</button>
-                    <button class="new-track" onclick="newTrack()">🔄 New Track</button>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span id="driverStatusHeader" style="font-size:13px; color:var(--muted);"></span>
+                    <span id="driverAddressHeader" style="font-size:13px; color:var(--muted);"></span>
+                    <span id="modalBatteryHeader" style="font-size:13px;"></span>
+                    <span id="modalAlarmHeader" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
                     <button class="close-modal-btn" onclick="closeDriverModal()">✕</button>
                 </div>
             </div>
             <div class="modal-map"><div id="driver-map"></div></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
-                <span id="driverLastUpdate" style="font-size:13px; color:var(--muted);">Last update: —</span>
-                <span id="driverStopCount" style="font-weight:600;">0 stops</span>
-            </div>
-            <div id="driverAddress" style="font-size:13px; color:var(--muted); padding:4px 0;"></div>
-            <!-- Extra info: battery, odometer, alarm -->
-            <div id="driverExtraInfo" style="display:flex; flex-wrap:wrap; gap:10px; padding:4px 0; font-size:13px; align-items:center;">
-                <span id="modalBattery">🔋 --%</span>
-                <span id="modalAlarm" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
-            </div>
-            <!-- History query with both Calculate Distance and Show Track buttons + simplification slider -->
-            <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px; display:flex; flex-direction:column; gap:8px;">
+            <!-- History query with both Show Track and Clear Track buttons + simplification slider -->
+            <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:0; padding-top:8px; display:flex; flex-direction:column; gap:8px;">
                 <div style="display:flex; flex-wrap:nowrap; gap:8px; align-items:center; overflow-x:auto;">
                     <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
                     <input type="datetime-local" id="historyStart" class="date-picker">
                     <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
                     <input type="datetime-local" id="historyEnd" class="date-picker">
                     <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">📊 Show Track</button>
-                    <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Historical</button>
+                    <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Track</button>
                     <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
                 </div>
                 <!-- Simplification tolerance slider -->
@@ -1500,6 +1492,7 @@
             </div>
             <!-- Historical stop list -->
             <div id="historicalStopList" style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 0;"></div>
+            <div id="driverStopCount" style="text-align:center; padding:4px 0; font-weight:600;">0 stops</div>
             <div class="modal-stops" id="driverModalStops"></div>
         </div>
     </div>
@@ -2115,78 +2108,8 @@
             }
         }
 
-        // ===== CLEAR TRACK / NEW TRACK =====
-        function clearTrack() {
-            if (!activeModalDriverId) return;
-            if (confirm('Clear the GPS track for this driver?')) {
-                driverTracks[activeModalDriverId] = [];
-                driverStopEvents[activeModalDriverId] = [];
-                driverStopState[activeModalDriverId] = null;
-                // If in historical mode, clear that too
-                if (isHistoricalMode[activeModalDriverId]) {
-                    historicalTracks[activeModalDriverId] = [];
-                    historicalStopEvents[activeModalDriverId] = [];
-                    isHistoricalMode[activeModalDriverId] = false;
-                }
-                if (driverModalMap) {
-                    if (driverModalMap._trackPolyline) {
-                        driverModalMap._trackPolyline.setMap(null);
-                        driverModalMap._trackPolyline = null;
-                    }
-                    if (driverModalMap._stopMarkers) {
-                        driverModalMap._stopMarkers.forEach(m => m.setMap(null));
-                        driverModalMap._stopMarkers = [];
-                    }
-                    if (driverModalMap._infoWindow) {
-                        driverModalMap._infoWindow.close();
-                        driverModalMap._infoWindow = null;
-                    }
-                }
-                renderDriverStops(activeModalDriverId);
-                // Clear historical stop list
-                renderHistoricalStops(activeModalDriverId);
-            }
-        }
-
-        function newTrack() {
-            if (!activeModalDriverId) return;
-            if (!confirm('Start a new track from your current location? The old track will be cleared.')) return;
-            const drv = drivers[activeModalDriverId];
-            // Clear both live and historical
-            driverTracks[activeModalDriverId] = [];
-            driverStopEvents[activeModalDriverId] = [];
-            driverStopState[activeModalDriverId] = null;
-            if (isHistoricalMode[activeModalDriverId]) {
-                historicalTracks[activeModalDriverId] = [];
-                historicalStopEvents[activeModalDriverId] = [];
-                isHistoricalMode[activeModalDriverId] = false;
-            }
-            if (drv && drv.lastLocation) {
-                driverTracks[activeModalDriverId].push({
-                    lat: drv.lastLocation.lat,
-                    lng: drv.lastLocation.lng,
-                    timestamp: drv.lastLocation.updatedAt || Date.now()
-                });
-            }
-            if (driverModalMap) {
-                if (driverModalMap._trackPolyline) {
-                    driverModalMap._trackPolyline.setMap(null);
-                    driverModalMap._trackPolyline = null;
-                }
-                if (driverModalMap._stopMarkers) {
-                    driverModalMap._stopMarkers.forEach(m => m.setMap(null));
-                    driverModalMap._stopMarkers = [];
-                }
-                if (driverModalMap._infoWindow) {
-                    driverModalMap._infoWindow.close();
-                    driverModalMap._infoWindow = null;
-                }
-                updateDriverModalTrack(activeModalDriverId);
-            }
-            renderDriverStops(activeModalDriverId);
-            // Clear historical stop list
-            renderHistoricalStops(activeModalDriverId);
-        }
+        // ===== CLEAR TRACK / NEW TRACK (removed) =====
+        // The functions clearTrack and newTrack have been removed.
 
         // ===== HISTORICAL TRACK FUNCTIONS =====
         async function loadHistoricalTrack() {
@@ -2999,16 +2922,41 @@
             document.getElementById('historyStart').value = localStart.toISOString().slice(0,16);
             document.getElementById('historyEnd').value = localEnd.toISOString().slice(0,16);
 
-            // Update modal extra info
+            // Update modal header with status, address, battery
+            const statusHeader = document.getElementById('driverStatusHeader');
+            const addressHeader = document.getElementById('driverAddressHeader');
+            const batteryHeader = document.getElementById('modalBatteryHeader');
+            const alarmHeader = document.getElementById('modalAlarmHeader');
+
+            // Set status
+            const devId = drv?.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
+            const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
+            let lastUp = '—';
+            if (drv?.lastLocation?.updatedAt) {
+                const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = Math.round(totalMinutes % 60);
+                let formatted = '';
+                if (hours > 0) formatted += `${hours} H`;
+                if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
+                if (!formatted) formatted = '0 Min';
+                lastUp = formatted;
+            }
+            statusHeader.textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
+
+            // Set address (will be updated after reverse geocode)
+            addressHeader.textContent = '📍 Loading address...';
+
+            // Set battery
             if (drv) {
                 let batteryVal = drv.battery || 0;
                 let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
-                document.getElementById('modalBattery').textContent = `🔋 ${batteryVal}%`;
-                document.getElementById('modalBattery').className = batteryColor;
+                batteryHeader.textContent = `🔋 ${batteryVal}%`;
+                batteryHeader.className = batteryColor;
                 if (drv.hasAlarm) {
-                    document.getElementById('modalAlarm').style.display = 'inline';
+                    alarmHeader.style.display = 'inline';
                 } else {
-                    document.getElementById('modalAlarm').style.display = 'none';
+                    alarmHeader.style.display = 'none';
                 }
             }
 
@@ -3078,14 +3026,13 @@
 
                     reverseGeocode(drv.lastLocation.lat, drv.lastLocation.lng)
                         .then(address => {
-                            document.getElementById('driverAddress').innerHTML =
-                                `📍 <a href="https://www.google.com/maps?q=${drv.lastLocation.lat},${drv.lastLocation.lng}" target="_blank" style="color:var(--accent); text-decoration:underline;">${address}</a>`;
+                            addressHeader.innerHTML = `📍 <a href="https://www.google.com/maps?q=${drv.lastLocation.lat},${drv.lastLocation.lng}" target="_blank" style="color:var(--accent); text-decoration:underline;">${address}</a>`;
                         })
                         .catch(() => {
-                            document.getElementById('driverAddress').innerHTML = '📍 <span style="color:var(--muted);">Address unavailable</span>';
+                            addressHeader.textContent = '📍 Address unavailable';
                         });
                 } else {
-                    document.getElementById('driverAddress').innerHTML = '';
+                    addressHeader.textContent = '';
                 }
 
                 // Assigned stops
@@ -3122,22 +3069,6 @@
                 updateDriverModalTrack(driverId);
 
                 renderDriverStops(driverId);
-
-                const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
-                const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
-                let lastUp = '—';
-                if (drv?.lastLocation?.updatedAt) {
-                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = Math.round(totalMinutes % 60);
-                    let formatted = '';
-                    if (hours > 0) formatted += `${hours} H`;
-                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
-                    if (!formatted) formatted = '0 Min';
-                    lastUp = formatted;
-                }
-                document.getElementById('driverLastUpdate').textContent =
-                    `Status: ${status.label} · Last update: ${lastUp} ago`;
 
                 // Update stop count with ETA/distance if available
                 let stopCountText = `${assigned.length} stops`;
