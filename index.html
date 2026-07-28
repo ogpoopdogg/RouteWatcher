@@ -1459,7 +1459,6 @@
             gap: 4px;
             padding: 4px 10px;
             border-radius: 12px;
-            background: var(--card2);
             border: 1px solid var(--border);
             cursor: pointer;
             font-size: 12px;
@@ -1619,8 +1618,7 @@
                     <button class="close-modal-btn" onclick="closeDriverModal()">✕</button>
                 </div>
             </div>
-            <div class="modal-map"><div id="driver-map"></div></div>
-            <!-- History query with both Show Track and Clear Track buttons + simplification slider -->
+            <!-- History query moved up -->
             <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:0; padding-top:8px; display:flex; flex-direction:column; gap:8px;">
                 <div style="display:flex; flex-wrap:nowrap; gap:8px; align-items:center; overflow-x:auto;">
                     <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
@@ -1631,7 +1629,6 @@
                     <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Track</button>
                     <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
                 </div>
-                <!-- Simplification tolerance slider -->
                 <div class="simplify-slider">
                     <label for="simplifyTolerance">Number of Meters per GPS Point</label>
                     <input type="range" id="simplifyTolerance" min="0" max="10000" value="15" step="1">
@@ -1639,10 +1636,15 @@
                     <span style="font-size:11px; color:var(--muted);">(0 = off)</span>
                 </div>
             </div>
-            <!-- Historical stop list -->
-            <div id="historicalStopList" style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 0;"></div>
-            <div id="driverStopCount" style="text-align:center; padding:4px 0; font-weight:600;">0 stops</div>
-            <div class="modal-stops" id="driverModalStops"></div>
+            <!-- Row for map and manifest -->
+            <div style="display:flex; flex-direction:row; gap:16px; flex:1; min-height:0; margin-top:8px;">
+                <div class="modal-map" style="flex:1; min-height:300px;"><div id="driver-map"></div></div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:8px; min-width:0; overflow-y:auto; max-height:400px;">
+                    <div id="driverStopCount" style="text-align:center; padding:4px 0; font-weight:600;">0 stops</div>
+                    <div id="historicalStopList" style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 0;"></div>
+                    <div class="modal-stops" id="driverModalStops" style="flex:1; overflow-y:auto;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2453,17 +2455,17 @@
                 document.getElementById('overlayStatus').textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
                 document.getElementById('overlayStatus').className = status.class;
 
-                // Address
+                // Address - make it a link
                 if (drv.lastLocation) {
                     reverseGeocode(drv.lastLocation.lat, drv.lastLocation.lng)
                         .then(address => {
-                            document.getElementById('overlayAddress').textContent = `📍 ${address}`;
+                            document.getElementById('overlayAddress').innerHTML = `📍 <a href="https://www.google.com/maps?q=${drv.lastLocation.lat},${drv.lastLocation.lng}" target="_blank" style="color:var(--accent); text-decoration:underline;">${address}</a>`;
                         })
                         .catch(() => {
-                            document.getElementById('overlayAddress').textContent = '📍 Address unavailable';
+                            document.getElementById('overlayAddress').innerHTML = '📍 Address unavailable';
                         });
                 } else {
-                    document.getElementById('overlayAddress').textContent = '📍 No location';
+                    document.getElementById('overlayAddress').innerHTML = '📍 No location';
                 }
 
                 // Battery
@@ -2528,6 +2530,14 @@
                     if (mins > 0) durStr += `${mins}m `;
                     durStr += `${secs}s`;
                     div.textContent = `⏸ ${durStr}`;
+
+                    // Apply background color based on duration
+                    let bgColor = 'transparent';
+                    if (event.duration >= 1500) bgColor = 'rgba(255,0,0,0.6)'; // > 25 min
+                    else if (event.duration >= 600) bgColor = 'rgba(255,165,0,0.6)'; // > 10 min
+                    else if (event.duration >= 300) bgColor = 'rgba(255,255,0,0.4)'; // > 5 min
+                    div.style.background = bgColor;
+
                     div.addEventListener('click', function() {
                         // Zoom to this stop on the overlay map
                         if (historicalMapInstance) {
@@ -2636,6 +2646,32 @@
             }
             historicalArrowMarkers = arrowMarkers;
 
+            // ---- ADD MANIFEST STOPS (green markers) ----
+            // Get assigned stops for this driver
+            const assignedStops = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId && s.lat && s.lng);
+            assignedStops.forEach(([id, s]) => {
+                const isCompleted = s.status === 'completed';
+                const marker = new google.maps.Marker({
+                    position: { lat: s.lat, lng: s.lng },
+                    map: historicalMapInstance,
+                    label: {
+                        text: s.name || 'Stop',
+                        color: isCompleted ? '#88a888' : '#00b32d',
+                        fontSize: '11px',
+                        className: 'driver-map-label'
+                    },
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 12,
+                        fillColor: isCompleted ? '#88a888' : '#22c55e',
+                        fillOpacity: isCompleted ? 0.7 : 1,
+                        strokeColor: 'white',
+                        strokeWeight: 2
+                    }
+                });
+                historicalStopMarkers.push(marker);
+            });
+
             // Map click listener to close tooltip
             if (historicalMapClickHandler) {
                 google.maps.event.removeListener(historicalMapClickHandler);
@@ -2681,12 +2717,20 @@
         let arrowTooltipElement = null;
         let currentTooltipMarker = null;
 
+        function formatTimestampTo12h(timestamp) {
+            const date = new Date(timestamp);
+            const hours = date.getHours();
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12;
+            return `${hour12}:${minutes} ${ampm}`;
+        }
+
         function showArrowTooltip(marker, latLng) {
             closeArrowTooltip();
             const timestamp = marker.get('timestamp');
             if (!timestamp) return;
-            const date = new Date(timestamp);
-            const timeStr = date.toISOString().replace('T', ' ').slice(0, 19);
+            const timeStr = formatTimestampTo12h(timestamp);
             // Create custom tooltip DOM element
             const tooltip = document.createElement('div');
             tooltip.className = 'arrow-tooltip';
@@ -2744,7 +2788,7 @@
             events.forEach((event, index) => {
                 const div = document.createElement('div');
                 let bgColor = 'var(--card2)';
-                if (event.duration >= 1800) bgColor = 'rgba(255,0,0,0.25)';
+                if (event.duration >= 1500) bgColor = 'rgba(255,0,0,0.25)';
                 else if (event.duration >= 600) bgColor = 'rgba(255,165,0,0.25)';
                 else if (event.duration >= 300) bgColor = 'rgba(255,255,0,0.25)';
                 div.style.cssText = `display:inline-flex; align-items:center; gap:4px; background:${bgColor}; padding:4px 10px; border-radius:12px; border:1px solid var(--border); cursor:pointer; font-size:12px;`;
