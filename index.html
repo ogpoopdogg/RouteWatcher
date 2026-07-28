@@ -1381,6 +1381,155 @@
         body.modal-open {
             overflow: hidden;
         }
+
+        /* Full-screen historical overlay */
+        #historicalOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #0b0b14;
+            z-index: 99999;
+            flex-direction: column;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        #historicalOverlay .overlay-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(6px);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 1;
+        }
+        #historicalOverlay .overlay-header .header-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        #historicalOverlay .overlay-header .header-info .status-online { color: #2ecc71; }
+        #historicalOverlay .overlay-header .header-info .status-standby { color: #f1c40f; }
+        #historicalOverlay .overlay-header .header-info .status-offline { color: #e74c3c; }
+        #historicalOverlay .overlay-header .header-info .address { color: var(--text); }
+        #historicalOverlay .overlay-header .header-info .battery { font-weight: 600; }
+        #historicalOverlay .overlay-header .close-overlay {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 32px;
+            cursor: pointer;
+            padding: 4px 12px;
+            line-height: 1;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        #historicalOverlay .overlay-header .close-overlay:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        #historicalOverlay .overlay-map {
+            flex: 1 1 auto;
+            min-height: 0;
+            position: relative;
+        }
+        #historicalOverlay .overlay-map #historical-map {
+            width: 100%;
+            height: 100%;
+        }
+        #historicalOverlay .overlay-stop-list {
+            flex-shrink: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-content: flex-start;
+        }
+        #historicalOverlay .overlay-stop-list .stop-event {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--card2);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        #historicalOverlay .overlay-stop-list .stop-event:hover {
+            background: var(--accent);
+            color: #0b0b14;
+        }
+        #historicalOverlay .overlay-stop-list .stop-event.active {
+            background: var(--accent);
+            color: #0b0b14;
+            border-color: var(--accent);
+        }
+        body.light-mode #historicalOverlay {
+            background: #f0f0f0;
+        }
+        body.light-mode #historicalOverlay .overlay-header {
+            background: rgba(255,255,255,0.9);
+            border-bottom: 1px solid #ccc;
+        }
+        body.light-mode #historicalOverlay .overlay-stop-list {
+            background: rgba(255,255,255,0.9);
+            border-top: 1px solid #ccc;
+        }
+        body.light-mode #historicalOverlay .overlay-stop-list .stop-event {
+            background: #fff;
+            border-color: #ccc;
+        }
+        body.light-mode #historicalOverlay .overlay-header .close-overlay {
+            color: #000;
+        }
+        body.light-mode #historicalOverlay .overlay-header .header-info .address {
+            color: #000;
+        }
+
+        /* Custom tooltip for arrows */
+        .arrow-tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            transform: translate(-50%, -100%);
+            margin-top: -10px;
+            white-space: nowrap;
+            z-index: 10;
+        }
+        .arrow-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid rgba(0,0,0,0.85);
+        }
+        body.light-mode .arrow-tooltip {
+            background: #fff;
+            color: #000;
+            border-color: #ccc;
+        }
+        body.light-mode .arrow-tooltip::after {
+            border-top-color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -1485,7 +1634,7 @@
                 <!-- Simplification tolerance slider -->
                 <div class="simplify-slider">
                     <label for="simplifyTolerance">Number of Meters per GPS Point</label>
-                    <input type="range" id="simplifyTolerance" min="0" max="50" value="15" step="1">
+                    <input type="range" id="simplifyTolerance" min="0" max="10000" value="15" step="1">
                     <span class="tolerance-value" id="toleranceDisplay">15m</span>
                     <span style="font-size:11px; color:var(--muted);">(0 = off)</span>
                 </div>
@@ -1539,7 +1688,21 @@
         </div>
     </div>
 
-    <!-- No more custom tooltip – we use InfoWindow now -->
+    <!-- Full-screen historical overlay -->
+    <div id="historicalOverlay">
+        <div class="overlay-header">
+            <div class="header-info" id="overlayHeaderInfo">
+                <span id="overlayStatus">Status: —</span>
+                <span class="address" id="overlayAddress">📍 —</span>
+                <span id="overlayBattery">🔋 —</span>
+            </div>
+            <button class="close-overlay" onclick="closeHistoricalOverlay()">✕</button>
+        </div>
+        <div class="overlay-map">
+            <div id="historical-map"></div>
+        </div>
+        <div class="overlay-stop-list" id="overlayStopList"></div>
+    </div>
 
     <!-- Firebase + Google Maps -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1579,6 +1742,7 @@
             const style = isLight ? [] : mapStyles;
             if (map) map.setOptions({ styles: style });
             if (driverModalMap) driverModalMap.setOptions({ styles: style });
+            if (window.historicalMapInstance) historicalMapInstance.setOptions({ styles: style });
         }
 
         if (localStorage.getItem('ec_theme') === 'light') {
@@ -1644,6 +1808,19 @@
         let historicalTracks = {}; // same format as driverTracks
         let historicalStopEvents = {}; // same format as driverStopEvents
         let isHistoricalMode = {}; // { driverId: true/false }
+
+        // For incremental auto-complete
+        let retroAutoCompleteInterval = null;
+
+        // For full-screen overlay
+        let historicalMapInstance = null;
+        let historicalOverlayOpen = false;
+        let historicalOverlayDriverId = null;
+        let historicalPolyline = null;
+        let historicalArrowMarkers = [];
+        let historicalStopMarkers = [];
+        let historicalTooltip = null;
+        let historicalMapClickHandler = null;
 
         const PAJ_BASE = 'https://connect.paj-gps.de/api/v1';
         const STANDBY_THRESHOLD = 15 * 60 * 1000;
@@ -2047,10 +2224,15 @@
                 driverModalMap._infoWindow = null;
             }
 
+            // Only draw if historical mode is active
+            if (!useHistorical) {
+                return;
+            }
+
             if (track.length < 2) return;
 
             const path = track.map(p => ({ lat: p.lat, lng: p.lng }));
-            const polyColor = useHistorical ? '#ff6b35' : '#00d4ff';
+            const polyColor = '#ff6b35';
             driverModalMap._trackPolyline = new google.maps.Polyline({
                 path: path,
                 geodesic: true,
@@ -2153,7 +2335,8 @@
                 const rawTrack = points.map(p => ({
                     lat: p.lat,
                     lng: p.lng,
-                    timestamp: p.dateunix * 1000
+                    timestamp: p.dateunix * 1000,
+                    heading: p.direction || null
                 }));
 
                 // ---- DETECT STOPS ON RAW TRACK ----
@@ -2208,11 +2391,8 @@
                 historicalStopEvents[activeModalDriverId] = stops;
                 isHistoricalMode[activeModalDriverId] = true;
 
-                // Update the modal map (no arrows)
-                updateDriverModalTrack(activeModalDriverId);
-
-                // Render the historical stop list
-                renderHistoricalStops(activeModalDriverId);
+                // Instead of updating driver modal map, open full-screen overlay
+                openFullScreenHistoricalOverlay(activeModalDriverId);
 
                 // Calculate distance
                 let totalDist = 0;
@@ -2233,7 +2413,7 @@
                 isHistoricalMode[activeModalDriverId] = false;
                 historicalTracks[activeModalDriverId] = [];
                 historicalStopEvents[activeModalDriverId] = [];
-                // Redraw with live track
+                // Redraw with live track (which is now empty)
                 updateDriverModalTrack(activeModalDriverId);
                 document.getElementById('historyResult').textContent = 'Historical track cleared.';
                 // Clear the stop list
@@ -2241,9 +2421,317 @@
             } else {
                 document.getElementById('historyResult').textContent = 'No historical track to clear.';
             }
+            // Also close overlay if open
+            if (historicalOverlayOpen) {
+                closeHistoricalOverlay();
+            }
         }
 
-        // ===== RENDER HISTORICAL STOP LIST =====
+        // ===== FULL-SCREEN HISTORICAL OVERLAY =====
+        function openFullScreenHistoricalOverlay(driverId) {
+            const overlay = document.getElementById('historicalOverlay');
+            const mapContainer = document.getElementById('historical-map');
+            const stopList = document.getElementById('overlayStopList');
+            const headerInfo = document.getElementById('overlayHeaderInfo');
+
+            // Populate header with live driver info
+            const drv = drivers[driverId];
+            if (drv) {
+                const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
+                const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
+                let lastUp = '—';
+                if (drv.lastLocation?.updatedAt) {
+                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = Math.round(totalMinutes % 60);
+                    let formatted = '';
+                    if (hours > 0) formatted += `${hours} H`;
+                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
+                    if (!formatted) formatted = '0 Min';
+                    lastUp = formatted;
+                }
+                document.getElementById('overlayStatus').textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
+                document.getElementById('overlayStatus').className = status.class;
+
+                // Address
+                if (drv.lastLocation) {
+                    reverseGeocode(drv.lastLocation.lat, drv.lastLocation.lng)
+                        .then(address => {
+                            document.getElementById('overlayAddress').textContent = `📍 ${address}`;
+                        })
+                        .catch(() => {
+                            document.getElementById('overlayAddress').textContent = '📍 Address unavailable';
+                        });
+                } else {
+                    document.getElementById('overlayAddress').textContent = '📍 No location';
+                }
+
+                // Battery
+                let batteryVal = drv.battery || 0;
+                let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
+                document.getElementById('overlayBattery').textContent = `🔋 ${batteryVal}%`;
+                document.getElementById('overlayBattery').className = batteryColor;
+            }
+
+            // Initialize map if not already
+            if (!historicalMapInstance) {
+                const isLight = document.body.classList.contains('light-mode');
+                historicalMapInstance = new google.maps.Map(mapContainer, {
+                    center: drv?.lastLocation ? { lat: drv.lastLocation.lat, lng: drv.lastLocation.lng } : { lat: 49.8425, lng: -99.9497 },
+                    zoom: 13,
+                    styles: isLight ? [] : mapStyles,
+                    gestureHandling: 'greedy',
+                    mapTypeControl: false
+                });
+                // Fit control
+                const fitControlDiv = document.createElement('div');
+                fitControlDiv.innerHTML = `
+                    <button class="map-fit-btn" aria-label="Fit all stops">
+                        <svg viewBox="0 0 24 24"><path d="M3 3v6h2V5h4V3H3zm16 0v6h2V3h-6v2h4zM3 21v-6h2v4h4v2H3zm16 0v-6h2v6h-6v-2h4z"/><rect x="5" y="5" width="14" height="14" rx="1" stroke="currentColor" fill="none"/></svg>
+                    </button>
+                `;
+                const fitButton = fitControlDiv.querySelector('.map-fit-btn');
+                fitButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (historicalTracks[driverId] && historicalTracks[driverId].length > 0) {
+                        const bounds = new google.maps.LatLngBounds();
+                        historicalTracks[driverId].forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
+                        historicalMapInstance.fitBounds(bounds);
+                    }
+                });
+                historicalMapInstance.controls[google.maps.ControlPosition.BOTTOM_RIGHT].push(fitControlDiv);
+            } else {
+                // Reuse map, but clear overlays
+                clearHistoricalOverlayMap();
+                if (drv?.lastLocation) {
+                    historicalMapInstance.setCenter({ lat: drv.lastLocation.lat, lng: drv.lastLocation.lng });
+                    historicalMapInstance.setZoom(13);
+                }
+            }
+
+            // Draw the historical track on the overlay map
+            drawHistoricalTrackOnOverlay(driverId);
+
+            // Populate stop list
+            const events = historicalStopEvents[driverId] || [];
+            stopList.innerHTML = '';
+            if (events.length === 0) {
+                stopList.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px 0;">No stops detected.</div>';
+            } else {
+                events.forEach((event, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'stop-event';
+                    div.dataset.index = index;
+                    const mins = Math.floor(event.duration / 60);
+                    const secs = Math.round(event.duration % 60);
+                    let durStr = '';
+                    if (mins > 0) durStr += `${mins}m `;
+                    durStr += `${secs}s`;
+                    div.textContent = `⏸ ${durStr}`;
+                    div.addEventListener('click', function() {
+                        // Zoom to this stop on the overlay map
+                        if (historicalMapInstance) {
+                            historicalMapInstance.panTo({ lat: event.lat, lng: event.lng });
+                            historicalMapInstance.setZoom(18);
+                        }
+                        // Highlight this item
+                        document.querySelectorAll('.overlay-stop-list .stop-event').forEach(el => el.classList.remove('active'));
+                        div.classList.add('active');
+                    });
+                    stopList.appendChild(div);
+                });
+            }
+
+            // Show overlay
+            overlay.style.display = 'flex';
+            historicalOverlayOpen = true;
+            historicalOverlayDriverId = driverId;
+
+            // Resize map after display
+            setTimeout(() => {
+                if (historicalMapInstance) {
+                    google.maps.event.trigger(historicalMapInstance, 'resize');
+                    // Fit bounds to track
+                    if (historicalTracks[driverId] && historicalTracks[driverId].length > 0) {
+                        const bounds = new google.maps.LatLngBounds();
+                        historicalTracks[driverId].forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
+                        historicalMapInstance.fitBounds(bounds);
+                    }
+                }
+            }, 100);
+        }
+
+        function drawHistoricalTrackOnOverlay(driverId) {
+            if (!historicalMapInstance) return;
+            const track = historicalTracks[driverId] || [];
+            if (track.length < 2) return;
+
+            // Clear previous overlays
+            clearHistoricalOverlayMap();
+
+            // Draw polyline
+            const path = track.map(p => ({ lat: p.lat, lng: p.lng }));
+            historicalPolyline = new google.maps.Polyline({
+                path: path,
+                geodesic: true,
+                strokeColor: '#ff6b35',
+                strokeOpacity: 0.8,
+                strokeWeight: 4,
+                map: historicalMapInstance
+            });
+
+            // Draw arrows for kept points (all points after simplification)
+            // Determine which points to show based on slider value (already simplified)
+            // But we also need to apply distance threshold again? Actually the track is already simplified by Douglas-Peucker.
+            // The user can adjust the slider, but that's already applied in loadHistoricalTrack.
+            // We'll just use the track as is.
+            // For arrows, we need direction. We'll use bearing between consecutive points, or heading if available.
+            const arrowMarkers = [];
+            for (let i = 0; i < track.length; i++) {
+                const pt = track[i];
+                let heading = pt.heading;
+                if (heading === null || heading === undefined) {
+                    // calculate bearing to next point
+                    if (i < track.length - 1) {
+                        const next = track[i+1];
+                        heading = google.maps.geometry.spherical.computeHeading(
+                            new google.maps.LatLng(pt.lat, pt.lng),
+                            new google.maps.LatLng(next.lat, next.lng)
+                        );
+                    } else {
+                        // use previous bearing
+                        if (i > 0) {
+                            const prev = track[i-1];
+                            heading = google.maps.geometry.spherical.computeHeading(
+                                new google.maps.LatLng(prev.lat, prev.lng),
+                                new google.maps.LatLng(pt.lat, pt.lng)
+                            );
+                        } else {
+                            heading = 0;
+                        }
+                    }
+                }
+                // Create arrow marker
+                const arrowMarker = new google.maps.Marker({
+                    position: { lat: pt.lat, lng: pt.lng },
+                    map: historicalMapInstance,
+                    icon: {
+                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                        scale: 6,
+                        fillColor: '#ff6b35',
+                        fillOpacity: 1,
+                        strokeColor: '#fff',
+                        strokeWeight: 1,
+                        rotation: heading
+                    },
+                    title: new Date(pt.timestamp).toLocaleString()
+                });
+                // Store timestamp in marker for tooltip
+                arrowMarker.set('timestamp', pt.timestamp);
+                // Click listener for tooltip
+                google.maps.event.addListener(arrowMarker, 'click', function(e) {
+                    showArrowTooltip(this, e.latLng);
+                });
+                arrowMarkers.push(arrowMarker);
+            }
+            historicalArrowMarkers = arrowMarkers;
+
+            // Map click listener to close tooltip
+            if (historicalMapClickHandler) {
+                google.maps.event.removeListener(historicalMapClickHandler);
+            }
+            historicalMapClickHandler = google.maps.event.addListener(historicalMapInstance, 'click', function() {
+                closeArrowTooltip();
+            });
+        }
+
+        function clearHistoricalOverlayMap() {
+            if (historicalPolyline) {
+                historicalPolyline.setMap(null);
+                historicalPolyline = null;
+            }
+            if (historicalArrowMarkers.length) {
+                historicalArrowMarkers.forEach(m => m.setMap(null));
+                historicalArrowMarkers = [];
+            }
+            if (historicalStopMarkers.length) {
+                historicalStopMarkers.forEach(m => m.setMap(null));
+                historicalStopMarkers = [];
+            }
+            closeArrowTooltip();
+        }
+
+        function closeHistoricalOverlay() {
+            const overlay = document.getElementById('historicalOverlay');
+            overlay.style.display = 'none';
+            historicalOverlayOpen = false;
+            // Clear historical data and reset modal map
+            if (historicalOverlayDriverId) {
+                // Clear track from overlay map
+                clearHistoricalOverlayMap();
+                // Also clear historical data from driver modal
+                clearHistoricalTrack();
+                historicalOverlayDriverId = null;
+            }
+            // Close any open tooltip
+            closeArrowTooltip();
+        }
+
+        // ===== ARROW TOOLTIP =====
+        let arrowTooltipElement = null;
+        let currentTooltipMarker = null;
+
+        function showArrowTooltip(marker, latLng) {
+            closeArrowTooltip();
+            const timestamp = marker.get('timestamp');
+            if (!timestamp) return;
+            const date = new Date(timestamp);
+            const timeStr = date.toISOString().replace('T', ' ').slice(0, 19);
+            // Create custom tooltip DOM element
+            const tooltip = document.createElement('div');
+            tooltip.className = 'arrow-tooltip';
+            tooltip.textContent = timeStr;
+            // Position it absolutely relative to the map container
+            const mapContainer = document.getElementById('historical-map');
+            const overlay = document.getElementById('historicalOverlay');
+            // Get pixel position of the marker on the map
+            const projection = historicalMapInstance.getProjection();
+            const point = projection.fromLatLngToPoint(latLng);
+            const mapBounds = historicalMapInstance.getBounds();
+            if (!mapBounds) return;
+            const mapDiv = historicalMapInstance.getDiv();
+            const mapWidth = mapDiv.offsetWidth;
+            const mapHeight = mapDiv.offsetHeight;
+            // Get the world coordinate of the bounds
+            const ne = mapBounds.getNorthEast();
+            const sw = mapBounds.getSouthWest();
+            const nePoint = projection.fromLatLngToPoint(ne);
+            const swPoint = projection.fromLatLngToPoint(sw);
+            const worldWidth = nePoint.x - swPoint.x;
+            const worldHeight = nePoint.y - swPoint.y;
+            const scaleX = mapWidth / worldWidth;
+            const scaleY = mapHeight / worldHeight;
+            const x = (point.x - swPoint.x) * scaleX;
+            const y = (point.y - swPoint.y) * scaleY;
+            // Position tooltip above the marker (centered)
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = (y - 10) + 'px'; // offset upward
+            // Append to map container (position relative)
+            mapContainer.style.position = 'relative';
+            mapContainer.appendChild(tooltip);
+            arrowTooltipElement = tooltip;
+            currentTooltipMarker = marker;
+        }
+
+        function closeArrowTooltip() {
+            if (arrowTooltipElement) {
+                arrowTooltipElement.remove();
+                arrowTooltipElement = null;
+            }
+            currentTooltipMarker = null;
+        }
+
+        // ===== RENDER HISTORICAL STOP LIST (in driver modal) =====
         function renderHistoricalStops(driverId) {
             const container = document.getElementById('historicalStopList');
             if (!container) return;
@@ -3354,6 +3842,44 @@
             driverStopEvents[driverId] = events;
         }
 
+        // ===== RETROACTIVE AUTO-COMPLETE =====
+        function runRetroactiveAutoComplete() {
+            // For each driver with deviceId, fetch from 6am today to now
+            const now = new Date();
+            const today6am = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0);
+            let fromTimestamp = Math.floor(today6am.getTime() / 1000);
+            // If current time is before 6am, set from to now (no data)
+            if (now < today6am) {
+                fromTimestamp = Math.floor(now.getTime() / 1000);
+            }
+
+            for (let [id, drv] of Object.entries(drivers)) {
+                if (!drv.deviceId || String(drv.deviceId).trim() === '') continue;
+                // Check if we have a lastTrackFetchTime; if so, use that as from? Actually we want to fetch from 6am, but we may already have some data.
+                // To avoid duplicates, we'll use lastTrackFetchTime if it exists and is after 6am, else use 6am.
+                let start = fromTimestamp;
+                if (drv.lastTrackFetchTime && drv.lastTrackFetchTime > fromTimestamp) {
+                    start = drv.lastTrackFetchTime;
+                }
+                // But we want to fetch from 6am to now on first load. So we'll use 6am regardless if no lastTrackFetchTime.
+                // If lastTrackFetchTime exists, we can incrementally fetch from that point.
+                // However, to ensure we process all points from 6am, we'll fetch from 6am to now for the first time, and then store lastTrackFetchTime.
+                // So we'll call fetchHistoricalDataSince with start = fromTimestamp (6am) for first time, but it will filter duplicates.
+                // Actually fetchHistoricalDataSince will fetch from start to now and only add new points.
+                // So we call it with the 6am timestamp.
+                fetchHistoricalDataSince(id, fromTimestamp);
+            }
+        }
+
+        function runIncrementalAutoComplete() {
+            // For each driver, fetch from lastTrackFetchTime to now
+            for (let [id, drv] of Object.entries(drivers)) {
+                if (!drv.deviceId || String(drv.deviceId).trim() === '') continue;
+                const lastFetch = drv.lastTrackFetchTime || Math.floor(Date.now()/1000) - 86400; // default 24h ago
+                fetchHistoricalDataSince(id, lastFetch);
+            }
+        }
+
         // ===== SETTINGS =====
         function openSettings() {
             document.getElementById('settingsModal').style.display = 'flex';
@@ -3541,14 +4067,14 @@
                 if (!dashboardLoaded) {
                     dashboardLoaded = true;
                     loadSavedDashboardState();
-                    // After loading saved state, fetch historical data for each driver with deviceId
+                    // Run retroactive auto-complete for all drivers
                     if (pajToken) {
-                        for (let [id, drv] of Object.entries(drivers)) {
-                            if (drv.deviceId && String(drv.deviceId).trim() !== '') {
-                                const lastFetch = drv.lastTrackFetchTime || null;
-                                fetchHistoricalDataSince(id, lastFetch);
-                            }
-                        }
+                        runRetroactiveAutoComplete();
+                        // Set interval for incremental auto-complete every 5 minutes
+                        if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
+                        retroAutoCompleteInterval = setInterval(() => {
+                            runIncrementalAutoComplete();
+                        }, 300000); // 5 minutes
                     }
                     // Try auto-load matching routes if not already done
                     if (Object.keys(availableRoutes).length > 0) {
@@ -3604,6 +4130,11 @@
                 const modal = document.getElementById('driverModal');
                 if (modal.style.display === 'flex') {
                     closeDriverModal();
+                    e.preventDefault();
+                }
+                // If overlay is open, close it
+                if (historicalOverlayOpen) {
+                    closeHistoricalOverlay();
                     e.preventDefault();
                 }
             }
