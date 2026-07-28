@@ -1836,6 +1836,9 @@
         // ETA/distance data per driver
         let driverEtaData = {};
 
+        // Flag to prevent auto-complete from starting multiple times
+        let autoCompleteStarted = false;
+
         function getDriversRef() { return db.ref('developer/dispatch_dashboard/drivers'); }
 
         function getMasterRef() { return db.ref('developer/dispatch_dashboard/master_config'); }
@@ -1917,6 +1920,13 @@
                     pajToken = token;
                     getMasterRef().update({ paj_token: token });
                     await fetchAllDevicePositions();
+                    // Start auto-completion if not already started
+                    if (pajToken && !autoCompleteStarted) {
+                        autoCompleteStarted = true;
+                        runRetroactiveAutoComplete();
+                        if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
+                        retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
+                    }
                 }
             } catch (e) { console.warn('PAJ auth error:', e); }
         }
@@ -2089,7 +2099,7 @@
         }
 
         function checkAutoComplete(driverId, lat, lng) {
-            const radius = proximityRadius;
+            const radius = Math.max(1, proximityRadius);
             let updated = false;
             for (let [stopId, stop] of Object.entries(loadedStops)) {
                 if (stop.assignedDriver !== driverId) continue;
@@ -2101,7 +2111,6 @@
                     stop.status = 'completed';
                     stop.completedAt = Date.now();
                     updated = true;
-                    // Update Firebase? No, we keep in memory only.
                 }
             }
             if (updated) {
@@ -2175,6 +2184,7 @@
         function processHistoricalAutoComplete(driverId, points) {
             if (!points || points.length === 0) return;
             let updated = false;
+            const radius = Math.max(1, proximityRadius);
             // Get pending stops for this driver
             const stopsToCheck = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId && s.status !== 'completed');
             if (stopsToCheck.length === 0) return;
@@ -2184,7 +2194,7 @@
                 for (const [stopId, stop] of stopsToCheck) {
                     if (stop.status === 'completed') continue;
                     const dist = haversineDistance(p.lat, p.lng, stop.lat, stop.lng);
-                    if (dist <= proximityRadius) {
+                    if (dist <= radius) {
                         stop.status = 'completed';
                         stop.completedAt = p.timestamp || Date.now();
                         updated = true;
@@ -2663,8 +2673,8 @@
                     icon: {
                         path: google.maps.SymbolPath.CIRCLE,
                         scale: 12,
-                        fillColor: isCompleted ? '#88a888' : '#22c55e',
-                        fillOpacity: isCompleted ? 0.7 : 1,
+                        fillColor: isCompleted ? '#999999' : '#22c55e',
+                        fillOpacity: isCompleted ? 0.5 : 1,
                         strokeColor: 'white',
                         strokeWeight: 2
                     }
@@ -2972,8 +2982,8 @@
                     icon: {
                         path: google.maps.SymbolPath.CIRCLE,
                         scale: 12,
-                        fillColor: isCompleted ? '#88a888' : '#22c55e',
-                        fillOpacity: isCompleted ? 0.7 : 1,
+                        fillColor: isCompleted ? '#999999' : '#22c55e',
+                        fillOpacity: isCompleted ? 0.5 : 1,
                         strokeColor: 'white',
                         strokeWeight: 2
                     }
@@ -3592,8 +3602,8 @@
                             icon: {
                                 path: google.maps.SymbolPath.CIRCLE,
                                 scale: 10,
-                                fillColor: isCompleted ? '#88a888' : '#2ecc71',
-                                fillOpacity: isCompleted ? 0.6 : 0.8,
+                                fillColor: isCompleted ? '#999999' : '#2ecc71',
+                                fillOpacity: isCompleted ? 0.5 : 0.8,
                                 strokeColor: '#fff',
                                 strokeWeight: 1
                             }
@@ -3750,6 +3760,7 @@
                 if (!response.ok) throw new Error('Failed to fetch historical data');
                 const data = await response.json();
                 const points = data.success || [];
+                console.log(`[${driverId}] Fetched ${points.length} historical points from ${from} to ${now}`);
                 if (points.length === 0) return;
 
                 // Process points: add to driverTracks and detect stops
@@ -4111,15 +4122,7 @@
                 if (!dashboardLoaded) {
                     dashboardLoaded = true;
                     loadSavedDashboardState();
-                    // Run retroactive auto-complete for all drivers
-                    if (pajToken) {
-                        runRetroactiveAutoComplete();
-                        // Set interval for incremental auto-complete every 5 minutes
-                        if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
-                        retroAutoCompleteInterval = setInterval(() => {
-                            runIncrementalAutoComplete();
-                        }, 300000); // 5 minutes
-                    }
+                    // auto-completion is now started from the master config callback
                     // Try auto-load matching routes if not already done
                     if (Object.keys(availableRoutes).length > 0) {
                         autoLoadMatchingRoutes();
@@ -4156,6 +4159,13 @@
                     if (!localStorage.getItem('ec_map_visible')) {
                         localStorage.setItem('ec_map_visible', 'false');
                     }
+                }
+                // Start auto-completion if pajToken is available and not already started
+                if (pajToken && !autoCompleteStarted) {
+                    autoCompleteStarted = true;
+                    runRetroactiveAutoComplete();
+                    if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
+                    retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
                 }
             }).catch(() => {
                 getMasterRef().set({ paj_email: '', paj_password: '', paj_token: '', proximity_radius: 50 });
