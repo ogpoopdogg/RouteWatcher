@@ -2072,7 +2072,7 @@
             }
 
             // Check auto-completion (live)
-            checkAutoComplete(driverId, lat, lng);
+            checkAutoComplete(driverId, lat, lng, timestamp);
         }
 
         function checkStopDetection(driverId, lat, lng, timestamp) {
@@ -2098,7 +2098,7 @@
             }
         }
 
-        function checkAutoComplete(driverId, lat, lng) {
+        function checkAutoComplete(driverId, lat, lng, timestamp) {
             const radius = Math.max(1, proximityRadius);
             let updated = false;
             for (let [stopId, stop] of Object.entries(loadedStops)) {
@@ -2109,7 +2109,7 @@
                 if (dist <= radius) {
                     // Auto-complete this stop
                     stop.status = 'completed';
-                    stop.completedAt = Date.now();
+                    stop.completedAt = timestamp || Date.now();
                     updated = true;
                 }
             }
