@@ -2206,7 +2206,6 @@
                 }
             }
             if (updated) {
-                // Update UI and save state
                 renderStopList();
                 updateMapMarkers();
                 saveDashboardState();
@@ -2358,7 +2357,7 @@
                 const rawTrack = points.map(p => ({
                     lat: p.lat,
                     lng: p.lng,
-                    timestamp: p.dateunix * 1000,
+                    timestamp: p.dateunix ? p.dateunix * 1000 : Date.now(),
                     heading: p.direction || null
                 }));
 
@@ -3790,17 +3789,25 @@
                 // Filter out points that are already in the track (prevent duplicates)
                 const existingTimestamps = new Set(driverTracks[driverId].map(p => p.timestamp));
                 const newPoints = points.filter(p => {
-                    const ts = p.dateunix * 1000;
+                    const ts = p.dateunix ? p.dateunix * 1000 : Date.now();
                     return !existingTimestamps.has(ts);
                 });
 
                 if (newPoints.length === 0) return;
 
+                // Build raw track with timestamp guard
+                const rawTrack = newPoints.map(p => ({
+                    lat: p.lat,
+                    lng: p.lng,
+                    timestamp: p.dateunix ? p.dateunix * 1000 : Date.now(),
+                    heading: p.direction || null
+                }));
+
                 // Add new points to track
-                for (const p of newPoints) {
+                for (const p of rawTrack) {
                     const lat = p.lat;
                     const lng = p.lng;
-                    const ts = p.dateunix * 1000;
+                    const ts = p.timestamp;
                     if (!isNaN(lat) && !isNaN(lng)) {
                         driverTracks[driverId].push({ lat, lng, timestamp: ts });
                         // Also update lastLocation for this driver if this is the newest point
@@ -3814,7 +3821,7 @@
                 driverTracks[driverId].sort((a, b) => a.timestamp - b.timestamp);
 
                 // Run historical auto-complete on the new points before rebuilding stops
-                processHistoricalAutoComplete(driverId, newPoints);
+                processHistoricalAutoComplete(driverId, rawTrack);
 
                 // Re-detect stop events from the entire track (simplified: run stop detection on all points)
                 // We'll just scan the track and build stop events
