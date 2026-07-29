@@ -2212,6 +2212,13 @@
             }
         }
 
+        // ===== RE-SCAN HISTORICAL TRACKS FOR A DRIVER =====
+        function reScanHistoricalTracksForDriver(driverId) {
+            const track = driverTracks[driverId] || [];
+            if (track.length === 0) return;
+            processHistoricalAutoComplete(driverId, track);
+        }
+
         // ===== DRIVER MODAL TRACK (no arrows, only stops with InfoWindow) =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
@@ -3276,6 +3283,12 @@
                 // Update each driver modal if open
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
                 saveDashboardState();
+
+                // Re-scan historical tracks for each driver that has stops
+                const driverIds = new Set(Object.values(newStops).map(s => s.assignedDriver).filter(Boolean));
+                driverIds.forEach(did => {
+                    reScanHistoricalTracksForDriver(did);
+                });
             });
         }
 
