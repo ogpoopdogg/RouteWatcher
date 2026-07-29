@@ -3339,8 +3339,18 @@
             empty.style.display = 'none';
 
             entries.sort((a, b) => {
-                if (a[1].status === 'completed' && b[1].status !== 'completed') return 1;
-                if (a[1].status !== 'completed' && b[1].status === 'completed') return -1;
+                const aCompleted = a[1].status === 'completed';
+                const bCompleted = b[1].status === 'completed';
+                if (aCompleted && !bCompleted) return -1;
+                if (!aCompleted && bCompleted) return 1;
+                // both completed or both not completed
+                if (aCompleted && bCompleted) {
+                    // sort by completedAt ascending
+                    const aTime = a[1].completedAt || 0;
+                    const bTime = b[1].completedAt || 0;
+                    return aTime - bTime;
+                }
+                // both not completed: sort by order
                 return (a[1].order || 0) - (b[1].order || 0);
             });
 
