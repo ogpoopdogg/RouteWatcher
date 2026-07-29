@@ -3140,6 +3140,9 @@
             } else {
                 btn.classList.add('map-open');
                 localStorage.setItem('ec_map_visible', 'true');
+                if (!mapInitialized) {
+                    initMap();
+                }
                 if (map) setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
             }
         }
