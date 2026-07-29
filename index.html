@@ -1535,6 +1535,116 @@
         body.light-mode .arrow-tooltip::after {
             border-top-color: #fff;
         }
+
+        /* Controls for historical overlay map */
+        #historicalMapControls {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 140px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        #historicalMapControls .control-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #historicalMapControls .control-row .gps-btn {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        #historicalMapControls .control-row .gps-btn.active {
+            background: #2ecc71;
+            border-color: #2ecc71;
+            color: #0b0b14;
+        }
+        #historicalMapControls .control-row .gps-btn:hover {
+            background: #2a2a3e;
+            border-color: var(--accent);
+        }
+        #historicalMapControls .control-row .gps-btn.active:hover {
+            background: #27ae60;
+            border-color: #27ae60;
+        }
+        #historicalMapControls .slider-row {
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        #historicalMapControls .slider-row.visible {
+            display: flex;
+        }
+        #historicalMapControls .slider-row label {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        #historicalMapControls .slider-row input[type="range"] {
+            flex: 1;
+            min-width: 60px;
+            accent-color: var(--accent);
+            background: var(--border);
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            border-radius: 4px;
+            outline: none;
+        }
+        #historicalMapControls .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+        #historicalMapControls .slider-row input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+        }
+        #historicalMapControls .slider-row .tolerance-value {
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+            color: var(--text);
+        }
+        body.light-mode #historicalMapControls {
+            background: rgba(255,255,255,0.9);
+            border-color: #ccc;
+        }
+        body.light-mode #historicalMapControls .control-row .gps-btn {
+            background: #f5f5f5;
+            border-color: #ccc;
+            color: #000;
+        }
+        body.light-mode #historicalMapControls .control-row .gps-btn.active {
+            background: #2ecc71;
+            border-color: #2ecc71;
+            color: #fff;
+        }
+        body.light-mode #historicalMapControls .slider-row input[type="range"] {
+            background: #ddd;
+        }
     </style>
 </head>
 <body>
@@ -1560,6 +1670,9 @@
                 <span class="badge">LIVE</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
+                <button class="gear-btn" onclick="location.reload(true);" title="Refresh page">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                </button>
                 <button class="gear-btn" onclick="openSettings()" title="Settings">
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
                 </button>
@@ -1634,12 +1747,6 @@
                     <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">📊 Show Track</button>
                     <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Track</button>
                     <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
-                </div>
-                <div class="simplify-slider">
-                    <label for="simplifyTolerance">Number of Meters per GPS Point</label>
-                    <input type="range" id="simplifyTolerance" min="0" max="10000" value="800" step="1">
-                    <span class="tolerance-value" id="toleranceDisplay">800m</span>
-                    <span style="font-size:11px; color:var(--muted);">(0 = off)</span>
                 </div>
             </div>
             <!-- Row for map and manifest -->
@@ -1816,6 +1923,7 @@
         let historicalTracks = {}; // same format as driverTracks
         let historicalStopEvents = {}; // same format as driverStopEvents
         let isHistoricalMode = {}; // { driverId: true/false }
+        let historicalRawTracks = {}; // store raw unsimplified points for re-simplification
 
         // For incremental auto-complete
         let retroAutoCompleteInterval = null;
@@ -1829,6 +1937,7 @@
         let historicalStopMarkers = [];
         let historicalTooltip = null;
         let historicalMapClickHandler = null;
+        let gpsOn = false; // GPS toggle state for overlay
 
         const PAJ_BASE = 'https://connect.paj-gps.de/api/v1';
         const STANDBY_THRESHOLD = 15 * 60 * 1000;
@@ -2340,10 +2449,13 @@
             const resultEl = document.getElementById('historyResult');
             resultEl.textContent = 'Loading track...';
 
-            // Get simplification tolerance from slider
-            const toleranceSlider = document.getElementById('simplifyTolerance');
-            const toleranceMeters = parseFloat(toleranceSlider.value);
-            document.getElementById('toleranceDisplay').textContent = toleranceMeters + 'm';
+            // Get simplification tolerance from the overlay slider (if available) else default 800
+            let toleranceMeters = 800;
+            const slider = document.getElementById('historicalSimplifyTolerance');
+            if (slider) {
+                toleranceMeters = parseFloat(slider.value);
+            }
+            document.getElementById('toleranceDisplay') && (document.getElementById('toleranceDisplay').textContent = toleranceMeters + 'm');
 
             try {
                 const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${fromUnix}&dateEnd=${toUnix}&wifi=1&gps=1`;
@@ -2415,7 +2527,8 @@
                     console.log(`Simplified from ${rawTrack.length} to ${track.length} points (tolerance: ${toleranceMeters}m)`);
                 }
 
-                // Store in historical variables
+                // Store raw and simplified in historical variables
+                historicalRawTracks[activeModalDriverId] = rawTrack;
                 historicalTracks[activeModalDriverId] = track;
                 historicalStopEvents[activeModalDriverId] = stops;
                 isHistoricalMode[activeModalDriverId] = true;
@@ -2442,6 +2555,7 @@
                 isHistoricalMode[activeModalDriverId] = false;
                 historicalTracks[activeModalDriverId] = [];
                 historicalStopEvents[activeModalDriverId] = [];
+                historicalRawTracks[activeModalDriverId] = [];
                 // Redraw with live track (which is now empty)
                 updateDriverModalTrack(activeModalDriverId);
                 document.getElementById('historyResult').textContent = 'Historical track cleared.';
@@ -2512,7 +2626,9 @@
                     gestureHandling: 'greedy',
                     mapTypeControl: false
                 });
-                // Fit control
+                // Add custom controls (GPS toggle + slider)
+                addHistoricalMapControls(historicalMapInstance);
+                // Fit control (already added)
                 const fitControlDiv = document.createElement('div');
                 fitControlDiv.innerHTML = `
                     <button class="map-fit-btn" aria-label="Fit all stops">
@@ -2536,6 +2652,12 @@
                     historicalMapInstance.setCenter({ lat: drv.lastLocation.lat, lng: drv.lastLocation.lng });
                     historicalMapInstance.setZoom(13);
                 }
+                // Ensure controls exist
+                if (!historicalMapInstance._controlsAdded) {
+                    addHistoricalMapControls(historicalMapInstance);
+                }
+                // Reset GPS state to off
+                setGpsState(false);
             }
 
             // Draw the historical track on the overlay map
@@ -2598,6 +2720,91 @@
             }, 100);
         }
 
+        function addHistoricalMapControls(mapInstance) {
+            // Create control div
+            const controlDiv = document.createElement('div');
+            controlDiv.id = 'historicalMapControls';
+            controlDiv.innerHTML = `
+                <div class="control-row">
+                    <button class="gps-btn" id="gpsToggleBtn">GPS Off</button>
+                </div>
+                <div class="slider-row" id="historicalSliderRow">
+                    <label for="historicalSimplifyTolerance">Meters per point</label>
+                    <input type="range" id="historicalSimplifyTolerance" min="0" max="10000" value="800" step="1">
+                    <span class="tolerance-value" id="historicalToleranceDisplay">800m</span>
+                </div>
+            `;
+            mapInstance.controls[google.maps.ControlPosition.TOP_LEFT].push(controlDiv);
+            mapInstance._controlsAdded = true;
+
+            // GPS toggle
+            const gpsBtn = controlDiv.querySelector('#gpsToggleBtn');
+            gpsBtn.addEventListener('click', function() {
+                const isOn = this.classList.contains('active');
+                setGpsState(!isOn);
+            });
+
+            // Slider
+            const slider = controlDiv.querySelector('#historicalSimplifyTolerance');
+            const display = controlDiv.querySelector('#historicalToleranceDisplay');
+            slider.addEventListener('input', function() {
+                display.textContent = this.value + 'm';
+            });
+            slider.addEventListener('change', function() {
+                const tolerance = parseFloat(this.value);
+                if (historicalOverlayDriverId && historicalRawTracks[historicalOverlayDriverId]) {
+                    reSimplifyAndRedraw(historicalOverlayDriverId, tolerance);
+                }
+            });
+            // Set initial state: GPS off, slider hidden
+            const sliderRow = controlDiv.querySelector('#historicalSliderRow');
+            sliderRow.classList.remove('visible');
+            gpsBtn.classList.remove('active');
+            gpsBtn.textContent = 'GPS Off';
+            gpsOn = false;
+        }
+
+        function setGpsState(on) {
+            gpsOn = on;
+            const controls = document.getElementById('historicalMapControls');
+            if (!controls) return;
+            const gpsBtn = controls.querySelector('#gpsToggleBtn');
+            const sliderRow = controls.querySelector('#historicalSliderRow');
+            if (on) {
+                gpsBtn.classList.add('active');
+                gpsBtn.textContent = 'GPS On';
+                sliderRow.classList.add('visible');
+                // Show arrow markers
+                historicalArrowMarkers.forEach(m => m.setMap(historicalMapInstance));
+            } else {
+                gpsBtn.classList.remove('active');
+                gpsBtn.textContent = 'GPS Off';
+                sliderRow.classList.remove('visible');
+                // Hide arrow markers
+                historicalArrowMarkers.forEach(m => m.setMap(null));
+            }
+        }
+
+        function reSimplifyAndRedraw(driverId, toleranceMeters) {
+            const raw = historicalRawTracks[driverId];
+            if (!raw || raw.length < 2) return;
+            let simplified = raw;
+            if (toleranceMeters > 0) {
+                const toleranceDeg = metersToDegrees(toleranceMeters);
+                simplified = douglasPeuckerSimplify(raw, toleranceDeg);
+            }
+            historicalTracks[driverId] = simplified;
+            // Redraw overlay with new simplified track
+            drawHistoricalTrackOnOverlay(driverId);
+            // Ensure GPS state is reapplied
+            if (!gpsOn) {
+                historicalArrowMarkers.forEach(m => m.setMap(null));
+            } else {
+                historicalArrowMarkers.forEach(m => m.setMap(historicalMapInstance));
+            }
+            // Also update stop events? Not needed, they are from raw track.
+        }
+
         function drawHistoricalTrackOnOverlay(driverId) {
             if (!historicalMapInstance) return;
             const track = historicalTracks[driverId] || [];
@@ -2618,11 +2825,6 @@
             });
 
             // Draw arrows for kept points (all points after simplification)
-            // Determine which points to show based on slider value (already simplified)
-            // But we also need to apply distance threshold again? Actually the track is already simplified by Douglas-Peucker.
-            // The user can adjust the slider, but that's already applied in loadHistoricalTrack.
-            // We'll just use the track as is.
-            // For arrows, we need direction. We'll use bearing between consecutive points, or heading if available.
             const arrowMarkers = [];
             for (let i = 0; i < track.length; i++) {
                 const pt = track[i];
@@ -2672,6 +2874,11 @@
                 arrowMarkers.push(arrowMarker);
             }
             historicalArrowMarkers = arrowMarkers;
+
+            // If GPS is off, hide arrows
+            if (!gpsOn) {
+                historicalArrowMarkers.forEach(m => m.setMap(null));
+            }
 
             // ---- ADD MANIFEST STOPS (green markers) ----
             // Get assigned stops for this driver
@@ -4205,11 +4412,6 @@
                         autoLoadMatchingRoutes();
                     }
                 }
-            });
-
-            // Update tolerance display on slider change
-            document.getElementById('simplifyTolerance').addEventListener('input', function() {
-                document.getElementById('toleranceDisplay').textContent = this.value + 'm';
             });
 
             getMasterRef().once('value').then(snap => {
