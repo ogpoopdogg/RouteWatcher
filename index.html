@@ -2101,10 +2101,8 @@
         function checkAutoComplete(driverId, lat, lng, timestamp) {
             const radius = Math.max(1, proximityRadius);
             let updated = false;
-            // Use the driver's last known GPS timestamp as the completion time.
-            // This ensures we use the actual GPS time of the point that triggered the completion.
-            const driver = drivers[driverId];
-            let completionTs = (driver && driver.lastLocation && driver.lastLocation.updatedAt) ? driver.lastLocation.updatedAt : (timestamp || Date.now());
+            // Use the timestamp passed in (the GPS point time) as the completion time for this point
+            // For each stop that gets completed by this point, use this timestamp
 
             for (let [stopId, stop] of Object.entries(loadedStops)) {
                 if (stop.assignedDriver !== driverId) continue;
@@ -2112,9 +2110,9 @@
                 if (!stop.lat || !stop.lng) continue;
                 const dist = haversineDistance(lat, lng, stop.lat, stop.lng);
                 if (dist <= radius) {
-                    // Auto-complete this stop
+                    // Auto-complete this stop - use the timestamp from the GPS point
                     stop.status = 'completed';
-                    stop.completedAt = completionTs;
+                    stop.completedAt = timestamp;
                     updated = true;
                 }
             }
@@ -2201,10 +2199,8 @@
                     const dist = haversineDistance(p.lat, p.lng, stop.lat, stop.lng);
                     if (dist <= radius) {
                         stop.status = 'completed';
-                        // Use the point's timestamp if available, otherwise use driver's last known timestamp
-                        const driver = drivers[driverId];
-                        const ts = p.timestamp ? p.timestamp : (driver && driver.lastLocation && driver.lastLocation.updatedAt ? driver.lastLocation.updatedAt : Date.now());
-                        stop.completedAt = ts;
+                        // Use the point's timestamp if available
+                        stop.completedAt = p.timestamp || Date.now();
                         updated = true;
                     }
                 }
