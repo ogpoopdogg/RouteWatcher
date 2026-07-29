@@ -1819,12 +1819,11 @@
         <div class="overlay-stop-list" id="overlayStopList"></div>
     </div>
 
-    <!-- Firebase + Google Maps -->
+    <!-- Firebase + Google Maps (will be loaded dynamically after login) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=initMap" async defer></script>
-
+    <!-- Google Maps will be loaded lazily -->
     <script>
         // ===== FIREBASE =====
         firebase.initializeApp({
@@ -1886,18 +1885,53 @@
                 }
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('app').style.display = 'flex';
-                initApp();
+                // Load Google Maps lazily after login
+                if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+                    loadGoogleMaps();
+                } else {
+                    initApp();
+                }
             } else {
                 document.getElementById('login-overlay').style.display = 'flex';
                 document.getElementById('app').style.display = 'none';
             }
         });
 
+        // ===== LAZY LOAD GOOGLE MAPS =====
+        let googleMapsLoaded = false;
+        let mapsLoading = false;
+        let mapsCallbacks = [];
+
+        function loadGoogleMaps() {
+            if (googleMapsLoaded) {
+                initApp();
+                return;
+            }
+            if (mapsLoading) {
+                mapsCallbacks.push(initApp);
+                return;
+            }
+            mapsLoading = true;
+            const script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=onGoogleMapsLoaded';
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        function onGoogleMapsLoaded() {
+            googleMapsLoaded = true;
+            mapsLoading = false;
+            initApp();
+            mapsCallbacks.forEach(cb => cb());
+            mapsCallbacks = [];
+        }
+
         // ===== STATE =====
         let drivers = {};
         let loadedStops = {}; // { id: { name, address, city, assignedDriver, lat, lng, status, completedAt, order, ... } }
         let map, driverMarkers = {},
-            stopMarkers = [];
+            stopMarkers = {};
         let driverModalMap = null;
         let activeModalDriverId = null;
         let gpsInterval = null;
@@ -1953,6 +1987,27 @@
 
         // Flag to prevent auto-complete from starting multiple times
         let autoCompleteStarted = false;
+
+        // Debounce timer for renders
+        let renderTimer = null;
+
+        // Pending stops per driver for auto-complete
+        let driverPendingStops = {};
+
+        // DOM element cache
+        const stopListEl = document.getElementById('stopList');
+        const emptyMsgEl = document.getElementById('emptyMsg');
+        const stopCountEl = document.getElementById('stopCount');
+        const driverBadgesEl = document.getElementById('driverBadges');
+        const mapDriverControlEl = document.getElementById('mapDriverControl');
+        const manifestSearchInput = document.getElementById('manifestSearchInput');
+        const manifestSearchClear = document.getElementById('manifestSearchClear');
+
+        // Geocode cache
+        let geocodeCache = {};
+        try {
+            geocodeCache = JSON.parse(localStorage.getItem('geocodeCache') || '{}');
+        } catch (_) { geocodeCache = {}; }
 
         function getDriversRef() { return db.ref('developer/dispatch_dashboard/drivers'); }
 
@@ -2048,6 +2103,63 @@
 
         let authRetryInProgress = false;
 
+        // ===== PROCESS GPS POINT (shared between live and historical) =====
+        function processPoint(driverId, lat, lng, timestamp, isHistorical = false) {
+            // Initialize track array if needed
+            if (!driverTracks[driverId]) driverTracks[driverId] = [];
+            if (!driverStopEvents[driverId]) driverStopEvents[driverId] = [];
+            if (!driverStopState[driverId]) driverStopState[driverId] = null;
+
+            const track = driverTracks[driverId];
+            const lastPoint = track.length > 0 ? track[track.length - 1] : null;
+
+            // Filter: only add if moved > TRACK_FILTER_DISTANCE meters
+            if (lastPoint) {
+                const dist = haversineDistance(lastPoint.lat, lastPoint.lng, lat, lng);
+                if (dist < TRACK_FILTER_DISTANCE) {
+                    // Still check stop detection
+                    checkStopDetection(driverId, lat, lng, timestamp);
+                    return;
+                }
+            }
+
+            // Check if we were stopped and now moving
+            if (driverStopState[driverId]) {
+                const stopState = driverStopState[driverId];
+                const stopDuration = (timestamp - stopState.startTime) / 1000;
+                if (stopDuration >= STOP_DETECTION_THRESHOLD) {
+                    driverStopEvents[driverId].push({
+                        lat: stopState.lat,
+                        lng: stopState.lng,
+                        startTime: stopState.startTime,
+                        endTime: timestamp,
+                        duration: stopDuration
+                    });
+                }
+                driverStopState[driverId] = null;
+            }
+
+            // Add point to track
+            track.push({ lat, lng, timestamp });
+
+            // Limit track length to 10,000 points
+            if (track.length > 10000) {
+                track.splice(0, track.length - 10000);
+            }
+
+            // Update the driver modal map if open and not in historical mode
+            if (activeModalDriverId === driverId && !isHistorical) {
+                if (!isHistoricalMode[driverId]) {
+                    updateDriverModalTrack(driverId);
+                }
+            }
+
+            // Check auto-completion (live only; historical auto-complete handled separately)
+            if (!isHistorical) {
+                checkAutoComplete(driverId, lat, lng, timestamp);
+            }
+        }
+
         async function fetchAllDevicePositions() {
             if (!pajToken) return;
             const deviceEntries = Object.entries(drivers).filter(([id, drv]) => drv.deviceId && String(drv.deviceId).trim() !==
@@ -2092,10 +2204,8 @@
                     }
 
                     const lastPoint = deviceData.lastPoint || null;
-                    // Extract new fields from lastPoint (battery, direction) and deviceStatus (alarms)
                     const battery = lastPoint?.battery ?? lastPoint?.battery_level ?? 0;
                     const heading = lastPoint?.direction ?? null;
-                    // Alarm flags (if present in deviceStatus)
                     const hasAlarm = !!(deviceStatus.movementAlarm || deviceStatus.tiltAlarm || deviceStatus.removeAlarm || deviceStatus.sosAlarm);
                     const odometer = deviceStatus.totalDistance || deviceStatus.odometer || 0;
 
@@ -2116,95 +2226,42 @@
                                     drv.heading = heading;
                                     drv.hasAlarm = hasAlarm;
                                     drv.odometer = odometer;
-                                    getDriversRef().child(did).update({ 
+                                    getDriversRef().child(did).update({
                                         lastLocation: drv.lastLocation,
                                         battery: battery,
                                         heading: heading,
                                         hasAlarm: hasAlarm,
                                         odometer: odometer
                                     });
-                                    // Process GPS tracking for this driver
-                                    processGPSUpdate(did, lat, lng, pajTimestamp);
+                                    // Process GPS tracking for this driver (live)
+                                    processPoint(did, lat, lng, pajTimestamp, false);
                                     break;
                                 }
                             }
                         }
                     }
                 }
-                updateMapMarkers();
-                renderDriverBadges();
-                updateMapDriverControl();
+                scheduleRender();
             } catch (e) {
                 console.warn('PAJ fetch error:', e);
             }
         }
 
-        // ===== GPS TRACKING =====
+        // ===== GPS TRACKING (live) =====
         function processGPSUpdate(driverId, lat, lng, timestamp) {
-            // Initialize track array if needed
-            if (!driverTracks[driverId]) driverTracks[driverId] = [];
-            if (!driverStopEvents[driverId]) driverStopEvents[driverId] = [];
-            if (!driverStopState[driverId]) driverStopState[driverId] = null;
-
-            const track = driverTracks[driverId];
-            const lastPoint = track.length > 0 ? track[track.length - 1] : null;
-
-            // Filter: only add if moved > TRACK_FILTER_DISTANCE meters
-            if (lastPoint) {
-                const dist = haversineDistance(lastPoint.lat, lastPoint.lng, lat, lng);
-                if (dist < TRACK_FILTER_DISTANCE) {
-                    // Still check for stop detection
-                    checkStopDetection(driverId, lat, lng, timestamp);
-                    return;
-                }
-            }
-
-            // Check if we were stopped and now moving
-            if (driverStopState[driverId]) {
-                const stopState = driverStopState[driverId];
-                const stopDuration = (timestamp - stopState.startTime) / 1000;
-                if (stopDuration >= STOP_DETECTION_THRESHOLD) {
-                    driverStopEvents[driverId].push({
-                        lat: stopState.lat,
-                        lng: stopState.lng,
-                        startTime: stopState.startTime,
-                        endTime: timestamp,
-                        duration: stopDuration
-                    });
-                }
-                driverStopState[driverId] = null;
-            }
-
-            // Add point to track
-            track.push({ lat, lng, timestamp });
-
-            // Update the driver modal map if open
-            if (activeModalDriverId === driverId) {
-                // Only update if not in historical mode
-                if (!isHistoricalMode[driverId]) {
-                    updateDriverModalTrack(driverId);
-                }
-            }
-
-            // Check auto-completion (live)
-            checkAutoComplete(driverId, lat, lng, timestamp);
+            processPoint(driverId, lat, lng, timestamp, false);
         }
 
         function checkStopDetection(driverId, lat, lng, timestamp) {
-            // If we are already in a stop state, just update the end time (still stopped)
             if (driverStopState[driverId]) {
-                // Still stopped, update the end time
                 driverStopState[driverId].endTime = timestamp;
                 return;
             }
-
-            // Check if this point is within the stop detection radius (use proximity radius)
-            // If we have a last point, check if we haven't moved
             const track = driverTracks[driverId] || [];
             if (track.length === 0) return;
             const lastPoint = track[track.length - 1];
             const dist = haversineDistance(lastPoint.lat, lastPoint.lng, lat, lng);
-            if (dist < 5) { // within 5 meters, consider stopped
+            if (dist < 5) {
                 driverStopState[driverId] = {
                     startTime: timestamp,
                     lat: lat,
@@ -2215,27 +2272,27 @@
 
         function checkAutoComplete(driverId, lat, lng, timestamp) {
             const radius = Math.max(1, proximityRadius);
+            const pending = driverPendingStops[driverId] || [];
             let updated = false;
-            // Use the timestamp passed in (the GPS point time) as the completion time for this point
-            // For each stop that gets completed by this point, use this timestamp
-
-            for (let [stopId, stop] of Object.entries(loadedStops)) {
-                if (stop.assignedDriver !== driverId) continue;
-                if (stop.status === 'completed') continue;
-                if (!stop.lat || !stop.lng) continue;
+            // Coarse check: 0.01 deg ~ 1 km
+            const coarseThreshold = 0.01;
+            for (const stop of pending) {
+                if (Math.abs(stop.lat - lat) > coarseThreshold || Math.abs(stop.lng - lng) > coarseThreshold) continue;
                 const dist = haversineDistance(lat, lng, stop.lat, stop.lng);
                 if (dist <= radius) {
-                    // Auto-complete this stop - use the timestamp from the GPS point
+                    // Auto-complete this stop
                     stop.status = 'completed';
                     stop.completedAt = timestamp;
                     updated = true;
+                    // Firestore update
+                    updateStopStatus(stop.id, 'completed', timestamp);
                 }
             }
             if (updated) {
-                renderStopList();
+                rebuildPendingStops();
+                scheduleRender();
                 if (activeModalDriverId === driverId) renderDriverStops(driverId);
                 updateMapMarkers();
-                saveDashboardState();
             }
         }
 
@@ -2250,83 +2307,76 @@
             return R * c;
         }
 
-        // ===== DOUGLAS-PEUCKER SIMPLIFICATION =====
+        // ===== DOUGLAS-PEUCKER SIMPLIFICATION (Iterative) =====
         function douglasPeuckerSimplify(points, tolerance) {
             if (tolerance <= 0 || points.length <= 2) return points.slice();
-
-            // Find the point with the maximum distance from the line between first and last
-            let dmax = 0;
-            let index = 0;
-            const first = points[0];
-            const last = points[points.length - 1];
-            for (let i = 1; i < points.length - 1; i++) {
-                const d = perpendicularDistance(points[i], first, last);
-                if (d > dmax) {
-                    dmax = d;
-                    index = i;
+            const stack = [{ start: 0, end: points.length - 1 }];
+            const keep = new Set();
+            keep.add(0);
+            keep.add(points.length - 1);
+            while (stack.length > 0) {
+                const { start, end } = stack.pop();
+                if (end - start <= 1) continue;
+                let dmax = 0,
+                    index = start;
+                const first = points[start],
+                    last = points[end];
+                for (let i = start + 1; i < end; i++) {
+                    const d = perpendicularDistance(points[i], first, last);
+                    if (d > dmax) { dmax = d;
+                        index = i; }
+                }
+                if (dmax > tolerance) {
+                    keep.add(index);
+                    stack.push({ start, end: index });
+                    stack.push({ start: index, end });
                 }
             }
-
-            // If max distance is greater than tolerance, recursively simplify
-            if (dmax > tolerance) {
-                const recResults1 = douglasPeuckerSimplify(points.slice(0, index + 1), tolerance);
-                const recResults2 = douglasPeuckerSimplify(points.slice(index), tolerance);
-                // Combine (remove duplicate point at junction)
-                const combined = recResults1.slice(0, recResults1.length - 1).concat(recResults2);
-                return combined;
-            } else {
-                return [first, last];
-            }
+            return points.filter((_, i) => keep.has(i));
         }
 
         function perpendicularDistance(p, a, b) {
-            // Calculate the perpendicular distance from point p to line segment a-b
             const dx = b.lat - a.lat;
             const dy = b.lng - a.lng;
-            // If the line segment is a point, return distance to that point
             if (dx === 0 && dy === 0) {
                 return Math.sqrt((p.lat - a.lat) ** 2 + (p.lng - a.lng) ** 2);
             }
-            // Use the formula for distance from point to line in 2D (in degrees, but it's fine for small distances)
             const numerator = Math.abs(dy * p.lat - dx * p.lng + (a.lng * dx - a.lat * dy));
             const denominator = Math.sqrt(dx * dx + dy * dy);
             return numerator / denominator;
         }
 
-        // Convert tolerance from meters to degrees (approximate: 1 degree ~ 111 km)
         function metersToDegrees(meters) {
             return meters / 111000;
         }
 
-        // ===== HISTORICAL AUTO-COMPLETE (runs on historical points) =====
+        // ===== HISTORICAL AUTO-COMPLETE =====
         function processHistoricalAutoComplete(driverId, points) {
             if (!points || points.length === 0) return;
-            let updated = false;
             const radius = Math.max(1, proximityRadius);
-            // Get pending stops for this driver
-            const stopsToCheck = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId && s.status !== 'completed');
-            if (stopsToCheck.length === 0) return;
-
+            const pending = driverPendingStops[driverId] || [];
+            if (pending.length === 0) return;
+            const coarseThreshold = 0.01;
+            let updated = false;
             for (const p of points) {
                 if (p.lat === undefined || p.lng === undefined) continue;
-                for (const [stopId, stop] of stopsToCheck) {
-                    if (stop.status === 'completed') continue;
+                for (const stop of pending) {
+                    if (Math.abs(stop.lat - p.lat) > coarseThreshold || Math.abs(stop.lng - p.lng) > coarseThreshold)
+                        continue;
                     const dist = haversineDistance(p.lat, p.lng, stop.lat, stop.lng);
                     if (dist <= radius) {
                         stop.status = 'completed';
-                        // Use the point's timestamp if available
                         stop.completedAt = p.timestamp || Date.now();
                         updated = true;
+                        updateStopStatus(stop.id, 'completed', stop.completedAt);
                     }
                 }
             }
             if (updated) {
-                renderStopList();
+                rebuildPendingStops();
+                scheduleRender();
+                if (activeModalDriverId === driverId) renderDriverStops(driverId);
                 updateMapMarkers();
-                saveDashboardState();
-                if (activeModalDriverId === driverId) {
-                    renderDriverStops(driverId);
-                }
             }
         }
 
@@ -2337,34 +2387,27 @@
             processHistoricalAutoComplete(driverId, track);
         }
 
-        // ===== DRIVER MODAL TRACK (no arrows, only stops with InfoWindow) =====
+        // ===== DRIVER MODAL TRACK =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
-            // Determine which track to use: historical if active, else live
             const useHistorical = isHistoricalMode[driverId] && historicalTracks[driverId] && historicalTracks[driverId].length > 0;
             const track = useHistorical ? historicalTracks[driverId] : (driverTracks[driverId] || []);
             const stops = useHistorical ? (historicalStopEvents[driverId] || []) : (driverStopEvents[driverId] || []);
 
-            // Remove old polyline
             if (driverModalMap._trackPolyline) {
                 driverModalMap._trackPolyline.setMap(null);
                 driverModalMap._trackPolyline = null;
             }
-            // Remove old stop markers
             if (driverModalMap._stopMarkers) {
                 driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                 driverModalMap._stopMarkers = [];
             }
-            // Close any open InfoWindow
             if (driverModalMap._infoWindow) {
                 driverModalMap._infoWindow.close();
                 driverModalMap._infoWindow = null;
             }
 
-            // Only draw if historical mode is active
-            if (!useHistorical) {
-                return;
-            }
+            if (!useHistorical) return;
 
             if (track.length < 2) return;
 
@@ -2379,11 +2422,8 @@
                 map: driverModalMap
             });
 
-            // Create a single InfoWindow for all stop markers (reused)
             const infoWindow = new google.maps.InfoWindow();
             driverModalMap._infoWindow = infoWindow;
-
-            // Draw stop markers (red stop signs) with click listener
             driverModalMap._stopMarkers = [];
             stops.forEach(event => {
                 const marker = new google.maps.Marker({
@@ -2399,7 +2439,6 @@
                         rotation: 0
                     }
                 });
-                // Add click listener that opens InfoWindow with time and duration
                 google.maps.event.addListener(marker, 'click', function() {
                     const mins = Math.floor(event.duration / 60);
                     const secs = Math.round(event.duration % 60);
@@ -2420,16 +2459,12 @@
                 driverModalMap._stopMarkers.push(marker);
             });
 
-            // Fit bounds to track
             if (track.length > 0) {
                 const bounds = new google.maps.LatLngBounds();
                 track.forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
                 driverModalMap.fitBounds(bounds);
             }
         }
-
-        // ===== CLEAR TRACK / NEW TRACK (removed) =====
-        // The functions clearTrack and newTrack have been removed.
 
         // ===== HISTORICAL TRACK FUNCTIONS =====
         async function loadHistoricalTrack() {
@@ -2449,7 +2484,6 @@
             const resultEl = document.getElementById('historyResult');
             resultEl.textContent = 'Loading track...';
 
-            // Get simplification tolerance from the overlay slider (if available) else default 800
             let toleranceMeters = 800;
             const slider = document.getElementById('historicalSimplifyTolerance');
             if (slider) {
@@ -2470,7 +2504,6 @@
                     resultEl.textContent = 'No track data for this period.';
                     return;
                 }
-                // Sort by time
                 points.sort((a, b) => a.dateunix - b.dateunix);
                 // Build raw track array (unsimplified)
                 const rawTrack = points.map(p => ({
@@ -2481,59 +2514,63 @@
                 }));
 
                 // ---- DETECT STOPS ON RAW TRACK ----
-                const stops = [];
-                let stopStart = null;
+                // We'll process points sequentially using the same logic as processPoint
+                // but we need to reset stop state for this driver to avoid interference
+                driverStopState[activeModalDriverId] = null;
+                // Clear existing stop events for this driver in historical mode? We'll override.
+                // We'll build a separate stop events list for historical.
+                const tempStopEvents = [];
+                let tempStopState = null;
                 for (let i = 1; i < rawTrack.length; i++) {
                     const prev = rawTrack[i-1];
                     const curr = rawTrack[i];
                     const dist = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
                     if (dist < 5) {
-                        if (!stopStart) stopStart = prev;
+                        if (!tempStopState) tempStopState = { startTime: prev.timestamp, lat: prev.lat, lng: prev.lng };
                     } else {
-                        if (stopStart) {
-                            const duration = (prev.timestamp - stopStart.timestamp) / 1000;
+                        if (tempStopState) {
+                            const duration = (prev.timestamp - tempStopState.startTime) / 1000;
                             if (duration >= STOP_DETECTION_THRESHOLD) {
-                                stops.push({
-                                    lat: stopStart.lat,
-                                    lng: stopStart.lng,
-                                    startTime: stopStart.timestamp,
+                                tempStopEvents.push({
+                                    lat: tempStopState.lat,
+                                    lng: tempStopState.lng,
+                                    startTime: tempStopState.startTime,
                                     endTime: prev.timestamp,
                                     duration: duration
                                 });
                             }
-                            stopStart = null;
+                            tempStopState = null;
                         }
                     }
                 }
-                if (stopStart) {
+                if (tempStopState) {
                     const last = rawTrack[rawTrack.length - 1];
-                    const duration = (last.timestamp - stopStart.timestamp) / 1000;
+                    const duration = (last.timestamp - tempStopState.startTime) / 1000;
                     if (duration >= STOP_DETECTION_THRESHOLD) {
-                        stops.push({
-                            lat: stopStart.lat,
-                            lng: stopStart.lng,
-                            startTime: stopStart.timestamp,
+                        tempStopEvents.push({
+                            lat: tempStopState.lat,
+                            lng: tempStopState.lng,
+                            startTime: tempStopState.startTime,
                             endTime: last.timestamp,
                             duration: duration
                         });
                     }
                 }
 
-                // ---- SIMPLIFY TRACK (if tolerance > 0) ----
+                // ---- SIMPLIFY TRACK ----
                 let track = rawTrack;
                 if (toleranceMeters > 0) {
                     const toleranceDeg = metersToDegrees(toleranceMeters);
                     track = douglasPeuckerSimplify(rawTrack, toleranceDeg);
-                    console.log(`Simplified from ${rawTrack.length} to ${track.length} points (tolerance: ${toleranceMeters}m)`);
                 }
 
                 // Store raw and simplified in historical variables
                 historicalRawTracks[activeModalDriverId] = rawTrack;
                 historicalTracks[activeModalDriverId] = track;
-                historicalStopEvents[activeModalDriverId] = stops;
+                historicalStopEvents[activeModalDriverId] = tempStopEvents;
                 isHistoricalMode[activeModalDriverId] = true;
 
-                // Instead of updating driver modal map, open full-screen overlay
+                // Open full-screen overlay
                 openFullScreenHistoricalOverlay(activeModalDriverId);
 
                 // Calculate distance
@@ -2543,7 +2580,7 @@
                 }
                 const km = totalDist / 1000;
                 const mi = totalDist / 1609;
-                resultEl.textContent = `Track loaded: ${track.length} points, ${km.toFixed(1)} km (${mi.toFixed(1)} mi) — ${stops.length} stops detected`;
+                resultEl.textContent = `Track loaded: ${track.length} points, ${km.toFixed(1)} km (${mi.toFixed(1)} mi) — ${tempStopEvents.length} stops detected`;
             } catch (e) {
                 resultEl.textContent = 'Error: ' + e.message;
             }
@@ -2556,15 +2593,12 @@
                 historicalTracks[activeModalDriverId] = [];
                 historicalStopEvents[activeModalDriverId] = [];
                 historicalRawTracks[activeModalDriverId] = [];
-                // Redraw with live track (which is now empty)
                 updateDriverModalTrack(activeModalDriverId);
                 document.getElementById('historyResult').textContent = 'Historical track cleared.';
-                // Clear the stop list
                 renderHistoricalStops(activeModalDriverId);
             } else {
                 document.getElementById('historyResult').textContent = 'No historical track to clear.';
             }
-            // Also close overlay if open
             if (historicalOverlayOpen) {
                 closeHistoricalOverlay();
             }
@@ -2577,7 +2611,6 @@
             const stopList = document.getElementById('overlayStopList');
             const headerInfo = document.getElementById('overlayHeaderInfo');
 
-            // Populate header with live driver info
             const drv = drivers[driverId];
             if (drv) {
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
@@ -2596,7 +2629,6 @@
                 document.getElementById('overlayStatus').textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
                 document.getElementById('overlayStatus').className = status.class;
 
-                // Address - make it a link
                 if (drv.lastLocation) {
                     reverseGeocode(drv.lastLocation.lat, drv.lastLocation.lng)
                         .then(address => {
@@ -2609,14 +2641,12 @@
                     document.getElementById('overlayAddress').innerHTML = '📍 No location';
                 }
 
-                // Battery
                 let batteryVal = drv.battery || 0;
                 let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
                 document.getElementById('overlayBattery').textContent = `🔋 ${batteryVal}%`;
                 document.getElementById('overlayBattery').className = batteryColor;
             }
 
-            // Initialize map if not already
             if (!historicalMapInstance) {
                 const isLight = document.body.classList.contains('light-mode');
                 historicalMapInstance = new google.maps.Map(mapContainer, {
@@ -2626,9 +2656,7 @@
                     gestureHandling: 'greedy',
                     mapTypeControl: false
                 });
-                // Add custom controls (GPS toggle + slider)
                 addHistoricalMapControls(historicalMapInstance);
-                // Fit control (already added)
                 const fitControlDiv = document.createElement('div');
                 fitControlDiv.innerHTML = `
                     <button class="map-fit-btn" aria-label="Fit all stops">
@@ -2646,24 +2674,19 @@
                 });
                 historicalMapInstance.controls[google.maps.ControlPosition.BOTTOM_RIGHT].push(fitControlDiv);
             } else {
-                // Reuse map, but clear overlays
                 clearHistoricalOverlayMap();
                 if (drv?.lastLocation) {
                     historicalMapInstance.setCenter({ lat: drv.lastLocation.lat, lng: drv.lastLocation.lng });
                     historicalMapInstance.setZoom(13);
                 }
-                // Ensure controls exist
                 if (!historicalMapInstance._controlsAdded) {
                     addHistoricalMapControls(historicalMapInstance);
                 }
-                // Reset GPS state to off
                 setGpsState(false);
             }
 
-            // Draw the historical track on the overlay map
             drawHistoricalTrackOnOverlay(driverId);
 
-            // Populate stop list
             const events = historicalStopEvents[driverId] || [];
             stopList.innerHTML = '';
             if (events.length === 0) {
@@ -2680,20 +2703,17 @@
                     durStr += `${secs}s`;
                     div.textContent = `⏸ ${durStr}`;
 
-                    // Apply background color based on duration
                     let bgColor = 'transparent';
-                    if (event.duration >= 1500) bgColor = 'rgba(255,0,0,0.6)'; // > 25 min
-                    else if (event.duration >= 600) bgColor = 'rgba(255,165,0,0.6)'; // > 10 min
-                    else if (event.duration >= 300) bgColor = 'rgba(255,255,0,0.4)'; // > 5 min
+                    if (event.duration >= 1500) bgColor = 'rgba(255,0,0,0.6)';
+                    else if (event.duration >= 600) bgColor = 'rgba(255,165,0,0.6)';
+                    else if (event.duration >= 300) bgColor = 'rgba(255,255,0,0.4)';
                     div.style.background = bgColor;
 
                     div.addEventListener('click', function() {
-                        // Zoom to this stop on the overlay map
                         if (historicalMapInstance) {
                             historicalMapInstance.panTo({ lat: event.lat, lng: event.lng });
                             historicalMapInstance.setZoom(18);
                         }
-                        // Highlight this item
                         document.querySelectorAll('.overlay-stop-list .stop-event').forEach(el => el.classList.remove('active'));
                         div.classList.add('active');
                     });
@@ -2701,16 +2721,13 @@
                 });
             }
 
-            // Show overlay
             overlay.style.display = 'flex';
             historicalOverlayOpen = true;
             historicalOverlayDriverId = driverId;
 
-            // Resize map after display
             setTimeout(() => {
                 if (historicalMapInstance) {
                     google.maps.event.trigger(historicalMapInstance, 'resize');
-                    // Fit bounds to track
                     if (historicalTracks[driverId] && historicalTracks[driverId].length > 0) {
                         const bounds = new google.maps.LatLngBounds();
                         historicalTracks[driverId].forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
@@ -2721,7 +2738,6 @@
         }
 
         function addHistoricalMapControls(mapInstance) {
-            // Create control div
             const controlDiv = document.createElement('div');
             controlDiv.id = 'historicalMapControls';
             controlDiv.innerHTML = `
@@ -2737,14 +2753,12 @@
             mapInstance.controls[google.maps.ControlPosition.TOP_LEFT].push(controlDiv);
             mapInstance._controlsAdded = true;
 
-            // GPS toggle
             const gpsBtn = controlDiv.querySelector('#gpsToggleBtn');
             gpsBtn.addEventListener('click', function() {
                 const isOn = this.classList.contains('active');
                 setGpsState(!isOn);
             });
 
-            // Slider
             const slider = controlDiv.querySelector('#historicalSimplifyTolerance');
             const display = controlDiv.querySelector('#historicalToleranceDisplay');
             slider.addEventListener('input', function() {
@@ -2756,7 +2770,6 @@
                     reSimplifyAndRedraw(historicalOverlayDriverId, tolerance);
                 }
             });
-            // Set initial state: GPS off, slider hidden
             const sliderRow = controlDiv.querySelector('#historicalSliderRow');
             sliderRow.classList.remove('visible');
             gpsBtn.classList.remove('active');
@@ -2774,13 +2787,11 @@
                 gpsBtn.classList.add('active');
                 gpsBtn.textContent = 'GPS On';
                 sliderRow.classList.add('visible');
-                // Show arrow markers
                 historicalArrowMarkers.forEach(m => m.setMap(historicalMapInstance));
             } else {
                 gpsBtn.classList.remove('active');
                 gpsBtn.textContent = 'GPS Off';
                 sliderRow.classList.remove('visible');
-                // Hide arrow markers
                 historicalArrowMarkers.forEach(m => m.setMap(null));
             }
         }
@@ -2794,15 +2805,12 @@
                 simplified = douglasPeuckerSimplify(raw, toleranceDeg);
             }
             historicalTracks[driverId] = simplified;
-            // Redraw overlay with new simplified track
             drawHistoricalTrackOnOverlay(driverId);
-            // Ensure GPS state is reapplied
             if (!gpsOn) {
                 historicalArrowMarkers.forEach(m => m.setMap(null));
             } else {
                 historicalArrowMarkers.forEach(m => m.setMap(historicalMapInstance));
             }
-            // Also update stop events? Not needed, they are from raw track.
         }
 
         function drawHistoricalTrackOnOverlay(driverId) {
@@ -2810,10 +2818,8 @@
             const track = historicalTracks[driverId] || [];
             if (track.length < 2) return;
 
-            // Clear previous overlays
             clearHistoricalOverlayMap();
 
-            // Draw polyline
             const path = track.map(p => ({ lat: p.lat, lng: p.lng }));
             historicalPolyline = new google.maps.Polyline({
                 path: path,
@@ -2824,13 +2830,11 @@
                 map: historicalMapInstance
             });
 
-            // Draw arrows for kept points (all points after simplification)
             const arrowMarkers = [];
             for (let i = 0; i < track.length; i++) {
                 const pt = track[i];
                 let heading = pt.heading;
                 if (heading === null || heading === undefined) {
-                    // calculate bearing to next point
                     if (i < track.length - 1) {
                         const next = track[i+1];
                         heading = google.maps.geometry.spherical.computeHeading(
@@ -2838,7 +2842,6 @@
                             new google.maps.LatLng(next.lat, next.lng)
                         );
                     } else {
-                        // use previous bearing
                         if (i > 0) {
                             const prev = track[i-1];
                             heading = google.maps.geometry.spherical.computeHeading(
@@ -2850,7 +2853,6 @@
                         }
                     }
                 }
-                // Create arrow marker
                 const arrowMarker = new google.maps.Marker({
                     position: { lat: pt.lat, lng: pt.lng },
                     map: historicalMapInstance,
@@ -2865,9 +2867,7 @@
                     },
                     title: new Date(pt.timestamp).toLocaleString()
                 });
-                // Store timestamp in marker for tooltip
                 arrowMarker.set('timestamp', pt.timestamp);
-                // Click listener for tooltip
                 google.maps.event.addListener(arrowMarker, 'click', function(e) {
                     showArrowTooltip(this, e.latLng);
                 });
@@ -2875,13 +2875,11 @@
             }
             historicalArrowMarkers = arrowMarkers;
 
-            // If GPS is off, hide arrows
             if (!gpsOn) {
                 historicalArrowMarkers.forEach(m => m.setMap(null));
             }
 
-            // ---- ADD MANIFEST STOPS (green markers) ----
-            // Get assigned stops for this driver
+            // Manifest stops
             const assignedStops = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId && s.lat && s.lng);
             assignedStops.forEach(([id, s]) => {
                 const isCompleted = s.status === 'completed';
@@ -2906,7 +2904,6 @@
                 historicalStopMarkers.push(marker);
             });
 
-            // ---- ADD STOP EVENT MARKERS (red stop signs) ----
             const stops = historicalStopEvents[driverId] || [];
             stops.forEach(event => {
                 const marker = new google.maps.Marker({
@@ -2922,7 +2919,6 @@
                         rotation: 0
                     }
                 });
-                // Add click listener to show duration
                 google.maps.event.addListener(marker, 'click', function() {
                     const mins = Math.floor(event.duration / 60);
                     const secs = Math.round(event.duration % 60);
@@ -2937,11 +2933,8 @@
                             <div style="font-size:18px; color:#e74c3c;">⏸ ${durStr}</div>
                         </div>
                     `;
-                    // Create a temporary InfoWindow for overlay
                     const info = new google.maps.InfoWindow({ content: content });
                     info.open(historicalMapInstance, marker);
-                    // Auto-close after 5s? We'll keep open until map click.
-                    // Store reference to close on map click later
                     if (historicalMapInstance._overlayInfoWindow) {
                         historicalMapInstance._overlayInfoWindow.close();
                     }
@@ -2950,7 +2943,6 @@
                 historicalStopMarkers.push(marker);
             });
 
-            // Map click listener to close tooltip
             if (historicalMapClickHandler) {
                 google.maps.event.removeListener(historicalMapClickHandler);
             }
@@ -2983,15 +2975,11 @@
             const overlay = document.getElementById('historicalOverlay');
             overlay.style.display = 'none';
             historicalOverlayOpen = false;
-            // Clear historical data and reset modal map
             if (historicalOverlayDriverId) {
-                // Clear track from overlay map
                 clearHistoricalOverlayMap();
-                // Also clear historical data from driver modal
                 clearHistoricalTrack();
                 historicalOverlayDriverId = null;
             }
-            // Close any open tooltip
             closeArrowTooltip();
         }
 
@@ -3013,14 +3001,10 @@
             const timestamp = marker.get('timestamp');
             if (!timestamp) return;
             const timeStr = formatTimestampTo12h(timestamp);
-            // Create custom tooltip DOM element
             const tooltip = document.createElement('div');
             tooltip.className = 'arrow-tooltip';
             tooltip.textContent = timeStr;
-            // Position it absolutely relative to the map container
             const mapContainer = document.getElementById('historical-map');
-            const overlay = document.getElementById('historicalOverlay');
-            // Get pixel position of the marker on the map
             const projection = historicalMapInstance.getProjection();
             const point = projection.fromLatLngToPoint(latLng);
             const mapBounds = historicalMapInstance.getBounds();
@@ -3028,7 +3012,6 @@
             const mapDiv = historicalMapInstance.getDiv();
             const mapWidth = mapDiv.offsetWidth;
             const mapHeight = mapDiv.offsetHeight;
-            // Get the world coordinate of the bounds
             const ne = mapBounds.getNorthEast();
             const sw = mapBounds.getSouthWest();
             const nePoint = projection.fromLatLngToPoint(ne);
@@ -3039,10 +3022,8 @@
             const scaleY = mapHeight / worldHeight;
             const x = (point.x - swPoint.x) * scaleX;
             const y = (point.y - swPoint.y) * scaleY;
-            // Position tooltip above the marker (centered horizontally)
             tooltip.style.left = x + 'px';
             tooltip.style.top = (y - 30) + 'px';
-            // Append to map container (position relative)
             mapContainer.style.position = 'relative';
             mapContainer.appendChild(tooltip);
             arrowTooltipElement = tooltip;
@@ -3057,7 +3038,7 @@
             currentTooltipMarker = null;
         }
 
-        // ===== RENDER HISTORICAL STOP LIST (in driver modal) =====
+        // ===== RENDER HISTORICAL STOP LIST =====
         function renderHistoricalStops(driverId) {
             const container = document.getElementById('historicalStopList');
             if (!container) return;
@@ -3186,119 +3167,156 @@
             if (hasPoints) map.fitBounds(bounds);
         }
 
-        // ===== UPDATE MAP MARKERS =====
+        // ===== UPDATE MAP MARKERS (with diffing) =====
         function updateMapMarkers() {
             if (!map) return;
 
-            Object.values(driverMarkers).forEach(m => m.setMap(null));
-            stopMarkers.forEach(m => m.setMap(null));
-            driverMarkers = {};
-            stopMarkers = [];
+            // Update driver markers
+            const driverIds = new Set(Object.keys(drivers));
+            const currentDriverMarkers = Object.keys(driverMarkers);
 
-            for (let id in driverPulseCircles) driverPulseCircles[id].setMap(null);
-            driverPulseCircles = {};
+            // Remove markers for drivers that no longer exist
+            currentDriverMarkers.forEach(id => {
+                if (!driverIds.has(id)) {
+                    driverMarkers[id].setMap(null);
+                    delete driverMarkers[id];
+                    if (driverPulseCircles[id]) {
+                        driverPulseCircles[id].setMap(null);
+                        delete driverPulseCircles[id];
+                    }
+                }
+            });
 
-            // Drivers
-            for (let [id, drv] of Object.entries(drivers)) {
-                if (!drv.lastLocation) continue;
-                const pos = drv.lastLocation;
+            // Update or create markers for drivers
+            for (const [id, drv] of Object.entries(drivers)) {
+                if (!drv.lastLocation) {
+                    if (driverMarkers[id]) {
+                        driverMarkers[id].setMap(null);
+                        delete driverMarkers[id];
+                        if (driverPulseCircles[id]) {
+                            driverPulseCircles[id].setMap(null);
+                            delete driverPulseCircles[id];
+                        }
+                    }
+                    continue;
+                }
+                const pos = new google.maps.LatLng(drv.lastLocation.lat, drv.lastLocation.lng);
                 const color = drv.color || '#f7c948';
                 const icon = getDriverIcon(drv.name || 'Driver', color, drv.heading);
-                const marker = new google.maps.Marker({
-                    position: { lat: pos.lat, lng: pos.lng },
-                    map: map,
-                    icon: icon
-                });
-                driverMarkers[id] = marker;
-                marker.addListener('click', function() {
-                    openDriverModal(id);
-                });
 
-                const circle = new google.maps.Circle({
-                    center: { lat: pos.lat, lng: pos.lng },
-                    radius: 15,
-                    fillColor: color,
-                    fillOpacity: 0.2,
-                    strokeColor: color,
-                    strokeOpacity: 0.6,
-                    strokeWeight: 2,
-                    map: map
-                });
-                driverPulseCircles[id] = circle;
+                if (driverMarkers[id]) {
+                    driverMarkers[id].setPosition(pos);
+                    driverMarkers[id].setIcon(icon);
+                    if (driverPulseCircles[id]) {
+                        driverPulseCircles[id].setCenter(pos);
+                    }
+                } else {
+                    const marker = new google.maps.Marker({
+                        position: pos,
+                        map: map,
+                        icon: icon
+                    });
+                    marker.addListener('click', function() {
+                        openDriverModal(id);
+                    });
+                    driverMarkers[id] = marker;
+
+                    const circle = new google.maps.Circle({
+                        center: pos,
+                        radius: 15,
+                        fillColor: color,
+                        fillOpacity: 0.2,
+                        strokeColor: color,
+                        strokeOpacity: 0.6,
+                        strokeWeight: 2,
+                        map: map
+                    });
+                    driverPulseCircles[id] = circle;
+                }
             }
 
-            if (Object.keys(driverPulseCircles).length > 0) startPulseAnimation();
-            else if (pulseAnimationId) cancelAnimationFrame(pulseAnimationId);
+            // Update stop markers
+            const stopIds = new Set(Object.keys(loadedStops));
+            const currentStopMarkers = Object.keys(stopMarkers);
 
-            // Stops - green markers like routeplanner
+            currentStopMarkers.forEach(id => {
+                if (!stopIds.has(id)) {
+                    stopMarkers[id].setMap(null);
+                    delete stopMarkers[id];
+                }
+            });
+
+            // We'll rebuild the infoWindow for stops
+            let infoWindow = new google.maps.InfoWindow();
+
             const entries = Object.entries(loadedStops)
                 .filter(([id, s]) => s.lat && s.lng)
                 .sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
 
-            // InfoWindow for completed stops (reused)
-            let infoWindow = new google.maps.InfoWindow();
-
-            entries.forEach(([id, s], index) => {
-                const pos = { lat: s.lat, lng: s.lng };
+            for (const [id, s] of entries) {
+                const pos = new google.maps.LatLng(s.lat, s.lng);
                 const isCompleted = s.status === 'completed';
-                const labelText = `${index+1}. ${s.name || 'Stop'}`;
+                const labelText = `${entries.indexOf([id,s])+1}. ${s.name || 'Stop'}`;
 
-                // Green marker (like routeplanner)
-                const marker = new google.maps.Marker({
-                    position: pos,
-                    map: map,
-                    label: {
+                if (stopMarkers[id]) {
+                    stopMarkers[id].setPosition(pos);
+                    // Update label and icon
+                    stopMarkers[id].setLabel({
                         text: labelText,
                         color: '#00b32d',
                         fontWeight: 'bold',
                         fontSize: '11px',
                         className: 'driver-map-label'
-                    },
-                    icon: {
+                    });
+                    stopMarkers[id].setIcon({
                         path: google.maps.SymbolPath.CIRCLE,
                         scale: 12,
                         fillColor: isCompleted ? '#999999' : '#22c55e',
                         fillOpacity: isCompleted ? 0.5 : 1,
                         strokeColor: 'white',
                         strokeWeight: 2
-                    }
-                });
-                marker.set('stopId', id);
-                marker.addListener('click', function() {
-                    if (isCompleted && s.completedAt) {
-                        const timeStr = new Date(s.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        const content = `<div style="font-family:Inter; padding:4px 8px; font-weight:600; color:#2ecc71;">✓ Completed at ${timeStr}</div>`;
-                        infoWindow.setContent(content);
-                        infoWindow.open(map, marker);
-                    } else {
-                        zoomToStop(id);
-                    }
-                });
-                marker.addListener('dblclick', function() {
-                    openGoogleMaps(pos.lat, pos.lng);
-                });
-
-                // If completed, add a subtle checkmark overlay (using a separate marker or label)
-                if (isCompleted) {
-                    // We'll add a small checkmark as a separate marker overlay
-                    const checkMarker = new google.maps.Marker({
+                    });
+                } else {
+                    const marker = new google.maps.Marker({
                         position: pos,
                         map: map,
-                        icon: {
-                            path: 'M 0,-12 L 4,-4 L 12,-12 L 6,4 L 0,12 L -6,4 L -12,-12 L -4,-4 Z',
-                            scale: 0.6,
-                            fillColor: '#2ecc71',
-                            fillOpacity: 0.9,
-                            strokeColor: '#fff',
-                            strokeWeight: 1
+                        label: {
+                            text: labelText,
+                            color: '#00b32d',
+                            fontWeight: 'bold',
+                            fontSize: '11px',
+                            className: 'driver-map-label'
                         },
-                        zIndex: 1000
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 12,
+                            fillColor: isCompleted ? '#999999' : '#22c55e',
+                            fillOpacity: isCompleted ? 0.5 : 1,
+                            strokeColor: 'white',
+                            strokeWeight: 2
+                        }
                     });
-                    // Not stored, but it's fine
+                    marker.set('stopId', id);
+                    marker.addListener('click', function() {
+                        if (isCompleted && s.completedAt) {
+                            const timeStr = new Date(s.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const content = `<div style="font-family:Inter; padding:4px 8px; font-weight:600; color:#2ecc71;">✓ Completed at ${timeStr}</div>`;
+                            infoWindow.setContent(content);
+                            infoWindow.open(map, marker);
+                        } else {
+                            zoomToStop(id);
+                        }
+                    });
+                    marker.addListener('dblclick', function() {
+                        openGoogleMaps(s.lat, s.lng);
+                    });
+                    stopMarkers[id] = marker;
                 }
+            }
 
-                stopMarkers.push(marker);
-            });
+            // Restart pulse animation if there are driver circles
+            if (Object.keys(driverPulseCircles).length > 0) startPulseAnimation();
+            else if (pulseAnimationId) cancelAnimationFrame(pulseAnimationId);
         }
 
         function getDriverIcon(name, color, heading = null) {
@@ -3343,7 +3361,6 @@
             const stop = loadedStops[stopId];
             if (!stop || !stop.lat || !stop.lng) return;
             if (map) {
-                // Ensure map is visible
                 const wrapper = document.getElementById('mainMapWrapper');
                 if (wrapper.classList.contains('hidden')) {
                     wrapper.classList.remove('hidden');
@@ -3357,11 +3374,10 @@
         }
 
         function updateMapDriverControl() {
-            const container = document.getElementById('mapDriverControl');
-            if (!container) return;
+            if (!mapDriverControlEl) return;
             const entries = Object.entries(drivers);
             if (entries.length === 0) {
-                container.innerHTML = '<div style="color:var(--muted);">No drivers</div>';
+                mapDriverControlEl.innerHTML = '<div style="color:var(--muted);">No drivers</div>';
                 return;
             }
             let html = '';
@@ -3378,7 +3394,44 @@
               <span class="driver-status" style="color:${statusColor};">${status.label}</span>
             </div>`;
             }
-            container.innerHTML = html;
+            mapDriverControlEl.innerHTML = html;
+        }
+
+        // ===== SCHEDULE RENDER =====
+        function scheduleRender() {
+            if (renderTimer) clearTimeout(renderTimer);
+            renderTimer = setTimeout(() => {
+                renderDriverBadges();
+                updateMapMarkers();
+                renderStopList();
+                updateMapDriverControl();
+                saveCachedData();
+                renderTimer = null;
+            }, 100);
+        }
+
+        // ===== CACHE DATA =====
+        function saveCachedData() {
+            try {
+                const cache = {
+                    drivers: drivers,
+                    loadedStops: loadedStops,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('ec_cache', JSON.stringify(cache));
+            } catch (_) {}
+        }
+
+        function loadCachedData() {
+            try {
+                const raw = localStorage.getItem('ec_cache');
+                if (!raw) return false;
+                const cache = JSON.parse(raw);
+                if (Date.now() - cache.timestamp > 5 * 60 * 1000) return false; // older than 5 min
+                drivers = cache.drivers || {};
+                loadedStops = cache.loadedStops || {};
+                return true;
+            } catch (_) { return false; }
         }
 
         // ===== ROUTE SELECTOR =====
@@ -3436,7 +3489,6 @@
         }
 
         function loadRoutes(keys) {
-            // Clear existing stops
             loadedStops = {};
             currentRouteKeys = keys;
 
@@ -3447,7 +3499,6 @@
                 const route = availableRoutes[key];
                 if (!route || !route.stops) return;
                 const driverName = route.label || 'Unnamed';
-                // Check if driver exists
                 let driverId = null;
                 for (let [id, drv] of Object.entries(drivers)) {
                     if (drv.name && drv.name.toLowerCase() === driverName.toLowerCase()) {
@@ -3456,12 +3507,10 @@
                     }
                 }
                 if (!driverId) {
-                    // Prompt to create driver
                     driversToCreate.push(driverName);
                 }
             });
 
-            // Create missing drivers
             if (driversToCreate.length > 0) {
                 const unique = [...new Set(driversToCreate)];
                 let msg = 'The following driver(s) do not exist. Create them?\n\n';
@@ -3471,22 +3520,17 @@
                     unique.forEach(name => {
                         ref.push({ name: name, color: '#f7c948', deviceId: '', lastLocation: null });
                     });
-                    // We'll re-fetch drivers after push
-                    // For now, we'll just reload drivers from Firebase
+                    getDriversRef().once('value').then(snap => {
+                        drivers = snap.val() || {};
+                        loadRoutes(keys);
+                    });
+                    return;
                 } else {
                     alert('Route loading cancelled.');
                     return;
                 }
-                // Re-fetch drivers before proceeding
-                getDriversRef().once('value').then(snap => {
-                    drivers = snap.val() || {};
-                    // Now re-run load with updated drivers
-                    loadRoutes(keys);
-                });
-                return;
             }
 
-            // Now assign stops and accumulate ETA/distance per driver
             let driverTotals = {};
             let stopIdCounter = 0;
             keys.forEach(key => {
@@ -3500,9 +3544,8 @@
                         break;
                     }
                 }
-                if (!driverId) return; // shouldn't happen
+                if (!driverId) return;
 
-                // Accumulate ETA and distance for this driver
                 if (!driverTotals[driverId]) driverTotals[driverId] = { etaMinutes: 0, km: 0 };
                 driverTotals[driverId].etaMinutes += (route.etaTotalMinutes || 0);
                 driverTotals[driverId].km += (route.etaTotalKm || 0);
@@ -3517,9 +3560,8 @@
                         status: 'pending',
                         completedAt: null,
                         order: idx,
-                        lat: null,
-                        lng: null,
-                        // Preserve extra fields
+                        lat: stop.lat || null,
+                        lng: stop.lng || null,
                         box_qty: stop.box_qty || 0,
                         piece_qty: stop.piece_qty || 0,
                         envelope_qty: stop.envelope_qty || 0,
@@ -3530,20 +3572,36 @@
                 });
             });
 
-            // Store ETA/distance data
             driverEtaData = driverTotals;
 
-            // Geocode all stops
+            // Geocode stops that lack coordinates
             const geocoder = new google.maps.Geocoder();
             const stopIds = Object.keys(newStops);
             let geocodePromises = stopIds.map(id => {
                 return new Promise((resolve) => {
                     const stop = newStops[id];
+                    if (stop.lat && stop.lng) {
+                        resolve();
+                        return;
+                    }
                     const fullAddress = stop.address + ', ' + stop.city + ', Canada';
+                    // Check cache
+                    const cached = getCachedGeocode(fullAddress);
+                    if (cached) {
+                        stop.lat = cached.lat;
+                        stop.lng = cached.lng;
+                        resolve();
+                        return;
+                    }
                     geocoder.geocode({ address: fullAddress }, function(results, status) {
                         if (status === 'OK' && results && results.length > 0) {
-                            stop.lat = results[0].geometry.location.lat();
-                            stop.lng = results[0].geometry.location.lng();
+                            const coords = {
+                                lat: results[0].geometry.location.lat(),
+                                lng: results[0].geometry.location.lng()
+                            };
+                            stop.lat = coords.lat;
+                            stop.lng = coords.lng;
+                            setCachedGeocode(fullAddress, coords);
                         }
                         resolve();
                     });
@@ -3552,18 +3610,23 @@
 
             Promise.all(geocodePromises).then(() => {
                 loadedStops = newStops;
-                renderStopList();
-                updateMapMarkers();
-                renderDriverBadges();
-                // Update each driver modal if open
+                rebuildPendingStops();
+                scheduleRender();
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
-                saveDashboardState();
-
+                // Save route meta
+                saveRouteMeta();
                 // Re-scan historical tracks for each driver that has stops
                 const driverIds = new Set(Object.values(newStops).map(s => s.assignedDriver).filter(Boolean));
                 driverIds.forEach(did => {
                     reScanHistoricalTracksForDriver(did);
                 });
+            });
+        }
+
+        function saveRouteMeta() {
+            db.ref('developer/dispatch_dashboard/route_meta').set({
+                currentRouteKeys: currentRouteKeys,
+                driverEtaData: driverEtaData
             });
         }
 
@@ -3575,18 +3638,17 @@
             loadedStops = {};
             currentRouteKeys = [];
             driverEtaData = {};
-            renderStopList();
-            updateMapMarkers();
-            renderDriverBadges();
+            rebuildPendingStops();
+            scheduleRender();
             if (activeModalDriverId) renderDriverStops(activeModalDriverId);
-            saveDashboardState();
+            saveRouteMeta();
         }
 
-        // ===== RENDER STOP LIST =====
+        // ===== RENDER STOP LIST (with DocumentFragment) =====
         function renderStopList() {
-            const container = document.getElementById('stopList');
-            const empty = document.getElementById('emptyMsg');
-            const counter = document.getElementById('stopCount');
+            const container = stopListEl;
+            const empty = emptyMsgEl;
+            const counter = stopCountEl;
 
             let entries = Object.entries(loadedStops);
             const searchQueryLower = searchQuery.toLowerCase().trim();
@@ -3596,7 +3658,7 @@
                     const address = (s.address || '').toLowerCase();
                     const city = (s.city || '').toLowerCase();
                     return name.includes(searchQueryLower) || address.includes(searchQueryLower) || city.includes(
-                    searchQueryLower);
+                        searchQueryLower);
                 });
             }
 
@@ -3615,45 +3677,44 @@
                 const bCompleted = b[1].status === 'completed';
                 if (aCompleted && !bCompleted) return -1;
                 if (!aCompleted && bCompleted) return 1;
-                // both completed or both not completed
                 if (aCompleted && bCompleted) {
-                    // sort by completedAt ascending
                     const aTime = a[1].completedAt || 0;
                     const bTime = b[1].completedAt || 0;
                     return aTime - bTime;
                 }
-                // both not completed: sort by order
                 return (a[1].order || 0) - (b[1].order || 0);
             });
 
-            let html = '';
+            const fragment = document.createDocumentFragment();
             for (let [id, s] of entries) {
                 const isCompleted = s.status === 'completed';
                 const driverName = s.assignedDriver && drivers[s.assignedDriver] ? drivers[s.assignedDriver].name : 'Unassigned';
-                const driverColor = s.assignedDriver && drivers[s.assignedDriver] ? drivers[s.assignedDriver].color :
-                '#555';
+                const driverColor = s.assignedDriver && drivers[s.assignedDriver] ? drivers[s.assignedDriver].color : '#555';
 
                 const ts = isCompleted ?
                     `<span class="timestamp">✓ ${s.completedAt ? new Date(s.completedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''}</span>` :
                     '';
 
                 let extraClasses = isCompleted ? 'completed' : '';
-
-                html += `
-              <div class="stop-item ${extraClasses}" data-id="${id}" style="border-left-color:${driverColor};">
+                const div = document.createElement('div');
+                div.className = `stop-item ${extraClasses}`;
+                div.dataset.id = id;
+                div.style.borderLeftColor = driverColor;
+                div.innerHTML = `
                 <div class="info" onclick="zoomToStop('${id}')">
                   <div class="name">${s.name || 'No name'} ${ts}</div>
                   <div class="addr">${s.address || ''} ${s.city || ''} <span class="driver-badge-sm">${driverName}</span></div>
                 </div>
-              </div>
-            `;
+              `;
+                fragment.appendChild(div);
             }
-            container.innerHTML = html;
+            container.innerHTML = '';
+            container.appendChild(fragment);
         }
 
         function filterStops() {
-            const input = document.getElementById('manifestSearchInput');
-            const clearBtn = document.getElementById('manifestSearchClear');
+            const input = manifestSearchInput;
+            const clearBtn = manifestSearchClear;
             searchQuery = input.value;
             if (searchQuery.length > 0) clearBtn.classList.add('visible');
             else clearBtn.classList.remove('visible');
@@ -3661,15 +3722,15 @@
         }
 
         function clearSearch() {
-            document.getElementById('manifestSearchInput').value = '';
-            document.getElementById('manifestSearchClear').classList.remove('visible');
+            manifestSearchInput.value = '';
+            manifestSearchClear.classList.remove('visible');
             searchQuery = '';
             renderStopList();
         }
 
         // ===== DRIVER BADGES =====
         function renderDriverBadges() {
-            const container = document.getElementById('driverBadges');
+            const container = driverBadgesEl;
             container.innerHTML = '';
             const entries = Object.entries(drivers);
             if (entries.length === 0) {
@@ -3695,13 +3756,11 @@
                     if (!formatted) formatted = '0 Min';
                     lastUpdateText = formatted;
                 }
-                // Count assigned stops
                 const assignedCount = Object.values(loadedStops).filter(s => s.assignedDriver === id && s.status !== 'completed')
                     .length;
                 const completedCount = Object.values(loadedStops).filter(s => s.assignedDriver === id && s.status === 'completed')
                     .length;
 
-                // Battery display with color
                 let batteryVal = drv.battery || 0;
                 let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
                 let batteryHtml = `<span class="battery ${batteryColor}">🔋 ${batteryVal}%</span>`;
@@ -3740,24 +3799,20 @@
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
 
-            // Set default date range for today 6am-6pm
             const now = new Date();
             const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0);
             const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
-            // Adjust for timezone offset to get local datetime string
             const offset = now.getTimezoneOffset() * 60000;
             const localStart = new Date(todayStart.getTime() - offset);
             const localEnd = new Date(todayEnd.getTime() - offset);
             document.getElementById('historyStart').value = localStart.toISOString().slice(0,16);
             document.getElementById('historyEnd').value = localEnd.toISOString().slice(0,16);
 
-            // Update modal header with status, address, battery
             const statusHeader = document.getElementById('driverStatusHeader');
             const addressHeader = document.getElementById('driverAddressHeader');
             const batteryHeader = document.getElementById('modalBatteryHeader');
             const alarmHeader = document.getElementById('modalAlarmHeader');
 
-            // Set status
             const devId = drv?.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
             const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
             let lastUp = '—';
@@ -3773,10 +3828,8 @@
             }
             statusHeader.textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
 
-            // Set address (will be updated after reverse geocode)
             addressHeader.textContent = '📍 Loading address...';
 
-            // Set battery
             if (drv) {
                 let batteryVal = drv.battery || 0;
                 let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
@@ -3823,11 +3876,9 @@
                     driverModalMap.setZoom(14);
                 }
 
-                // Clear old markers
                 if (container._markers) container._markers.forEach(m => m.setMap(null));
                 container._markers = [];
 
-                // Driver marker
                 if (drv?.lastLocation) {
                     const color = drv.color || '#f7c948';
                     const icon = getDriverIcon(drv.name || 'Driver', color, drv.heading);
@@ -3864,7 +3915,6 @@
                     addressHeader.textContent = '';
                 }
 
-                // Assigned stops
                 const assigned = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId);
                 assigned.forEach(([id, s]) => {
                     if (s.lat && s.lng) {
@@ -3894,16 +3944,11 @@
                     }
                 });
 
-                // Draw track (uses historical if active) – no arrows
                 updateDriverModalTrack(driverId);
-
                 renderDriverStops(driverId);
 
-                // Update stop count with ETA/distance if available
                 let stopCountText = `${assigned.length} stops`;
                 document.getElementById('driverStopCount').textContent = stopCountText;
-
-                // Render historical stop list (if any)
                 renderHistoricalStops(driverId);
 
             }, 200);
@@ -3948,7 +3993,6 @@
         function closeDriverModal() {
             document.getElementById('driverModal').style.display = 'none';
             document.body.classList.remove('modal-open');
-            // Do not clear historical state, keep it for next open
             activeModalDriverId = null;
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
@@ -3967,7 +4011,6 @@
                 container.innerHTML = '<div style="color:var(--muted);padding:12px;">No assigned stops</div>';
                 return;
             }
-            // Sort: completed first (by completedAt ascending), then pending by order
             assigned.sort((a, b) => {
                 const aComp = a[1].status === 'completed';
                 const bComp = b[1].status === 'completed';
@@ -4012,10 +4055,7 @@
         }
 
         // ===== HISTORICAL DISTANCE (standalone) =====
-        async function calculateHistoricalDistance() {
-            // Function kept for backward compatibility but no longer used.
-            // Automatically calculated in loadHistoricalTrack.
-        }
+        // Kept for compatibility; not used.
 
         // ===== PERSISTENCE: fetch historical data since last fetch =====
         async function fetchHistoricalDataSince(driverId, sinceTimestamp) {
@@ -4023,7 +4063,6 @@
             const drv = drivers[driverId];
             if (!drv || !drv.deviceId) return;
             const now = Math.floor(Date.now() / 1000);
-            // If no sinceTimestamp, default to 24 hours ago
             const from = sinceTimestamp || (now - 86400);
             if (from >= now) return;
 
@@ -4035,19 +4074,15 @@
                 });
                 if (!response.ok) throw new Error('Failed to fetch historical data');
                 const data = await response.json();
-                const points = data.success || [];
+                let points = data.success || [];
                 console.log(`[${driverId}] Fetched ${points.length} historical points from ${from} to ${now}`);
                 if (points.length === 0) return;
 
-                // Process points: add to driverTracks and detect stops
-                if (!driverTracks[driverId]) driverTracks[driverId] = [];
-                if (!driverStopEvents[driverId]) driverStopEvents[driverId] = [];
-
-                // Sort points by dateunix (oldest first)
+                // Sort points by dateunix
                 points.sort((a, b) => a.dateunix - b.dateunix);
 
                 // Filter out points that are already in the track (prevent duplicates)
-                const existingTimestamps = new Set(driverTracks[driverId].map(p => p.timestamp));
+                const existingTimestamps = new Set((driverTracks[driverId] || []).map(p => p.timestamp));
                 const newPoints = points.filter(p => {
                     const ts = p.dateunix ? p.dateunix * 1000 : Date.now();
                     return !existingTimestamps.has(ts);
@@ -4055,166 +4090,74 @@
 
                 if (newPoints.length === 0) return;
 
-                // Build raw track with timestamp guard
-                const rawTrack = newPoints.map(p => ({
-                    lat: p.lat,
-                    lng: p.lng,
-                    timestamp: p.dateunix ? p.dateunix * 1000 : Date.now(),
-                    heading: p.direction || null
-                }));
-
-                // Add new points to track
-                for (const p of rawTrack) {
+                // Process each new point
+                for (const p of newPoints) {
                     const lat = p.lat;
                     const lng = p.lng;
-                    const ts = p.timestamp;
+                    const ts = p.dateunix ? p.dateunix * 1000 : Date.now();
                     if (!isNaN(lat) && !isNaN(lng)) {
-                        driverTracks[driverId].push({ lat, lng, timestamp: ts });
-                        // Also update lastLocation for this driver if this is the newest point
-                        if (!drv.lastLocation || ts > drv.lastLocation.updatedAt) {
-                            drv.lastLocation = { lat, lng, updatedAt: ts };
-                        }
+                        processPoint(driverId, lat, lng, ts, true);
                     }
                 }
 
-                // Re-sort tracks by timestamp
-                driverTracks[driverId].sort((a, b) => a.timestamp - b.timestamp);
+                // Run historical auto-complete on the new points
+                processHistoricalAutoComplete(driverId, newPoints.map(p => ({
+                    lat: p.lat,
+                    lng: p.lng,
+                    timestamp: p.dateunix ? p.dateunix * 1000 : Date.now()
+                })));
 
-                // Run historical auto-complete on the new points before rebuilding stops
-                processHistoricalAutoComplete(driverId, rawTrack);
+                // Update lastTrackFetchTime
+                const newFetchTime = now;
+                getDriversRef().child(driverId).update({ lastTrackFetchTime: newFetchTime });
+                drv.lastTrackFetchTime = newFetchTime;
 
-                // Re-detect stop events from the entire track (simplified: run stop detection on all points)
-                // We'll just scan the track and build stop events
-                // For simplicity, we'll use the existing stop detection logic by processing points sequentially
-                // Reset stop state for this driver to avoid interference
-                driverStopState[driverId] = null;
-                // We'll reprocess all points to build stop events (more accurate)
-                // But to avoid O(n^2) we'll just clear and rebuild from scratch for this driver
-                // Given that tracks are typically not huge, this is acceptable.
-                const fullTrack = driverTracks[driverId];
-                // Clear existing stop events for this driver
-                driverStopEvents[driverId] = [];
-                // Re-run stop detection on the full track
-                for (let i = 0; i < fullTrack.length; i++) {
-                    const pt = fullTrack[i];
-                    // Simulate the same logic as in processGPSUpdate but without adding new points
-                    // We'll call a helper that processes a point for stop detection
-                    // For simplicity, we'll just use the existing checkStopDetection logic in a loop.
-                    // But we need to adapt: we'll call a function that mimics the detection.
-                    // We'll implement a separate function that rebuilds stops from track.
-                }
-                // For now, we'll just clear stop events and rebuild using a simple algorithm:
-                // Group consecutive points where distance < 5m and duration > threshold
-                // We'll implement a simple rebuild function.
-                rebuildStopEvents(driverId);
-
-                // Update UI if this driver is currently active
+                // Update UI if this driver is active
                 if (activeModalDriverId === driverId && !isHistoricalMode[driverId]) {
                     updateDriverModalTrack(driverId);
                     renderDriverStops(driverId);
                 }
-                renderDriverBadges();
-                updateMapMarkers();
-
-                // Update lastTrackFetchTime in Firebase
-                const newFetchTime = now;
-                getDriversRef().child(driverId).update({ lastTrackFetchTime: newFetchTime });
-                // Also update local driver object
-                drv.lastTrackFetchTime = newFetchTime;
+                scheduleRender();
 
             } catch (e) {
                 console.warn('Historical fetch error for driver', driverId, e);
             }
         }
 
-        // Helper to rebuild stop events from track
-        function rebuildStopEvents(driverId) {
-            const track = driverTracks[driverId] || [];
-            if (track.length < 2) {
-                driverStopEvents[driverId] = [];
-                return;
-            }
-            const events = [];
-            let stopStart = null;
-            let stopStartIndex = 0;
-            for (let i = 1; i < track.length; i++) {
-                const prev = track[i-1];
-                const curr = track[i];
-                const dist = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
-                if (dist < 5) {
-                    // Still stopped or starting a stop
-                    if (!stopStart) {
-                        stopStart = prev;
-                        stopStartIndex = i-1;
-                    }
-                } else {
-                    // Movement detected; if we had a stop, close it
-                    if (stopStart) {
-                        const duration = (prev.timestamp - stopStart.timestamp) / 1000;
-                        if (duration >= STOP_DETECTION_THRESHOLD) {
-                            events.push({
-                                lat: stopStart.lat,
-                                lng: stopStart.lng,
-                                startTime: stopStart.timestamp,
-                                endTime: prev.timestamp,
-                                duration: duration
-                            });
-                        }
-                        stopStart = null;
-                    }
+        // ===== REBUILD PENDING STOPS =====
+        function rebuildPendingStops() {
+            driverPendingStops = {};
+            Object.entries(loadedStops).forEach(([id, s]) => {
+                if (s.status !== 'completed' && s.assignedDriver && s.lat && s.lng) {
+                    if (!driverPendingStops[s.assignedDriver]) driverPendingStops[s.assignedDriver] = [];
+                    driverPendingStops[s.assignedDriver].push({ id, ...s });
                 }
-            }
-            // Check if we are still in a stop at the end
-            if (stopStart) {
-                const last = track[track.length - 1];
-                const duration = (last.timestamp - stopStart.timestamp) / 1000;
-                if (duration >= STOP_DETECTION_THRESHOLD) {
-                    events.push({
-                        lat: stopStart.lat,
-                        lng: stopStart.lng,
-                        startTime: stopStart.timestamp,
-                        endTime: last.timestamp,
-                        duration: duration
-                    });
-                }
-            }
-            driverStopEvents[driverId] = events;
+            });
         }
 
         // ===== RETROACTIVE AUTO-COMPLETE =====
         function runRetroactiveAutoComplete() {
-            // For each driver with deviceId, fetch from 6am today to now
             const now = new Date();
             const today6am = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0);
             let fromTimestamp = Math.floor(today6am.getTime() / 1000);
-            // If current time is before 6am, set from to now (no data)
             if (now < today6am) {
                 fromTimestamp = Math.floor(now.getTime() / 1000);
             }
 
             for (let [id, drv] of Object.entries(drivers)) {
                 if (!drv.deviceId || String(drv.deviceId).trim() === '') continue;
-                // Check if we have a lastTrackFetchTime; if so, use that as from? Actually we want to fetch from 6am, but we may already have some data.
-                // To avoid duplicates, we'll use lastTrackFetchTime if it exists and is after 6am, else use 6am.
                 let start = fromTimestamp;
                 if (drv.lastTrackFetchTime && drv.lastTrackFetchTime > fromTimestamp) {
                     start = drv.lastTrackFetchTime;
                 }
-                // But we want to fetch from 6am to now on first load. So we'll use 6am regardless if no lastTrackFetchTime.
-                // If lastTrackFetchTime exists, we can incrementally fetch from that point.
-                // However, to ensure we process all points from 6am, we'll fetch from 6am to now for the first time, and then store lastTrackFetchTime.
-                // So we'll call fetchHistoricalDataSince with start = fromTimestamp (6am) for first time, but it will filter duplicates.
-                // Actually fetchHistoricalDataSince will fetch from start to now and only add new points.
-                // So we call it with the 6am timestamp.
-                fetchHistoricalDataSince(id, fromTimestamp);
+                fetchHistoricalDataSince(id, start);
             }
         }
 
         function runIncrementalAutoComplete() {
-            // For each driver, fetch from lastTrackFetchTime to now
             for (let [id, drv] of Object.entries(drivers)) {
                 if (!drv.deviceId || String(drv.deviceId).trim() === '') continue;
-                const lastFetch = drv.lastTrackFetchTime || Math.floor(Date.now()/1000) - 86400; // default 24h ago
+                const lastFetch = drv.lastTrackFetchTime || Math.floor(Date.now()/1000) - 86400;
                 fetchHistoricalDataSince(id, lastFetch);
             }
         }
@@ -4223,7 +4166,6 @@
         function openSettings() {
             document.getElementById('settingsModal').style.display = 'flex';
             renderSettingsList();
-            // Load current proximity radius
             getMasterRef().once('value').then(snap => {
                 const cfg = snap.val() || {};
                 document.getElementById('pajEmail').value = cfg.paj_email || '';
@@ -4258,14 +4200,13 @@
         function removeDriver(id) {
             if (!confirm('Remove this driver?')) return;
             getDriversRef().child(id).remove();
-            // Also unassign stops
             for (let [stopId, stop] of Object.entries(loadedStops)) {
                 if (stop.assignedDriver === id) {
                     stop.assignedDriver = null;
                 }
             }
-            renderStopList();
-            renderDriverBadges();
+            rebuildPendingStops();
+            scheduleRender();
             updateMapMarkers();
         }
 
@@ -4292,8 +4233,7 @@
                 }
             });
             if (email && pass) authenticatePAJ();
-            renderDriverBadges();
-            renderStopList();
+            scheduleRender();
             closeSettings();
         }
 
@@ -4318,53 +4258,39 @@
 
             if (matchingKeys.length === 0) return;
 
-            // Only auto-load if no stops are currently loaded
             if (Object.keys(loadedStops).length > 0) {
-                // If stops already loaded, check if the matching keys are already loaded
                 const allLoaded = matchingKeys.every(k => currentRouteKeys.includes(k));
                 if (allLoaded) {
                     autoLoaded = true;
                     return;
                 }
-                // If not all loaded, we could still load but we avoid clearing existing stops.
-                // For safety, we skip auto-load if any stops exist.
                 return;
             }
 
-            // Load the matching routes
-            console.log('Auto-loading routes for drivers:', matchingKeys);
             loadRoutes(matchingKeys);
             autoLoaded = true;
         }
 
         // ===== PERSISTENCE FUNCTIONS =====
-        function saveDashboardState() {
-            // Save loadedStops
-            db.ref('developer/dispatch_dashboard/loaded_stops').set(loadedStops);
-            // Save route meta
-            db.ref('developer/dispatch_dashboard/route_meta').set({
-                currentRouteKeys: currentRouteKeys,
-                driverEtaData: driverEtaData
-            });
+        function updateStopStatus(stopId, status, completedAt) {
+            const updates = {};
+            updates[`developer/dispatch_dashboard/loaded_stops/${stopId}/status`] = status;
+            updates[`developer/dispatch_dashboard/loaded_stops/${stopId}/completedAt`] = completedAt;
+            db.ref().update(updates);
         }
 
         function loadSavedDashboardState() {
-            // Read from Firebase and restore
             db.ref('developer/dispatch_dashboard/loaded_stops').once('value').then(snap => {
                 const stops = snap.val();
                 if (stops && typeof stops === 'object') {
-                    // Merge or replace? We'll assign loadedStops = stops;
                     loadedStops = stops;
-                    // Also need to validate assigned drivers exist; if not, set to null.
                     for (let id in loadedStops) {
                         if (loadedStops[id].assignedDriver && !drivers[loadedStops[id].assignedDriver]) {
                             loadedStops[id].assignedDriver = null;
                         }
                     }
-                    // Then read route meta
                     return db.ref('developer/dispatch_dashboard/route_meta').once('value');
                 } else {
-                    // No stops, but we still need to read route_meta? Not necessary.
                     return null;
                 }
             }).then(snapMeta => {
@@ -4375,45 +4301,64 @@
                         driverEtaData = meta.driverEtaData || {};
                     }
                 }
-                // After restoring, update UI
-                renderStopList();
-                updateMapMarkers();
-                renderDriverBadges();
+                rebuildPendingStops();
+                scheduleRender();
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
                 updateMapDriverControl();
             }).catch(err => console.warn('Failed to load saved dashboard state:', err));
         }
 
+        // ===== GEOCODE CACHE =====
+        function getCachedGeocode(address) {
+            const entry = geocodeCache[address];
+            if (entry && (Date.now() - entry.timestamp < 30 * 24 * 60 * 60 * 1000)) {
+                return entry.coords;
+            }
+            return null;
+        }
+
+        function setCachedGeocode(address, coords) {
+            geocodeCache[address] = { coords, timestamp: Date.now() };
+            localStorage.setItem('geocodeCache', JSON.stringify(geocodeCache));
+        }
+
         // ===== INIT =====
         function initApp() {
-            // Fetch saved routes first to have them ready for auto-load
+            // Load cached data
+            const cached = loadCachedData();
+            if (cached) {
+                rebuildPendingStops();
+                renderDriverBadges();
+                updateMapMarkers();
+                renderStopList();
+                updateMapDriverControl();
+                if (activeModalDriverId) renderDriverStops(activeModalDriverId);
+            }
+
+            // Fetch saved routes
             getSavedRoutesRef().once('value').then(snap => {
                 availableRoutes = snap.val() || {};
-                // After routes are loaded, trigger auto-load if drivers already loaded
                 if (Object.keys(drivers).length > 0) {
                     autoLoadMatchingRoutes();
                 }
             }).catch(err => console.warn('Failed to load saved routes:', err));
 
+            // Listen to drivers
             getDriversRef().on('value', snap => {
                 drivers = snap.val() || {};
-                renderDriverBadges();
-                updateMapMarkers();
-                renderSettingsList();
-                renderStopList();
-                updateMapDriverControl();
+                rebuildPendingStops();
+                scheduleRender();
                 if (activeModalDriverId) renderDriverStops(activeModalDriverId);
                 if (!dashboardLoaded) {
                     dashboardLoaded = true;
                     loadSavedDashboardState();
-                    // auto-completion is now started from the master config callback
-                    // Try auto-load matching routes if not already done
                     if (Object.keys(availableRoutes).length > 0) {
                         autoLoadMatchingRoutes();
                     }
                 }
             });
 
+            // Listen to master config
             getMasterRef().once('value').then(snap => {
                 const cfg = snap.val() || {};
                 document.getElementById('pajEmail').value = cfg.paj_email || '';
@@ -4439,12 +4384,17 @@
                         localStorage.setItem('ec_map_visible', 'false');
                     }
                 }
-                // Start auto-completion if pajToken is available and not already started
                 if (pajToken && !autoCompleteStarted) {
                     autoCompleteStarted = true;
                     runRetroactiveAutoComplete();
                     if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
                     retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
+                }
+                // Init map if not already
+                if (typeof google !== 'undefined' && google.maps && !mapInitialized) {
+                    initMap();
+                } else if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+                    // Should not happen because we load maps before initApp
                 }
             }).catch(() => {
                 getMasterRef().set({ paj_email: '', paj_password: '', paj_token: '', proximity_radius: 50 });
@@ -4455,6 +4405,12 @@
                 if (pajToken) fetchAllDevicePositions();
             }, 15000);
             setTimeout(() => { if (pajToken) fetchAllDevicePositions(); }, 3000);
+
+            // Before unload cleanup
+            window.addEventListener('beforeunload', function() {
+                if (gpsInterval) clearInterval(gpsInterval);
+                if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
+            });
         }
 
         // ===== ESC KEY TO CLOSE DRIVER MODAL =====
@@ -4465,7 +4421,6 @@
                     closeDriverModal();
                     e.preventDefault();
                 }
-                // If overlay is open, close it
                 if (historicalOverlayOpen) {
                     closeHistoricalOverlay();
                     e.preventDefault();
@@ -4473,7 +4428,20 @@
             }
         });
 
-        console.log('✅ E&C Dispatch Tracker loaded.');
+        // Ensure the map is initialized when Google Maps loads
+        window.initMap = function() {
+            if (document.getElementById('app').style.display === 'flex') {
+                initMap();
+            }
+        };
+
+        // If Google Maps is already loaded (e.g., due to cache), initApp will handle it.
+        // But we need to ensure initMap is called when the script loads.
+        // The onGoogleMapsLoaded callback will call initApp, which will call initMap if needed.
+        // Also, we need to trigger initMap when the app is displayed after login.
+        // In auth.onAuthStateChanged, after login we call loadGoogleMaps, which calls initApp, which will init map.
+
+        console.log('✅ E&C Dispatch Tracker loaded (optimized).');
         console.log('📋 Use "Load Routes" to import routes from routeplanner.');
         console.log('📍 GPS tracking enabled for drivers with PAJ device IDs.');
         console.log('🔄 Auto-completion enabled with proximity radius:', proximityRadius, 'm');
