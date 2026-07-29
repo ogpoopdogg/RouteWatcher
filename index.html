@@ -2030,6 +2030,23 @@
             return { status: 'offline', label: '○ Offline', class: 'status-offline' };
         }
 
+        // ===== FETCH WITH RETRY FOR 401 =====
+        async function fetchWithRetry(url, options = {}) {
+            let retries = 1;
+            for (let attempt = 0; attempt <= retries; attempt++) {
+                const response = await fetch(url, options);
+                if (response.status === 401 && attempt < retries) {
+                    await authenticatePAJ();
+                    if (!pajToken) throw new Error('Authentication failed');
+                    // Update headers with new token
+                    options.headers = { ...options.headers, 'Authorization': `Bearer ${pajToken}` };
+                    continue;
+                }
+                return response;
+            }
+            throw new Error('Max retries exceeded');
+        }
+
         // ===== TEST PAJ CONNECTION =====
         async function testPAJConnection() {
             const debug = document.getElementById('debugOutput');
@@ -2493,7 +2510,8 @@
 
             try {
                 const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${fromUnix}&dateEnd=${toUnix}&wifi=1&gps=1`;
-                const response = await fetch(url, {
+                // Use fetchWithRetry to handle 401
+                const response = await fetchWithRetry(url, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${pajToken}` }
                 });
@@ -2517,7 +2535,6 @@
                 // We'll process points sequentially using the same logic as processPoint
                 // but we need to reset stop state for this driver to avoid interference
                 driverStopState[activeModalDriverId] = null;
-                // Clear existing stop events for this driver in historical mode? We'll override.
                 // We'll build a separate stop events list for historical.
                 const tempStopEvents = [];
                 let tempStopState = null;
@@ -4068,7 +4085,8 @@
 
             try {
                 const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${from}&dateEnd=${now}&wifi=1&gps=1`;
-                const response = await fetch(url, {
+                // Use fetchWithRetry for 401 handling
+                const response = await fetchWithRetry(url, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${pajToken}` }
                 });
