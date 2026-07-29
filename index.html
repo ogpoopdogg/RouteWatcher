@@ -1913,7 +1913,7 @@
             }
             mapsLoading = true;
             const script = document.createElement('script');
-            script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=onGoogleMapsLoaded';
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=places,geometry&callback=onGoogleMapsLoaded&loading=async';
             script.async = true;
             script.defer = true;
             document.head.appendChild(script);
@@ -2038,13 +2038,58 @@
                 if (response.status === 401 && attempt < retries) {
                     await authenticatePAJ();
                     if (!pajToken) throw new Error('Authentication failed');
-                    // Update headers with new token
                     options.headers = { ...options.headers, 'Authorization': `Bearer ${pajToken}` };
                     continue;
                 }
                 return response;
             }
             throw new Error('Max retries exceeded');
+        }
+
+        // ===== AUTHENTICATE PAJ (with fallback to saved credentials) =====
+        async function authenticatePAJ() {
+            let email = document.getElementById('pajEmail').value.trim();
+            let pass = document.getElementById('pajPassword').value.trim();
+            if (!email || !pass) {
+                // try to get from master config
+                const snap = await getMasterRef().once('value');
+                const cfg = snap.val() || {};
+                email = cfg.paj_email || '';
+                pass = cfg.paj_password || '';
+                // populate DOM for future use
+                if (email) document.getElementById('pajEmail').value = email;
+                if (pass) document.getElementById('pajPassword').value = pass;
+            }
+            if (!email || !pass) {
+                console.warn('PAJ credentials missing');
+                return;
+            }
+            try {
+                const response = await fetch(`${PAJ_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: pass })
+                });
+                const data = await response.json();
+                let token = data.success?.token || data.token;
+                if (token) {
+                    pajToken = token;
+                    getMasterRef().update({ paj_token: token });
+                    // Also trigger fetch of device positions after successful auth
+                    await fetchAllDevicePositions();
+                    // Start auto-completion if not already started
+                    if (pajToken && !autoCompleteStarted) {
+                        autoCompleteStarted = true;
+                        runRetroactiveAutoComplete();
+                        if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
+                        retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
+                    }
+                } else {
+                    console.warn('PAJ login failed, no token received');
+                }
+            } catch (e) {
+                console.warn('PAJ auth error:', e);
+            }
         }
 
         // ===== TEST PAJ CONNECTION =====
@@ -2088,34 +2133,6 @@
             } catch (e) {
                 debug.innerHTML += `<span class="error">❌ Error: ${e.message}</span>`;
             }
-        }
-
-        // ===== PAJ GPS =====
-        async function authenticatePAJ() {
-            const email = document.getElementById('pajEmail').value.trim();
-            const pass = document.getElementById('pajPassword').value.trim();
-            if (!email || !pass) return;
-            try {
-                const response = await fetch(`${PAJ_BASE}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password: pass })
-                });
-                const data = await response.json();
-                let token = data.success?.token || data.token;
-                if (token) {
-                    pajToken = token;
-                    getMasterRef().update({ paj_token: token });
-                    await fetchAllDevicePositions();
-                    // Start auto-completion if not already started
-                    if (pajToken && !autoCompleteStarted) {
-                        autoCompleteStarted = true;
-                        runRetroactiveAutoComplete();
-                        if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
-                        retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
-                    }
-                }
-            } catch (e) { console.warn('PAJ auth error:', e); }
         }
 
         let authRetryInProgress = false;
@@ -2178,7 +2195,11 @@
         }
 
         async function fetchAllDevicePositions() {
-            if (!pajToken) return;
+            if (!pajToken) {
+                // Try to authenticate first
+                await authenticatePAJ();
+                if (!pajToken) return;
+            }
             const deviceEntries = Object.entries(drivers).filter(([id, drv]) => drv.deviceId && String(drv.deviceId).trim() !==
                 '');
             if (deviceEntries.length === 0) return;
@@ -2501,6 +2522,15 @@
             const resultEl = document.getElementById('historyResult');
             resultEl.textContent = 'Loading track...';
 
+            // Ensure we have a valid token
+            if (!pajToken) {
+                await authenticatePAJ();
+                if (!pajToken) {
+                    resultEl.textContent = 'Error: PAJ GPS authentication failed. Please check credentials in Settings.';
+                    return;
+                }
+            }
+
             let toleranceMeters = 800;
             const slider = document.getElementById('historicalSimplifyTolerance');
             if (slider) {
@@ -2515,7 +2545,10 @@
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${pajToken}` }
                 });
-                if (!response.ok) throw new Error('API error');
+                if (!response.ok) {
+                    const errText = await response.text().catch(() => 'Unknown error');
+                    throw new Error(`API error (${response.status}): ${errText}`);
+                }
                 const data = await response.json();
                 let points = data.success || [];
                 if (points.length < 2) {
@@ -4076,7 +4109,10 @@
 
         // ===== PERSISTENCE: fetch historical data since last fetch =====
         async function fetchHistoricalDataSince(driverId, sinceTimestamp) {
-            if (!pajToken) return;
+            if (!pajToken) {
+                await authenticatePAJ();
+                if (!pajToken) return;
+            }
             const drv = drivers[driverId];
             if (!drv || !drv.deviceId) return;
             const now = Math.floor(Date.now() / 1000);
