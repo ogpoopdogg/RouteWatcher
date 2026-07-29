@@ -3132,8 +3132,8 @@
         // ===== MAP TOGGLE =====
         function toggleMapVisibility() {
             const wrapper = document.getElementById('mainMapWrapper');
-            wrapper.classList.toggle('hidden');
             const btn = document.getElementById('mapToggleBtn');
+            wrapper.classList.toggle('hidden');
             if (wrapper.classList.contains('hidden')) {
                 btn.classList.remove('map-open');
                 localStorage.setItem('ec_map_visible', 'false');
