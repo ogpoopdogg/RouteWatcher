@@ -329,6 +329,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 2px;
             font-size: 15px;
             font-weight: 600;
@@ -1363,25 +1364,37 @@
         .battery-mid { color: #f1c40f; }
         .battery-low { color: #e74c3c; }
 
-        /* Style for date inputs */
+        /* Style for date inputs - enhanced professional look */
         .date-picker {
             background: var(--card2);
-            border: 1px solid var(--border);
+            border: 1.5px solid var(--border);
             color: var(--text);
-            padding: 8px 12px;
-            border-radius: 10px;
+            padding: 8px 14px;
+            border-radius: 12px;
             font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
             flex: 0 1 auto;
             min-width: 160px;
             outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .date-picker:focus {
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.15);
+        }
+        .date-picker::-webkit-calendar-picker-indicator {
+            filter: invert(0.6);
+            cursor: pointer;
         }
         body.light-mode .date-picker {
             background: #f5f5f5;
-            border: 1px solid #ccc;
+            border-color: #ccc;
             color: #000;
+        }
+        body.light-mode .date-picker::-webkit-calendar-picker-indicator {
+            filter: invert(0.9);
         }
 
         /* Prevent body scroll when modal is open */
@@ -1506,7 +1519,7 @@
         .arrow-tooltip {
             position: absolute;
             background: rgba(0,0,0,0.85);
-            color: #fff;
+            color: #000;
             padding: 6px 12px;
             border-radius: 8px;
             font-size: 13px;
@@ -1628,6 +1641,37 @@
             text-align: center;
             color: var(--text);
         }
+        #historicalMapControls .slider-row .set-btn {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        #historicalMapControls .slider-row .set-btn:hover {
+            background: #2a2a3e;
+            border-color: var(--accent);
+        }
+        #historicalMapControls .slider-row .set-btn.pending {
+            background: #f7c948;
+            border-color: #f7c948;
+            color: #0b0b14;
+            animation: setPulse 1s infinite;
+        }
+        #historicalMapControls .slider-row .set-btn.pending:hover {
+            background: #e5b800;
+            border-color: #e5b800;
+        }
+        @keyframes setPulse {
+            0% { box-shadow: 0 0 0 0 rgba(247, 201, 72, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(247, 201, 72, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(247, 201, 72, 0); }
+        }
         body.light-mode #historicalMapControls {
             background: rgba(255,255,255,0.9);
             border-color: #ccc;
@@ -1644,6 +1688,16 @@
         }
         body.light-mode #historicalMapControls .slider-row input[type="range"] {
             background: #ddd;
+        }
+        body.light-mode #historicalMapControls .slider-row .set-btn {
+            background: #f5f5f5;
+            border-color: #ccc;
+            color: #000;
+        }
+        body.light-mode #historicalMapControls .slider-row .set-btn.pending {
+            background: #f7c948;
+            border-color: #f7c948;
+            color: #0b0b14;
         }
     </style>
 </head>
@@ -2404,7 +2458,7 @@
             if (slider) {
                 toleranceMeters = parseFloat(slider.value);
             }
-            document.getElementById('toleranceDisplay') && (document.getElementById('toleranceDisplay').textContent = toleranceMeters + 'm');
+            document.getElementById('historicalToleranceDisplay') && (document.getElementById('historicalToleranceDisplay').textContent = toleranceMeters + 'm');
 
             try {
                 const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${fromUnix}&dateEnd=${toUnix}&wifi=1&gps=1`;
@@ -2652,8 +2706,9 @@
                 </div>
                 <div class="slider-row" id="historicalSliderRow">
                     <label for="historicalSimplifyTolerance">Meters per point</label>
-                    <input type="range" id="historicalSimplifyTolerance" min="0" max="10000" value="800" step="1">
+                    <input type="range" id="historicalSimplifyTolerance" min="0" max="10000" value="800" step="50">
                     <span class="tolerance-value" id="historicalToleranceDisplay">800m</span>
+                    <button class="set-btn" id="historicalSetBtn">Set</button>
                 </div>
             `;
             mapInstance.controls[google.maps.ControlPosition.TOP_LEFT].push(controlDiv);
@@ -2667,15 +2722,22 @@
 
             const slider = controlDiv.querySelector('#historicalSimplifyTolerance');
             const display = controlDiv.querySelector('#historicalToleranceDisplay');
+            const setBtn = controlDiv.querySelector('#historicalSetBtn');
+
             slider.addEventListener('input', function() {
-                display.textContent = this.value + 'm';
+                const val = parseInt(this.value, 10);
+                display.textContent = val + 'm';
+                setBtn.classList.add('pending');
             });
-            slider.addEventListener('change', function() {
-                const tolerance = parseFloat(this.value);
+
+            setBtn.addEventListener('click', function() {
+                const tolerance = parseFloat(slider.value);
                 if (historicalOverlayDriverId && historicalTracks[historicalOverlayDriverId]) {
                     reSimplifyAndRedraw(historicalOverlayDriverId, tolerance);
+                    this.classList.remove('pending');
                 }
             });
+
             const sliderRow = controlDiv.querySelector('#historicalSliderRow');
             sliderRow.classList.remove('visible');
             gpsBtn.classList.remove('active');
@@ -2836,7 +2898,7 @@
                     const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const content = `
                         <div style="font-family:Inter; padding:4px 8px; font-weight:600;">
-                            <div style="font-size:15px; color:#f7c948;">🕒 ${timeStr}</div>
+                            <div style="font-size:15px; color:#000;">🕒 ${timeStr}</div>
                             <div style="font-size:18px; color:#e74c3c;">⏸ ${durStr}</div>
                         </div>
                     `;
