@@ -323,7 +323,7 @@
             pointer-events: auto;
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(6px);
-            padding: 10px 18px 10px 14px;
+            padding: 4px 18px 4px 14px;
             border-radius: 40px;
             border-left: 4px solid;
             display: flex;
@@ -1628,6 +1628,31 @@
             text-align: center;
             color: var(--text);
         }
+        #historicalMapControls .slider-row .set-btn {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        #historicalMapControls .slider-row .set-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #historicalMapControls .slider-row .set-btn.pending {
+            border-color: #f7c948;
+            animation: pulseGlow 1.2s infinite;
+        }
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(247, 201, 72, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(247, 201, 72, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(247, 201, 72, 0); }
+        }
         body.light-mode #historicalMapControls {
             background: rgba(255,255,255,0.9);
             border-color: #ccc;
@@ -1930,6 +1955,16 @@
         let historicalStopMarkers = [];
         let historicalTooltip = null;
         let historicalMapClickHandler = null;
+
+        // New state for historical track layers
+        let historicalRawTracks = {};
+        let historicalPolylinePoints = {};
+        let historicalArrowPoints = {};
+        let historicalAppliedTolerance = {};
+        let historicalPendingTolerance = {};
+        let gpsOn = false;
+        let historicalSetButton = null;
+        let historicalSlider = null;
 
         const PAJ_BASE = 'https://connect.paj-gps.de/api/v1';
         const STANDBY_THRESHOLD = 15 * 60 * 1000;
@@ -2356,7 +2391,7 @@
                     const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const content = `
                         <div style="font-family:Inter; padding:4px 8px; font-weight:600;">
-                            <div style="font-size:15px; color:#f7c948;">🕒 ${timeStr}</div>
+                            <div style="font-size:15px; color:#000000;">🕒 ${timeStr}</div>
                             <div style="font-size:18px; color:#e74c3c;">⏸ ${durStr}</div>
                         </div>
                     `;
@@ -2399,13 +2434,6 @@
                 }
             }
 
-            let toleranceMeters = 800;
-            const slider = document.getElementById('historicalSimplifyTolerance');
-            if (slider) {
-                toleranceMeters = parseFloat(slider.value);
-            }
-            document.getElementById('toleranceDisplay') && (document.getElementById('toleranceDisplay').textContent = toleranceMeters + 'm');
-
             try {
                 const url = `${PAJ_BASE}/trackerdata/${drv.deviceId}/date_range?dateStart=${fromUnix}&dateEnd=${toUnix}&wifi=1&gps=1`;
                 const response = await fetch(url, {
@@ -2419,7 +2447,9 @@
                 const data = await response.json();
                 let points = data.success || [];
                 if (points.length < 2) {
-                    resultEl.textContent = 'No track data for this period.';
+                    resultEl.textContent = 'No track data available for this period.';
+                    // Reset overlay to show no track
+                    openFullScreenHistoricalOverlay(activeModalDriverId);
                     return;
                 }
                 points.sort((a, b) => a.dateunix - b.dateunix);
@@ -2429,6 +2459,9 @@
                     timestamp: p.dateunix ? p.dateunix * 1000 : Date.now(),
                     heading: p.direction || null
                 }));
+
+                // Store raw track
+                historicalRawTracks[activeModalDriverId] = rawTrack;
 
                 // ---- DETECT STOPS ON RAW TRACK ----
                 driverStopState[activeModalDriverId] = null;
@@ -2470,25 +2503,44 @@
                     }
                 }
 
-                let track = rawTrack;
-                if (toleranceMeters > 0) {
-                    const toleranceDeg = metersToDegrees(toleranceMeters);
-                    track = douglasPeuckerSimplify(rawTrack, toleranceDeg);
-                }
-
-                historicalTracks[activeModalDriverId] = track;
+                // Store stop events
                 historicalStopEvents[activeModalDriverId] = tempStopEvents;
+
+                // --- Simplify polyline with fixed 5m tolerance ---
+                const polyToleranceDeg = metersToDegrees(5);
+                const polyPoints = douglasPeuckerSimplify(rawTrack, polyToleranceDeg);
+                historicalPolylinePoints[activeModalDriverId] = polyPoints;
+
+                // Reset arrow state
+                historicalArrowPoints[activeModalDriverId] = null;
+                historicalAppliedTolerance[activeModalDriverId] = null;
+                historicalPendingTolerance[activeModalDriverId] = null;
                 isHistoricalMode[activeModalDriverId] = true;
 
+                // Open overlay
                 openFullScreenHistoricalOverlay(activeModalDriverId);
 
+                // Reset GPS to off and slider to 800
+                setGpsState(false);
+                const slider = document.getElementById('historicalSimplifyTolerance');
+                if (slider) {
+                    slider.value = 800;
+                    const display = document.getElementById('historicalToleranceDisplay');
+                    if (display) display.textContent = '800m';
+                }
+                // Reset Set button state
+                if (historicalSetButton) {
+                    historicalSetButton.disabled = true;
+                    historicalSetButton.classList.remove('pending');
+                }
+
                 let totalDist = 0;
-                for (let i = 1; i < track.length; i++) {
-                    totalDist += haversineDistance(track[i-1].lat, track[i-1].lng, track[i].lat, track[i].lng);
+                for (let i = 1; i < rawTrack.length; i++) {
+                    totalDist += haversineDistance(rawTrack[i-1].lat, rawTrack[i-1].lng, rawTrack[i].lat, rawTrack[i].lng);
                 }
                 const km = totalDist / 1000;
                 const mi = totalDist / 1609;
-                resultEl.textContent = `Track loaded: ${track.length} points, ${km.toFixed(1)} km (${mi.toFixed(1)} mi) — ${tempStopEvents.length} stops detected`;
+                resultEl.textContent = `Track loaded: ${rawTrack.length} points, ${km.toFixed(1)} km (${mi.toFixed(1)} mi) — ${tempStopEvents.length} stops detected`;
             } catch (e) {
                 resultEl.textContent = 'Error: ' + e.message;
             }
@@ -2500,6 +2552,11 @@
                 isHistoricalMode[activeModalDriverId] = false;
                 historicalTracks[activeModalDriverId] = [];
                 historicalStopEvents[activeModalDriverId] = [];
+                historicalRawTracks[activeModalDriverId] = [];
+                historicalPolylinePoints[activeModalDriverId] = [];
+                historicalArrowPoints[activeModalDriverId] = null;
+                historicalAppliedTolerance[activeModalDriverId] = null;
+                historicalPendingTolerance[activeModalDriverId] = null;
                 updateDriverModalTrack(activeModalDriverId);
                 document.getElementById('historyResult').textContent = 'Historical track cleared.';
                 renderHistoricalStops(activeModalDriverId);
@@ -2508,6 +2565,12 @@
             }
             if (historicalOverlayOpen) {
                 closeHistoricalOverlay();
+            }
+            // Reset GPS and Set button
+            setGpsState(false);
+            if (historicalSetButton) {
+                historicalSetButton.disabled = true;
+                historicalSetButton.classList.remove('pending');
             }
         }
 
@@ -2572,9 +2635,9 @@
                 const fitButton = fitControlDiv.querySelector('.map-fit-btn');
                 fitButton.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    if (historicalTracks[driverId] && historicalTracks[driverId].length > 0) {
+                    if (historicalPolylinePoints[driverId] && historicalPolylinePoints[driverId].length > 0) {
                         const bounds = new google.maps.LatLngBounds();
-                        historicalTracks[driverId].forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
+                        historicalPolylinePoints[driverId].forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
                         historicalMapInstance.fitBounds(bounds);
                     }
                 });
@@ -2634,9 +2697,9 @@
             setTimeout(() => {
                 if (historicalMapInstance) {
                     google.maps.event.trigger(historicalMapInstance, 'resize');
-                    if (historicalTracks[driverId] && historicalTracks[driverId].length > 0) {
+                    if (historicalPolylinePoints[driverId] && historicalPolylinePoints[driverId].length > 0) {
                         const bounds = new google.maps.LatLngBounds();
-                        historicalTracks[driverId].forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
+                        historicalPolylinePoints[driverId].forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
                         historicalMapInstance.fitBounds(bounds);
                     }
                 }
@@ -2652,8 +2715,9 @@
                 </div>
                 <div class="slider-row" id="historicalSliderRow">
                     <label for="historicalSimplifyTolerance">Meters per point</label>
-                    <input type="range" id="historicalSimplifyTolerance" min="0" max="10000" value="800" step="1">
+                    <input type="range" id="historicalSimplifyTolerance" min="50" max="20000" value="800" step="50">
                     <span class="tolerance-value" id="historicalToleranceDisplay">800m</span>
+                    <button class="set-btn" id="setArrowBtn" disabled>Set</button>
                 </div>
             `;
             mapInstance.controls[google.maps.ControlPosition.TOP_LEFT].push(controlDiv);
@@ -2667,150 +2731,127 @@
 
             const slider = controlDiv.querySelector('#historicalSimplifyTolerance');
             const display = controlDiv.querySelector('#historicalToleranceDisplay');
+            const setBtn = controlDiv.querySelector('#setArrowBtn');
+            historicalSetButton = setBtn;
+            historicalSlider = slider;
+
             slider.addEventListener('input', function() {
                 display.textContent = this.value + 'm';
-            });
-            slider.addEventListener('change', function() {
-                const tolerance = parseFloat(this.value);
-                if (historicalOverlayDriverId && historicalTracks[historicalOverlayDriverId]) {
-                    reSimplifyAndRedraw(historicalOverlayDriverId, tolerance);
+                // If GPS is on, set pending and update button state
+                if (gpsOn && historicalOverlayDriverId) {
+                    const val = parseFloat(this.value);
+                    const applied = historicalAppliedTolerance[historicalOverlayDriverId];
+                    if (applied === null || Math.abs(val - applied) > 0.1) {
+                        historicalPendingTolerance[historicalOverlayDriverId] = val;
+                        setBtn.disabled = false;
+                        setBtn.classList.add('pending');
+                    } else {
+                        historicalPendingTolerance[historicalOverlayDriverId] = null;
+                        setBtn.disabled = true;
+                        setBtn.classList.remove('pending');
+                    }
+                } else {
+                    setBtn.disabled = true;
+                    setBtn.classList.remove('pending');
                 }
             });
+
+            setBtn.addEventListener('click', function() {
+                if (!gpsOn || !historicalOverlayDriverId) return;
+                const pending = historicalPendingTolerance[historicalOverlayDriverId];
+                if (pending === null) return;
+                // Apply
+                const raw = historicalRawTracks[historicalOverlayDriverId];
+                if (!raw || raw.length < 2) return;
+                const toleranceDeg = metersToDegrees(pending);
+                const simplified = douglasPeuckerSimplify(raw, toleranceDeg);
+                historicalArrowPoints[historicalOverlayDriverId] = simplified;
+                historicalAppliedTolerance[historicalOverlayDriverId] = pending;
+                historicalPendingTolerance[historicalOverlayDriverId] = null;
+                // Redraw overlay with arrows
+                drawHistoricalTrackOnOverlay(historicalOverlayDriverId);
+                // Reset button state
+                this.disabled = true;
+                this.classList.remove('pending');
+            });
+
+            // Store references
+            mapInstance._gpsBtn = gpsBtn;
+            mapInstance._slider = slider;
+            mapInstance._setBtn = setBtn;
+
             const sliderRow = controlDiv.querySelector('#historicalSliderRow');
             sliderRow.classList.remove('visible');
             gpsBtn.classList.remove('active');
             gpsBtn.textContent = 'GPS Off';
+            setBtn.disabled = true;
+            setBtn.classList.remove('pending');
         }
 
-        let gpsOn = false;
         function setGpsState(on) {
             gpsOn = on;
             const controls = document.getElementById('historicalMapControls');
             if (!controls) return;
             const gpsBtn = controls.querySelector('#gpsToggleBtn');
             const sliderRow = controls.querySelector('#historicalSliderRow');
+            const setBtn = controls.querySelector('#setArrowBtn');
+            const slider = controls.querySelector('#historicalSimplifyTolerance');
+
             if (on) {
                 gpsBtn.classList.add('active');
                 gpsBtn.textContent = 'GPS On';
                 sliderRow.classList.add('visible');
-                historicalArrowMarkers.forEach(m => m.setMap(historicalMapInstance));
+                // Enable set button if there is a pending tolerance
+                if (historicalOverlayDriverId) {
+                    const pending = historicalPendingTolerance[historicalOverlayDriverId];
+                    if (pending !== null) {
+                        setBtn.disabled = false;
+                        setBtn.classList.add('pending');
+                    } else {
+                        setBtn.disabled = true;
+                        setBtn.classList.remove('pending');
+                    }
+                } else {
+                    setBtn.disabled = true;
+                    setBtn.classList.remove('pending');
+                }
+                // Do NOT auto-draw arrows; user must click Set
             } else {
                 gpsBtn.classList.remove('active');
                 gpsBtn.textContent = 'GPS Off';
                 sliderRow.classList.remove('visible');
-                historicalArrowMarkers.forEach(m => m.setMap(null));
+                setBtn.disabled = true;
+                setBtn.classList.remove('pending');
+                // Remove arrows from map
+                if (historicalArrowMarkers.length) {
+                    historicalArrowMarkers.forEach(m => m.setMap(null));
+                    historicalArrowMarkers = [];
+                }
+                // Clear arrow points? Keep them but not displayed.
+                // Do not clear historicalArrowPoints because we want to keep them for when GPS turns on? But requirement: toggling GPS on does not auto-redraw; user must click Set. So we keep the points but don't show.
+                // However, when GPS turns on, we might want to show them if they exist? The requirement says: "Switching GPS back to 'On' does not auto-redraw arrows; the user must click 'Set' again." So we should not show arrows when GPS turns on. So we just hide them.
             }
         }
-
-        function reSimplifyAndRedraw(driverId, toleranceMeters) {
-            const raw = historicalRawTracks[driverId];
-            if (!raw || raw.length < 2) return;
-            let simplified = raw;
-            if (toleranceMeters > 0) {
-                const toleranceDeg = metersToDegrees(toleranceMeters);
-                simplified = douglasPeuckerSimplify(raw, toleranceDeg);
-            }
-            historicalTracks[driverId] = simplified;
-            drawHistoricalTrackOnOverlay(driverId);
-            if (!gpsOn) {
-                historicalArrowMarkers.forEach(m => m.setMap(null));
-            } else {
-                historicalArrowMarkers.forEach(m => m.setMap(historicalMapInstance));
-            }
-        }
-
-        let historicalRawTracks = {};
 
         function drawHistoricalTrackOnOverlay(driverId) {
             if (!historicalMapInstance) return;
-            const track = historicalTracks[driverId] || [];
-            if (track.length < 2) return;
-
             clearHistoricalOverlayMap();
 
-            const path = track.map(p => ({ lat: p.lat, lng: p.lng }));
-            historicalPolyline = new google.maps.Polyline({
-                path: path,
-                geodesic: true,
-                strokeColor: '#ff6b35',
-                strokeOpacity: 0.8,
-                strokeWeight: 4,
-                map: historicalMapInstance
-            });
-
-            const arrowMarkers = [];
-            for (let i = 0; i < track.length; i++) {
-                const pt = track[i];
-                let heading = pt.heading;
-                if (heading === null || heading === undefined) {
-                    if (i < track.length - 1) {
-                        const next = track[i+1];
-                        heading = google.maps.geometry.spherical.computeHeading(
-                            new google.maps.LatLng(pt.lat, pt.lng),
-                            new google.maps.LatLng(next.lat, next.lng)
-                        );
-                    } else {
-                        if (i > 0) {
-                            const prev = track[i-1];
-                            heading = google.maps.geometry.spherical.computeHeading(
-                                new google.maps.LatLng(prev.lat, prev.lng),
-                                new google.maps.LatLng(pt.lat, pt.lng)
-                            );
-                        } else {
-                            heading = 0;
-                        }
-                    }
-                }
-                const arrowMarker = new google.maps.Marker({
-                    position: { lat: pt.lat, lng: pt.lng },
-                    map: historicalMapInstance,
-                    icon: {
-                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                        scale: 6,
-                        fillColor: '#ff6b35',
-                        fillOpacity: 1,
-                        strokeColor: '#fff',
-                        strokeWeight: 1,
-                        rotation: heading
-                    },
-                    title: new Date(pt.timestamp).toLocaleString()
+            // Draw polyline using historicalPolylinePoints (fixed 5m)
+            const polyPoints = historicalPolylinePoints[driverId] || [];
+            if (polyPoints.length >= 2) {
+                const path = polyPoints.map(p => ({ lat: p.lat, lng: p.lng }));
+                historicalPolyline = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeColor: '#ff6b35',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 4,
+                    map: historicalMapInstance
                 });
-                arrowMarker.set('timestamp', pt.timestamp);
-                google.maps.event.addListener(arrowMarker, 'click', function(e) {
-                    showArrowTooltip(this, e.latLng);
-                });
-                arrowMarkers.push(arrowMarker);
-            }
-            historicalArrowMarkers = arrowMarkers;
-
-            if (!gpsOn) {
-                historicalArrowMarkers.forEach(m => m.setMap(null));
             }
 
-            const assignedStops = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId && s.lat && s.lng);
-            assignedStops.forEach(([id, s]) => {
-                const isCompleted = s.status === 'completed';
-                const marker = new google.maps.Marker({
-                    position: { lat: s.lat, lng: s.lng },
-                    map: historicalMapInstance,
-                    label: {
-                        text: s.name || 'Stop',
-                        color: isCompleted ? '#88a888' : '#00b32d',
-                        fontSize: '11px',
-                        className: 'driver-map-label'
-                    },
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 12,
-                        fillColor: isCompleted ? '#999999' : '#22c55e',
-                        fillOpacity: isCompleted ? 0.5 : 1,
-                        strokeColor: 'white',
-                        strokeWeight: 2
-                    }
-                });
-                historicalStopMarkers.push(marker);
-            });
-
+            // Draw stop markers (red diamonds)
             const stops = historicalStopEvents[driverId] || [];
             stops.forEach(event => {
                 const marker = new google.maps.Marker({
@@ -2836,7 +2877,7 @@
                     const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const content = `
                         <div style="font-family:Inter; padding:4px 8px; font-weight:600;">
-                            <div style="font-size:15px; color:#f7c948;">🕒 ${timeStr}</div>
+                            <div style="font-size:15px; color:#000000;">🕒 ${timeStr}</div>
                             <div style="font-size:18px; color:#e74c3c;">⏸ ${durStr}</div>
                         </div>
                     `;
@@ -2850,6 +2891,82 @@
                 historicalStopMarkers.push(marker);
             });
 
+            // Draw arrows if GPS is on and arrow points exist
+            if (gpsOn) {
+                const arrowPoints = historicalArrowPoints[driverId] || [];
+                if (arrowPoints.length > 0) {
+                    // Use arrowPoints to place arrow markers
+                    for (let i = 0; i < arrowPoints.length; i++) {
+                        const pt = arrowPoints[i];
+                        let heading = pt.heading;
+                        if (heading === null || heading === undefined) {
+                            if (i < arrowPoints.length - 1) {
+                                const next = arrowPoints[i+1];
+                                heading = google.maps.geometry.spherical.computeHeading(
+                                    new google.maps.LatLng(pt.lat, pt.lng),
+                                    new google.maps.LatLng(next.lat, next.lng)
+                                );
+                            } else {
+                                if (i > 0) {
+                                    const prev = arrowPoints[i-1];
+                                    heading = google.maps.geometry.spherical.computeHeading(
+                                        new google.maps.LatLng(prev.lat, prev.lng),
+                                        new google.maps.LatLng(pt.lat, pt.lng)
+                                    );
+                                } else {
+                                    heading = 0;
+                                }
+                            }
+                        }
+                        const arrowMarker = new google.maps.Marker({
+                            position: { lat: pt.lat, lng: pt.lng },
+                            map: historicalMapInstance,
+                            icon: {
+                                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                                scale: 6,
+                                fillColor: '#ff6b35',
+                                fillOpacity: 1,
+                                strokeColor: '#fff',
+                                strokeWeight: 1,
+                                rotation: heading
+                            },
+                            title: new Date(pt.timestamp).toLocaleString()
+                        });
+                        arrowMarker.set('timestamp', pt.timestamp);
+                        google.maps.event.addListener(arrowMarker, 'click', function(e) {
+                            showArrowTooltip(this, e.latLng);
+                        });
+                        historicalArrowMarkers.push(arrowMarker);
+                    }
+                }
+            }
+
+            // Assigned stops markers (from loadedStops) - keep as before
+            const assignedStops = Object.entries(loadedStops).filter(([id, s]) => s.assignedDriver === driverId && s.lat && s.lng);
+            assignedStops.forEach(([id, s]) => {
+                const isCompleted = s.status === 'completed';
+                const marker = new google.maps.Marker({
+                    position: { lat: s.lat, lng: s.lng },
+                    map: historicalMapInstance,
+                    label: {
+                        text: s.name || 'Stop',
+                        color: isCompleted ? '#88a888' : '#00b32d',
+                        fontSize: '11px',
+                        className: 'driver-map-label'
+                    },
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 12,
+                        fillColor: isCompleted ? '#999999' : '#22c55e',
+                        fillOpacity: isCompleted ? 0.5 : 1,
+                        strokeColor: 'white',
+                        strokeWeight: 2
+                    }
+                });
+                historicalStopMarkers.push(marker);
+            });
+
+            // Map click handler to close tooltips
             if (historicalMapClickHandler) {
                 google.maps.event.removeListener(historicalMapClickHandler);
             }
@@ -2883,8 +3000,18 @@
             overlay.style.display = 'none';
             historicalOverlayOpen = false;
             if (historicalOverlayDriverId) {
+                // Reset GPS to off and clear arrows
+                setGpsState(false);
                 clearHistoricalOverlayMap();
-                clearHistoricalTrack();
+                // Reset slider to 800 and clear pending
+                const slider = document.getElementById('historicalSimplifyTolerance');
+                if (slider) slider.value = 800;
+                const display = document.getElementById('historicalToleranceDisplay');
+                if (display) display.textContent = '800m';
+                if (historicalSetButton) {
+                    historicalSetButton.disabled = true;
+                    historicalSetButton.classList.remove('pending');
+                }
                 historicalOverlayDriverId = null;
             }
             closeArrowTooltip();
