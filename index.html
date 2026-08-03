@@ -2317,6 +2317,52 @@
             return meters / 111000;
         }
 
+        // ----- NEW: DECIMATE POINTS (distance‑based filtering) -----
+        function decimatePoints(points, minDistanceMeters) {
+            if (!points || points.length === 0) return [];
+            if (minDistanceMeters <= 0 || points.length <= 2) return points.slice();
+
+            const result = [];
+            let lastKept = points[0];
+            result.push(lastKept);
+
+            for (let i = 1; i < points.length - 1; i++) {
+                const p = points[i];
+                const dist = haversineDistance(lastKept.lat, lastKept.lng, p.lat, p.lng);
+                if (dist >= minDistanceMeters) {
+                    result.push(p);
+                    lastKept = p;
+                }
+            }
+
+            // Always keep the last point
+            const last = points[points.length - 1];
+            if (result.length === 0 || result[result.length - 1] !== last) {
+                result.push(last);
+            }
+            return result;
+        }
+
+        // ----- NEW: COMBINED SIMPLIFICATION (decimate + DP) -----
+        function simplifyTrack(points, minDistanceMeters) {
+            if (!points || points.length === 0) return [];
+            if (minDistanceMeters <= 0) return points.slice();
+
+            // 1) Decimate
+            const decimated = decimatePoints(points, minDistanceMeters);
+            if (decimated.length <= 2) return decimated;
+
+            // 2) Douglas‑Peucker with tolerance = 15% of minDistanceMeters (converted to degrees)
+            let dpToleranceDeg = metersToDegrees(minDistanceMeters * 0.15);
+            // Clamp to a safe minimum to remove GPS noise (about 1.1 meters)
+            const MIN_DP_TOLERANCE_DEG = 0.00001;
+            if (dpToleranceDeg < MIN_DP_TOLERANCE_DEG) {
+                dpToleranceDeg = MIN_DP_TOLERANCE_DEG;
+            }
+
+            return douglasPeuckerSimplify(decimated, dpToleranceDeg);
+        }
+
         function processHistoricalAutoComplete(driverId, points) {
             if (!points || points.length === 0) return;
             const radius = Math.max(1, proximityRadius);
@@ -2484,6 +2530,9 @@
                     heading: p.direction || null
                 }));
 
+                // ---- STORE THE FULL UNSIMPLIFIED TRACK ----
+                historicalRawTracks[activeModalDriverId] = rawTrack;
+
                 // ---- DETECT STOPS ON RAW TRACK ----
                 driverStopState[activeModalDriverId] = null;
                 const tempStopEvents = [];
@@ -2524,10 +2573,10 @@
                     }
                 }
 
+                // Use the combined simplification (decimate + DP) instead of pure DP
                 let track = rawTrack;
                 if (toleranceMeters > 0) {
-                    const toleranceDeg = metersToDegrees(toleranceMeters);
-                    track = douglasPeuckerSimplify(rawTrack, toleranceDeg);
+                    track = simplifyTrack(rawTrack, toleranceMeters);
                 }
 
                 historicalTracks[activeModalDriverId] = track;
@@ -2705,8 +2754,8 @@
                     <button class="gps-btn" id="gpsToggleBtn">GPS Off</button>
                 </div>
                 <div class="slider-row" id="historicalSliderRow">
-                    <label for="historicalSimplifyTolerance">Meters per point</label>
-                    <input type="range" id="historicalSimplifyTolerance" min="0" max="10000" value="800" step="50">
+                    <label for="historicalSimplifyTolerance">Min spacing between points (m)</label>
+                    <input type="range" id="historicalSimplifyTolerance" min="50" max="5000" value="800" step="50">
                     <span class="tolerance-value" id="historicalToleranceDisplay">800m</span>
                     <button class="set-btn" id="historicalSetBtn">Set</button>
                 </div>
@@ -2732,7 +2781,7 @@
 
             setBtn.addEventListener('click', function() {
                 const tolerance = parseFloat(slider.value);
-                if (historicalOverlayDriverId && historicalTracks[historicalOverlayDriverId]) {
+                if (historicalOverlayDriverId && historicalRawTracks[historicalOverlayDriverId]) {
                     reSimplifyAndRedraw(historicalOverlayDriverId, tolerance);
                     this.classList.remove('pending');
                 }
@@ -2764,13 +2813,13 @@
             }
         }
 
+        // ----- UPDATED: reSimplifyAndRedraw using the combined simplifyTrack -----
         function reSimplifyAndRedraw(driverId, toleranceMeters) {
             const raw = historicalRawTracks[driverId];
             if (!raw || raw.length < 2) return;
             let simplified = raw;
             if (toleranceMeters > 0) {
-                const toleranceDeg = metersToDegrees(toleranceMeters);
-                simplified = douglasPeuckerSimplify(raw, toleranceDeg);
+                simplified = simplifyTrack(raw, toleranceMeters);
             }
             historicalTracks[driverId] = simplified;
             drawHistoricalTrackOnOverlay(driverId);
