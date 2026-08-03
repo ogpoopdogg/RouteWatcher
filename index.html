@@ -627,49 +627,27 @@
         }
         .driver-modal .modal-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
+            flex-direction: column;
+            gap: 4px;
             flex-shrink: 0;
         }
-        .driver-modal .modal-header h2 {
+        .driver-modal .modal-header .header-top {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
+            width: 100%;
         }
-        .driver-modal .modal-header .track-actions {
+        .driver-modal .modal-header .header-status {
             display: flex;
-            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 8px;
+            font-size: 13px;
         }
-        .driver-modal .modal-header .track-actions button {
-            background: var(--card2);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 4px 14px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .driver-modal .modal-header .track-actions button:hover {
-            background: #2a2a3e;
-            border-color: var(--accent);
-        }
-        .driver-modal .modal-header .track-actions .clear-track {
-            border-color: #b71c1c;
-            color: #e74c3c;
-        }
-        .driver-modal .modal-header .track-actions .clear-track:hover {
-            background: #2a0a0a;
-        }
-        .driver-modal .modal-header .track-actions .new-track {
-            border-color: #2ecc71;
-            color: #2ecc71;
-        }
-        .driver-modal .modal-header .track-actions .new-track:hover {
-            background: #0a2a1a;
+        .driver-modal .modal-header .header-address {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 2px;
         }
         .driver-modal .modal-header .close-modal-btn {
             background: transparent;
@@ -677,6 +655,8 @@
             color: white;
             font-size: 28px;
             cursor: pointer;
+            line-height: 1;
+            padding: 0 4px;
         }
         .driver-modal .modal-map {
             flex: 1;
@@ -709,6 +689,23 @@
         }
         .driver-modal .modal-stops .stop-item .info {
             cursor: pointer;
+        }
+        .driver-modal .modal-map-row {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+            margin-top: 8px;
+        }
+        .driver-modal .modal-stops-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+            overflow-y: auto;
+            max-height: 400px;
         }
 
         .settings-modal {
@@ -1219,6 +1216,59 @@
             }
             .simplify-slider input[type="range"] {
                 min-width: 60px;
+            }
+
+            /* Mobile driver modal adjustments */
+            .driver-modal .modal-card {
+                padding: 12px;
+                gap: 10px;
+            }
+            .driver-modal .modal-header .header-status {
+                font-size: 11px;
+                gap: 2px 6px;
+            }
+            .driver-modal .modal-header .header-address {
+                font-size: 11px;
+            }
+            .driver-modal .modal-header .close-modal-btn {
+                font-size: 24px;
+            }
+            #historyQuery > div {
+                flex-wrap: wrap !important;
+                gap: 6px;
+            }
+            #historyQuery .date-picker {
+                font-size: 11px;
+                padding: 4px 8px;
+                min-width: 100px;
+                max-width: 130px;
+                flex: 0 1 auto;
+            }
+            #historyQuery label {
+                font-size: 10px;
+            }
+            #historyQuery button {
+                font-size: 11px;
+                padding: 4px 10px;
+                white-space: nowrap;
+            }
+            #historyQuery #historyResult {
+                font-size: 11px;
+                white-space: normal;
+            }
+            .driver-modal .modal-map-row {
+                flex-direction: column !important;
+                gap: 10px;
+            }
+            .driver-modal .modal-map {
+                min-height: 200px;
+                flex: none;
+                height: 280px;
+            }
+            .driver-modal .modal-stops-container {
+                max-height: 200px;
+                flex: none;
+                overflow-y: auto;
             }
         }
 
@@ -1782,31 +1832,39 @@
     <div class="driver-modal" id="driverModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h2 id="driverModalTitle">Driver</h2>
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <span id="driverStatusHeader" style="font-size:13px; color:var(--muted);"></span>
-                    <span id="driverAddressHeader" style="font-size:13px; color:var(--muted);"></span>
-                    <span id="modalBatteryHeader" style="font-size:13px;"></span>
-                    <span id="modalAlarmHeader" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
+                <div class="header-top">
+                    <h2 id="driverModalTitle">Driver</h2>
                     <button class="close-modal-btn" onclick="closeDriverModal()">✕</button>
                 </div>
+                <div class="header-status">
+                    <span id="driverStatusHeader" style="font-size:13px; color:var(--muted);"></span>
+                    <span id="modalBatteryHeader" style="font-size:13px;"></span>
+                    <span id="modalAlarmHeader" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
+                </div>
+                <div class="header-address">
+                    <span id="driverAddressHeader"></span>
+                </div>
             </div>
-            <!-- History query moved up -->
+            <!-- History query -->
             <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:0; padding-top:8px; display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
-                <div style="display:flex; flex-wrap:nowrap; gap:8px; align-items:center; overflow-x:auto;">
-                    <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
-                    <input type="datetime-local" id="historyStart" class="date-picker">
-                    <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
-                    <input type="datetime-local" id="historyEnd" class="date-picker">
-                    <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">📊 Show Track</button>
-                    <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Track</button>
-                    <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <div style="display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; flex:1 1 auto;">
+                        <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
+                        <input type="datetime-local" id="historyStart" class="date-picker" style="flex:0 1 auto; min-width:140px;">
+                        <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
+                        <input type="datetime-local" id="historyEnd" class="date-picker" style="flex:0 1 auto; min-width:140px;">
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; flex:1 0 auto; justify-content:flex-start;">
+                        <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">📊 Show Track</button>
+                        <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Track</button>
+                        <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
+                    </div>
                 </div>
             </div>
             <!-- Row for map and manifest -->
-            <div style="display:flex; flex-direction:row; gap:16px; flex:1; min-height:0; margin-top:8px;">
-                <div class="modal-map" style="flex:1; min-height:300px;"><div id="driver-map"></div></div>
-                <div style="flex:1; display:flex; flex-direction:column; gap:8px; min-width:0; overflow-y:auto; max-height:400px;">
+            <div class="modal-map-row">
+                <div class="modal-map"><div id="driver-map"></div></div>
+                <div class="modal-stops-container">
                     <div id="driverStopCount" style="text-align:center; padding:4px 0; font-weight:600;">0 stops</div>
                     <div id="historicalStopList" style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 0;"></div>
                     <div class="modal-stops" id="driverModalStops" style="flex:1; overflow-y:auto;"></div>
