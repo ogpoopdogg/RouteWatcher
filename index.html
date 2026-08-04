@@ -1270,6 +1270,35 @@
                 flex: none;
                 overflow-y: auto;
             }
+
+            /* Mobile: date picker layout */
+            #historyQuery > div > div {
+                display: grid !important;
+                grid-template-columns: auto 1fr;
+                grid-template-rows: auto auto;
+                gap: 4px 8px;
+                align-items: center;
+            }
+            #historyQuery > div > div label:nth-child(1) { grid-column: 1; grid-row: 1; }
+            #historyQuery > div > div input:nth-child(2) { grid-column: 2; grid-row: 1; }
+            #historyQuery > div > div label:nth-child(3) { grid-column: 1; grid-row: 2; }
+            #historyQuery > div > div input:nth-child(4) { grid-column: 2; grid-row: 2; }
+            /* Hide result text in mobile */
+            #historyResult {
+                display: none !important;
+            }
+            /* Ensure header not cut off */
+            .driver-modal .modal-header .header-top {
+                flex-wrap: wrap;
+            }
+            .driver-modal .modal-header .header-top h2 {
+                flex: 1;
+                min-width: 0;
+                word-break: break-word;
+            }
+            .driver-modal .modal-header .header-top .close-modal-btn {
+                flex-shrink: 0;
+            }
         }
 
         body.light-mode {
