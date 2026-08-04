@@ -3499,26 +3499,6 @@
             // Center and zoom to see surrounding streets (zoom ~14)
             map.panTo({ lat, lng });
             map.setZoom(14);
-
-            // Show info window with coordinates
-            const infoWindow = new google.maps.InfoWindow({
-                content: `<div style="font-family:Inter; font-weight:600; padding:4px 8px;">
-                            <div style="font-size:16px;">📍 ${drv.name || 'Driver'}</div>
-                            <div style="font-size:13px; color:#555;">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
-                          </div>`
-            });
-            infoWindow.setPosition({ lat, lng });
-            infoWindow.open(map);
-            // Store to close on next click? But we'll keep simple; user can close by clicking map.
-            // Close previous info window if any
-            if (window._currentInfoWindow) {
-                window._currentInfoWindow.close();
-            }
-            window._currentInfoWindow = infoWindow;
-            // Auto-close after 10 seconds?
-            setTimeout(() => {
-                if (infoWindow) infoWindow.close();
-            }, 15000);
         }
 
         // ===== ROUTE SELECTOR =====
