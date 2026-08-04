@@ -708,6 +708,22 @@
             max-height: 400px;
         }
 
+        /* new pill for stops count */
+        #driverStopsPill {
+            display: none;
+            background: #f7c948;
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #driverStopsPill:hover {
+            opacity: 0.8;
+        }
+
         .settings-modal {
             display: none;
             position: fixed;
@@ -1310,6 +1326,23 @@
     line-height: 1;
     padding: 0 4px;
 }
+            /* Show stops pill on mobile */
+            #driverStopsPill {
+                display: inline-block !important;
+                margin: 0 8px;
+            }
+            /* Make date pickers fit text on mobile */
+            .date-picker {
+                flex: 1 1 auto !important;
+                min-width: 0 !important;
+                width: auto !important;
+                max-width: 100% !important;
+            }
+            /* Center the track buttons */
+            #historyQuery > div > div:last-child {
+                justify-content: center !important;
+                flex: 1 1 100% !important;
+            }
         }
 
         body.light-mode {
@@ -1874,6 +1907,7 @@
             <div class="modal-header">
                 <div class="header-top">
                     <h2 id="driverModalTitle">Driver</h2>
+                    <span id="driverStopsPill" onclick="document.getElementById('driverModalStops').scrollIntoView({ behavior: 'smooth', block: 'start' });">0 stops</span>
                     <button class="close-modal-btn" onclick="closeDriverModal()">✕</button>
                 </div>
                 <div class="header-status">
@@ -1895,8 +1929,8 @@
                         <input type="datetime-local" id="historyEnd" class="date-picker" style="flex:0 1 auto; min-width:140px;">
                     </div>
                     <div style="display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; flex:1 0 auto; justify-content:flex-start;">
-                        <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">📊 Show Track</button>
-                        <button onclick="clearHistoricalTrack()" style="background:#e74c3c; color:#fff; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">✕ Clear Track</button>
+                        <button onclick="loadHistoricalTrack()" style="background:#2ecc71; color:#0b0b14; border:none; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">Show Track</button>
+                        <button onclick="clearHistoricalTrack()" style="background:transparent; color:#e74c3c; border:2px solid #e74c3c; border-radius:20px; padding:6px 16px; font-weight:600; cursor:pointer; white-space:nowrap;">Clear Track</button>
                         <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
                     </div>
                 </div>
@@ -1905,7 +1939,6 @@
             <div class="modal-map-row">
                 <div class="modal-map"><div id="driver-map"></div></div>
                 <div class="modal-stops-container">
-                    <div id="driverStopCount" style="text-align:center; padding:4px 0; font-weight:600;">0 stops</div>
                     <div id="historicalStopList" style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 0;"></div>
                     <div class="modal-stops" id="driverModalStops" style="flex:1; overflow-y:auto;"></div>
                 </div>
@@ -3433,13 +3466,59 @@
                 let statusColor = '#e74c3c';
                 if (status.class === 'status-online') statusColor = '#2ecc71';
                 else if (status.class === 'status-standby') statusColor = '#f1c40f';
-                html += `<div class="driver-entry" onclick="openDriverModal('${id}')">
+                html += `<div class="driver-entry" onclick="showDriverLocation('${id}')">
               <span class="driver-dot" style="background:${color};"></span>
               <span class="driver-name">${drv.name || 'Driver'}</span>
               <span class="driver-status" style="color:${statusColor};">${status.label}</span>
             </div>`;
             }
             container.innerHTML = html;
+        }
+
+        // ===== SHOW DRIVER LOCATION ON MAIN MAP =====
+        function showDriverLocation(driverId) {
+            const drv = drivers[driverId];
+            if (!drv || !drv.lastLocation) {
+                alert('No location data for this driver.');
+                return;
+            }
+            const lat = drv.lastLocation.lat;
+            const lng = drv.lastLocation.lng;
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('Invalid coordinates.');
+                return;
+            }
+            // Make map visible
+            const wrapper = document.getElementById('mainMapWrapper');
+            if (wrapper.classList.contains('hidden')) {
+                wrapper.classList.remove('hidden');
+                document.getElementById('mapToggleBtn').classList.add('map-open');
+                localStorage.setItem('ec_map_visible', 'true');
+                setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
+            }
+            // Center and zoom to see surrounding streets (zoom ~14)
+            map.panTo({ lat, lng });
+            map.setZoom(14);
+
+            // Show info window with coordinates
+            const infoWindow = new google.maps.InfoWindow({
+                content: `<div style="font-family:Inter; font-weight:600; padding:4px 8px;">
+                            <div style="font-size:16px;">📍 ${drv.name || 'Driver'}</div>
+                            <div style="font-size:13px; color:#555;">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+                          </div>`
+            });
+            infoWindow.setPosition({ lat, lng });
+            infoWindow.open(map);
+            // Store to close on next click? But we'll keep simple; user can close by clicking map.
+            // Close previous info window if any
+            if (window._currentInfoWindow) {
+                window._currentInfoWindow.close();
+            }
+            window._currentInfoWindow = infoWindow;
+            // Auto-close after 10 seconds?
+            setTimeout(() => {
+                if (infoWindow) infoWindow.close();
+            }, 15000);
         }
 
         // ===== ROUTE SELECTOR =====
@@ -3780,6 +3859,11 @@
             activeModalDriverId = driverId;
             const drv = drivers[driverId];
             document.getElementById('driverModalTitle').textContent = drv ? (drv.name || 'Driver') : 'Driver';
+            // Update stops pill
+            const assignedStops = Object.values(loadedStops).filter(s => s.assignedDriver === driverId);
+            const pill = document.getElementById('driverStopsPill');
+            pill.textContent = assignedStops.length + ' stops';
+
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
@@ -3932,8 +4016,11 @@
                 updateDriverModalTrack(driverId);
                 renderDriverStops(driverId);
 
-                let stopCountText = `${assigned.length} stops`;
-                document.getElementById('driverStopCount').textContent = stopCountText;
+                // Update pill again
+                const assignedStops2 = Object.values(loadedStops).filter(s => s.assignedDriver === driverId);
+                document.getElementById('driverStopsPill').textContent = assignedStops2.length + ' stops';
+
+                // Update stop count in historical list maybe
                 renderHistoricalStops(driverId);
 
             }, 200);
