@@ -1287,18 +1287,27 @@
             #historyResult {
                 display: none !important;
             }
-            /* Ensure header not cut off */
-            .driver-modal .modal-header .header-top {
-                flex-wrap: wrap;
-            }
-            .driver-modal .modal-header .header-top h2 {
-                flex: 1;
-                min-width: 0;
-                word-break: break-word;
-            }
-            .driver-modal .modal-header .header-top .close-modal-btn {
-                flex-shrink: 0;
-            }
+            /* Ensure header not cut off - mobile fix */
+.driver-modal .modal-header .header-top {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+}
+.driver-modal .modal-header .header-top h2 {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+    font-size: 18px !important;
+    margin-right: 10px !important;
+}
+.driver-modal .modal-header .header-top .close-modal-btn {
+    flex-shrink: 0 !important;
+    font-size: 28px !important;
+    line-height: 1 !important;
+    padding: 0 6px !important;
+    margin-left: auto !important;
+}
         }
 
         body.light-mode {
