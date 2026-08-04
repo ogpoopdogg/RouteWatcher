@@ -1289,24 +1289,23 @@
             }
             /* Ensure header not cut off - mobile fix */
 .driver-modal .modal-header .header-top {
-    flex-wrap: wrap !important;
-    align-items: flex-start !important;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
 }
 .driver-modal .modal-header .header-top h2 {
-    flex: 1 1 100% !important;
-    min-width: 0 !important;
-    word-break: break-word !important;
-    white-space: normal !important;
-    overflow-wrap: break-word !important;
-    font-size: 18px !important;
-    margin-right: 10px !important;
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+    font-size: 15px !important;
+    margin-right: 8px;
 }
 .driver-modal .modal-header .header-top .close-modal-btn {
-    flex-shrink: 0 !important;
-    font-size: 28px !important;
-    line-height: 1 !important;
-    padding: 0 6px !important;
-    margin-left: auto !important;
+    flex-shrink: 0;
+    font-size: 24px;
+    line-height: 1;
+    padding: 0 4px;
 }
         }
 
