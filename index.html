@@ -2179,8 +2179,9 @@
                     if (pajToken && !autoCompleteStarted) {
                         autoCompleteStarted = true;
                         runRetroactiveAutoComplete();
-                        if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
-                        retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
+                        // REMOVED: background catch‑up interval
+                        // if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
+                        // retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
                     }
                 }
             } catch (e) { console.warn('PAJ auth error:', e); }
@@ -2333,6 +2334,8 @@
                 const dist = haversineDistance(lastPoint.lat, lastPoint.lng, lat, lng);
                 if (dist < TRACK_FILTER_DISTANCE) {
                     checkStopDetection(driverId, lat, lng, timestamp);
+                    // LIVE AUTO‑COMPLETE: check against stops on every point
+                    checkAutoComplete(driverId, lat, lng, timestamp);
                     return;
                 }
             }
@@ -4214,9 +4217,10 @@
         // ===== RETROACTIVE AUTO-COMPLETE =====
         function runRetroactiveAutoComplete() {
             const now = new Date();
-            const today6am = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0);
-            let fromTimestamp = Math.floor(today6am.getTime() / 1000);
-            if (now < today6am) {
+            // CHANGE: from 6am to midnight (start of day)
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            let fromTimestamp = Math.floor(todayMidnight.getTime() / 1000);
+            if (now < todayMidnight) {
                 fromTimestamp = Math.floor(now.getTime() / 1000);
             }
 
@@ -4442,8 +4446,9 @@
                 if (pajToken && !autoCompleteStarted) {
                     autoCompleteStarted = true;
                     runRetroactiveAutoComplete();
-                    if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
-                    retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
+                    // REMOVED: background interval
+                    // if (retroAutoCompleteInterval) clearInterval(retroAutoCompleteInterval);
+                    // retroAutoCompleteInterval = setInterval(runIncrementalAutoComplete, 300000);
                 }
             }).catch(() => {
                 getMasterRef().set({ paj_email: '', paj_password: '', paj_token: '', proximity_radius: 50 });
