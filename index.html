@@ -3525,7 +3525,14 @@
                 keys.forEach(key => {
                     const route = availableRoutes[key];
                     const label = route.label || 'Unnamed';
-                    const stopCount = route.stops ? route.stops.length : 0;
+                    let stopCount = 0;
+                    if (route.stops) {
+                        if (Array.isArray(route.stops)) {
+                            stopCount = route.stops.length;
+                        } else {
+                            stopCount = Object.keys(route.stops).length;
+                        }
+                    }
                     const isChecked = currentRouteKeys.includes(key) ? 'checked' : '';
                     html += `
                 <div class="route-item">
@@ -3622,7 +3629,18 @@
                 driverTotals[driverId].etaMinutes += (route.etaTotalMinutes || 0);
                 driverTotals[driverId].km += (route.etaTotalKm || 0);
 
-                route.stops.forEach((stop, idx) => {
+                // Normalize stops array
+                let stopsArray;
+                if (Array.isArray(route.stops)) {
+                    stopsArray = route.stops;
+                } else if (route.stops && typeof route.stops === 'object') {
+                    // object keyed by job ID, use route.order for ordering
+                    const order = route.order || Object.keys(route.stops);
+                    stopsArray = order.map(id => route.stops[id]).filter(Boolean);
+                } else {
+                    stopsArray = [];
+                }
+                stopsArray.forEach((stop, idx) => {
                     const id = 'stop_' + (stopIdCounter++);
                     newStops[id] = {
                         name: stop.name || 'No name',
