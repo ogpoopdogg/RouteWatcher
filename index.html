@@ -3307,9 +3307,9 @@
             if (window.historicalMapInstance) historicalMapInstance.setOptions({ styles: style });
         }
 
-        if (localStorage.getItem('ec_theme') !== 'dark') {
-            document.body.classList.add('light-mode');
-        }
+      if (localStorage.getItem('ec_theme') === 'light') {
+    document.body.classList.add('light-mode');
+}
 
         // ===== INSTALL APP =====
         let deferredInstallPrompt = null;
