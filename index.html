@@ -3175,6 +3175,33 @@
             display: block;
         }
         body.light-mode .ec-offline-banner { color: #fff !important; }
+        .ec-update-banner {
+            display: none;
+            position: fixed;
+            left: 50%;
+            bottom: 16px;
+            transform: translateX(-50%);
+            z-index: 100000;
+            max-width: calc(100% - 32px);
+            background: #1f6f43;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 10px 8px 14px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+        }
+        .ec-update-banner.visible { display: flex; align-items: center; gap: 10px; }
+        .ec-update-banner button {
+            background: #fff;
+            color: #1f6f43;
+            border: 0;
+            border-radius: 6px;
+            padding: 5px 10px;
+            font: inherit;
+            cursor: pointer;
+        }
+        body.light-mode .ec-update-banner { color: #fff !important; }
         .attention-strip {
             display: flex;
             flex-wrap: wrap;
@@ -4620,6 +4647,9 @@
     <!-- Connection lost banner -->
     <div id="ecOfflineBanner" class="ec-offline-banner" role="status" aria-live="polite">⚠️ Offline: showing the last data received. Changes you make will be sent when the connection returns, so don't reload the page.</div>
 
+    <!-- New version available banner -->
+    <div id="ecUpdateBanner" class="ec-update-banner" role="status" aria-live="polite">A new version of the app is ready. <button type="button" onclick="location.reload()">Reload now</button></div>
+
     <div id="ecNotice" class="ec-notice" role="alert"></div>
 
     <div id="ecIdleBanner" class="ec-idle-banner" aria-hidden="true"></div>
@@ -5661,11 +5691,6 @@
             return isFinite(n) ? n : null;
         }
 
-        // FleetHunt trucks don't report a battery level: always shown as 100% (green)
-        function ecIsFleetHunt(drv) {
-            return !!drv && /^fleet[\s_-]*hunt$/i.test(String(drv.provider || '').trim());
-        }
-
         // ===== MAP STYLES =====
         // Dark "midnight" map: quiet streets, warm highways, so the driver colours stand out
         const mapStyles = [
@@ -5784,14 +5809,94 @@
             if (btn) btn.style.display = 'none';
         });
 
-        // Register Service Worker (required for PWA installability)
+        // Register Service Worker (required for PWA installability; sw.js always fetches the newest files)
+        let ecSwReg = null;
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker registered:', reg))
+                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                    .then(reg => { ecSwReg = reg; })
                     .catch(err => console.warn('Service Worker registration failed:', err));
             });
         }
+
+        // ===== APP UPDATES =====
+        // An open window keeps running the code it was loaded with. Every 5 minutes, and whenever
+        // the app comes back on screen, check whether index.html on the server has changed. If it
+        // has, reload into the new version at a moment that won't interrupt anything (coming back
+        // to the app, or after 5 minutes without use); until then a banner offers "Reload now".
+        const EC_UPDATE_CHECK_MS = 5 * 60 * 1000;
+        let ecLoadedVersion = null;   // { tag, hash } of index.html as this window loaded it
+        let ecUpdateReady = false;
+        let ecUpdateChecking = false;
+
+        function ecPageUrl() { return location.href.split('#')[0]; }
+
+        function ecTextHash(text) { // FNV-1a: cheap fingerprint to tell two versions of the page apart
+            let h = 0x811c9dc5;
+            for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return text.length + ':' + (h >>> 0).toString(16);
+        }
+
+        async function ecFetchPageTag() { // ETag / Last-Modified header only: no download
+            const res = await fetch(ecPageUrl(), { method: 'HEAD', cache: 'no-store' });
+            if (!res.ok) return null;
+            return res.headers.get('ETag') || res.headers.get('Last-Modified') || null;
+        }
+
+        async function ecFetchPageVersion() {
+            const res = await fetch(ecPageUrl(), { cache: 'no-store' });
+            if (!res.ok) return null;
+            const tag = res.headers.get('ETag') || res.headers.get('Last-Modified') || null;
+            return { tag, hash: ecTextHash(await res.text()) };
+        }
+
+        async function ecCheckForUpdate() {
+            if (ecUpdateReady || ecUpdateChecking || !navigator.onLine) return;
+            ecUpdateChecking = true;
+            try {
+                if (ecSwReg) ecSwReg.update().catch(() => {});
+                if (!ecLoadedVersion) { ecLoadedVersion = await ecFetchPageVersion(); return; }
+                if (ecLoadedVersion.tag) {
+                    const tag = await ecFetchPageTag();
+                    if (!tag || tag === ecLoadedVersion.tag) return; // unchanged
+                }
+                // Header changed (or the server sends none): compare the page itself, so a reload only happens for real changes
+                const latest = await ecFetchPageVersion();
+                if (!latest) return;
+                if (latest.hash === ecLoadedVersion.hash) { ecLoadedVersion.tag = latest.tag; return; }
+                ecUpdateReady = true;
+            } catch (e) {
+                console.warn('Update check failed:', e && e.message); // next check tries again
+            } finally {
+                ecUpdateChecking = false;
+            }
+        }
+
+        function ecSafeToReloadNow() {
+            if (!navigator.onLine) return false;
+            const offline = document.getElementById('ecOfflineBanner');
+            if (offline && offline.classList.contains('visible')) return false; // changes may still be waiting to send
+            const el = document.activeElement;
+            if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return false;
+            return true;
+        }
+
+        function ecApplyUpdateIfReady(justReturned) {
+            if (!ecUpdateReady || document.hidden) return;
+            if ((justReturned || ecIsIdle() || !auth.currentUser) && ecSafeToReloadNow()) { location.reload(); return; }
+            const banner = document.getElementById('ecUpdateBanner');
+            if (banner) banner.classList.add('visible');
+        }
+
+        window.addEventListener('load', () => { ecCheckForUpdate(); });
+        setInterval(function() {
+            if (document.hidden) return;
+            ecCheckForUpdate().then(() => ecApplyUpdateIfReady(false));
+        }, EC_UPDATE_CHECK_MS);
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) return;
+            ecCheckForUpdate().then(() => ecApplyUpdateIfReady(true));
+        });
 
         // ===== AUTH =====
         function login() {
@@ -6166,7 +6271,6 @@
         let historicalMapClickHandler = null;
 
         const PAJ_API_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/pajApi'; // PAJ proxy (Cloud Function)
-        const FLEETHUNT_HISTORY_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/fleetHuntHistory';
         const POLL_NOW_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/pollNow'; // live GPS poll, on demand
         const STANDBY_THRESHOLD = 15 * 60 * 1000;
         const OFFLINE_THRESHOLD = 60 * 60 * 1000;
@@ -6389,7 +6493,7 @@
         // Nothing polls on a server timer: this page asks pollNow for fresh positions every
         // 15 s while it is signed in, visible and not idle-paused, and stops the moment it
         // is hidden, idle or closed. pollNow shares one upstream call between everyone
-        // watching, so extra open pages don't mean extra requests to PAJ or FleetHunt.
+        // watching, so extra open pages don't mean extra requests to PAJ.
         const EC_POLL_MS = 15 * 1000;
         let ecPollInterval = null;
         let ecPollInFlight = false;
@@ -6586,7 +6690,7 @@
                 if (!drv) continue;
                 const name = getDriverNickname(id) || getDriverDisplayName(id, drv);
                 if (drv.hasAlarm) items.push({ level: 'red', text: name + ': tracker alarm', driverId: id });
-                const bat = drv.provider === 'fleethunt' ? null : ecBatteryValue(drv);
+                const bat = ecBatteryValue(drv);
                 if (bat !== null && bat < ATTENTION_LOW_BATTERY) items.push({ level: 'amber', text: name + ': battery ' + bat + '%', driverId: id });
             }
 
@@ -6858,8 +6962,6 @@
             const resultEl = document.getElementById('historyResult');
             resultEl.textContent = 'Loading track...';
 
-            const isFleetHuntDrv = drv.provider === 'fleethunt';
-
             let toleranceMeters = 800;
             const slider = document.getElementById('historicalSimplifyTolerance');
             if (slider) {
@@ -6868,9 +6970,7 @@
             document.getElementById('historicalToleranceDisplay') && (document.getElementById('historicalToleranceDisplay').textContent = toleranceMeters + 'm');
 
             try {
-                const url = isFleetHuntDrv
-                    ? `${FLEETHUNT_HISTORY_URL}?asset_id=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`
-                    : `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
+                const url = `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
                 const response = await ecFetchFunction(url);
                 if (!response.ok) {
                     const errText = await response.text().catch(() => 'Unknown error');
@@ -7003,7 +7103,7 @@
                 document.getElementById('overlayStatus').textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
                 document.getElementById('overlayStatus').className = status.class;
 
-                let batteryVal = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
+                let batteryVal = ecBatteryValue(drv);
                 if (batteryVal === null) {
                     document.getElementById('overlayBattery').textContent = '🔋 —';
                     document.getElementById('overlayBattery').className = '';
@@ -8882,7 +8982,7 @@
                 }
 
                 let batteryHtml;
-                const batteryKnown = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
+                const batteryKnown = ecBatteryValue(drv);
                 if (batteryKnown === null) {
                     batteryHtml = `<span class="battery" title="Battery not reported"><span class="ec-batt ec-batt-unknown" aria-hidden="true"></span>—</span>`;
                 } else {
@@ -8970,7 +9070,7 @@
             statusHeader.textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
 
             if (drv) {
-                let batteryVal = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
+                let batteryVal = ecBatteryValue(drv);
                 if (batteryVal === null) {
                     batteryHeader.textContent = '🔋 —';
                     batteryHeader.className = '';
@@ -9309,10 +9409,7 @@
 
         // Fetch raw points for a window using the same endpoints/auth as loadHistoricalTrack (no shared state touched)
         async function fetchRouteTimePoints(drv, fromUnix, toUnix) {
-            const isFleetHuntDrv = drv.provider === 'fleethunt';
-            const url = isFleetHuntDrv
-                ? `${FLEETHUNT_HISTORY_URL}?asset_id=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`
-                : `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
+            const url = `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
             const response = await ecFetchFunction(url);
             if (!response.ok) throw new Error('API error (' + response.status + ')');
             const data = await response.json();
