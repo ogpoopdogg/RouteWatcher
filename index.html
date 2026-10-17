@@ -910,7 +910,8 @@
             color: var(--muted);
         }
         #driverSettingsList .driver-row-fields input.drv-name,
-        #driverSettingsList .driver-row-fields input.drv-device {
+        #driverSettingsList .driver-row-fields input.drv-device,
+        #driverSettingsList .driver-row-fields select.drv-gps-interval {
             width: 100%;
             max-width: 320px;
             background: #0b0b14;
@@ -923,8 +924,13 @@
             outline: none;
         }
         #driverSettingsList .driver-row-fields input.drv-name:focus,
-        #driverSettingsList .driver-row-fields input.drv-device:focus {
+        #driverSettingsList .driver-row-fields input.drv-device:focus,
+        #driverSettingsList .driver-row-fields select.drv-gps-interval:focus {
             border-color: var(--accent);
+        }
+        #driverSettingsList .driver-row-fields select.drv-gps-interval {
+            text-align-last: center;
+            cursor: pointer;
         }
         #driverSettingsList .driver-row-fields input.drv-color {
             width: 72px;
@@ -1744,7 +1750,8 @@
                 flex: 0 0 auto;
             }
             #driverSettingsList .driver-row-fields input.drv-name,
-            #driverSettingsList .driver-row-fields input.drv-device {
+            #driverSettingsList .driver-row-fields input.drv-device,
+            #driverSettingsList .driver-row-fields select.drv-gps-interval {
                 width: 100%;
             }
             #driverSettingsList .driver-row-fields input.drv-color {
@@ -1934,7 +1941,8 @@
             background: #f5f5f5 !important;
             border: 1px solid #ccc !important;
         }
-        body.light-mode .settings-card input {
+        body.light-mode .settings-card input,
+        body.light-mode .settings-card select {
             background: #f5f5f5 !important;
             border: 1px solid #ccc !important;
             color: #000 !important;
@@ -4280,6 +4288,7 @@
         body:not(.light-mode) .settings-card .field input,
         body:not(.light-mode) #driverSettingsList .driver-row-fields input.drv-name,
         body:not(.light-mode) #driverSettingsList .driver-row-fields input.drv-device,
+        body:not(.light-mode) #driverSettingsList .driver-row-fields select.drv-gps-interval,
         body:not(.light-mode) .group-drawer .create-section input,
         body:not(.light-mode) .nickname-modal .nickname-card input,
         body:not(.light-mode) .date-picker {
@@ -4290,6 +4299,7 @@
         body:not(.light-mode) .settings-card .field input:focus,
         body:not(.light-mode) #driverSettingsList .driver-row-fields input.drv-name:focus,
         body:not(.light-mode) #driverSettingsList .driver-row-fields input.drv-device:focus,
+        body:not(.light-mode) #driverSettingsList .driver-row-fields select.drv-gps-interval:focus,
         body:not(.light-mode) .group-drawer .create-section input:focus,
         body:not(.light-mode) .date-picker:focus {
             border-color: var(--accent);
@@ -6386,16 +6396,35 @@
         }
 
         // ===== LIVE GPS POLLING =====
-        // Nothing polls on a server timer: this page asks pollNow for fresh positions every
-        // 15 s while it is signed in, visible and not idle-paused, and stops the moment it
-        // is hidden, idle or closed. pollNow shares one upstream call between everyone
-        // watching, so extra open pages don't mean extra requests to PAJ or FleetHunt.
-        const EC_POLL_MS = 15 * 1000;
+        // Nothing polls on a server timer: this page asks pollNow for fresh positions while it
+        // is signed in, visible and not idle-paused, and stops the moment it is hidden, idle or
+        // closed. pollNow shares one upstream call between everyone watching, so extra open
+        // pages don't mean extra requests to PAJ or FleetHunt.
+        // Each driver has their own refresh interval (Settings > driver > GPS refresh: 5, 10 or
+        // 15 s, saved as gpsIntervalSec). pollNow returns every driver at once, so the page polls
+        // as often as the fastest driver needs, and each driver's dot only moves on the maps
+        // once their own interval has passed (see ecGateDriverLocations).
+        const EC_GPS_INTERVAL_CHOICES = [5, 10, 15];
+        const EC_GPS_INTERVAL_DEFAULT = 15; // drivers with no saved interval keep the old 15 s refresh
+        const EC_POLL_TICK_MS = 5 * 1000;   // smallest choice: the poll timer checks this often
         let ecPollInterval = null;
         let ecPollInFlight = false;
+        let ecLastPollAt = 0;
+        function ecDriverGpsIntervalSec(drv) {
+            const v = Number(drv && drv.gpsIntervalSec);
+            return EC_GPS_INTERVAL_CHOICES.indexOf(v) >= 0 ? v : EC_GPS_INTERVAL_DEFAULT;
+        }
+        function ecFastestGpsIntervalMs() {
+            let fastest = EC_GPS_INTERVAL_DEFAULT;
+            for (const drv of Object.values(ecRawDrivers)) {
+                if (drv && drv.deviceId) fastest = Math.min(fastest, ecDriverGpsIntervalSec(drv));
+            }
+            return fastest * 1000;
+        }
         async function ecPollNow() {
             if (ecPollInFlight || document.hidden || ecIsIdle() || ecSessionKicked || !auth.currentUser) return;
             ecPollInFlight = true;
+            ecLastPollAt = Date.now();
             try {
                 const res = await ecFetchFunction(POLL_NOW_URL);
                 if (!res.ok) console.warn('pollNow: server returned ' + res.status);
@@ -6405,10 +6434,79 @@
                 ecPollInFlight = false;
             }
         }
+        function ecPollTick() {
+            ecReleaseHeldLocations();
+            if (Date.now() - ecLastPollAt >= ecFastestGpsIntervalMs() - 500) ecPollNow(); // 500 ms slack for timer drift
+        }
         function ecStartLivePolling() {
             if (ecPollInterval) clearInterval(ecPollInterval);
-            ecPollInterval = setInterval(ecPollNow, EC_POLL_MS);
-            ecPollNow(); // don't make the dispatcher wait 15 s for the first fix
+            ecPollInterval = setInterval(ecPollTick, EC_POLL_TICK_MS);
+            ecPollNow(); // don't make the dispatcher wait for the first fix
+        }
+
+        // ===== PER-DRIVER MAP REFRESH =====
+        // ecRawDrivers is the drivers node exactly as Firebase sent it; `drivers` is the same data
+        // with each driver's position held back until that driver's interval has passed.
+        let ecRawDrivers = {};
+        const ecShownFix = {}; // driverId -> { loc, heading, shownAt } currently on the maps
+        let ecHeldDriverIds = [];
+        function ecGateDriverLocations(raw) {
+            const now = Date.now();
+            const out = {};
+            const held = [];
+            for (const [id, drv] of Object.entries(raw)) {
+                const loc = drv && drv.lastLocation;
+                const shown = ecShownFix[id];
+                if (!loc || !shown || !shown.loc || shown.loc.updatedAt === loc.updatedAt) {
+                    out[id] = drv;
+                    if (loc && (!shown || !shown.loc || shown.loc.updatedAt !== loc.updatedAt)) {
+                        ecShownFix[id] = { loc: loc, heading: drv.heading, shownAt: now };
+                    } else if (shown) {
+                        shown.heading = drv.heading;
+                    }
+                    continue;
+                }
+                const intervalMs = ecDriverGpsIntervalSec(drv) * 1000;
+                const fixGapMs = Number(loc.updatedAt) - Number(shown.loc.updatedAt);
+                // New fix at least one interval newer (1 s slack for device clock jitter), or the
+                // driver has waited a full interval on screen: show it. Otherwise keep the old dot.
+                if (!(fixGapMs < intervalMs - 1000 && fixGapMs >= 0 && now - shown.shownAt < intervalMs)) {
+                    ecShownFix[id] = { loc: loc, heading: drv.heading, shownAt: now };
+                    out[id] = drv;
+                    continue;
+                }
+                out[id] = Object.assign({}, drv, { lastLocation: shown.loc, heading: shown.heading });
+                held.push(id);
+            }
+            for (const id of Object.keys(ecShownFix)) {
+                if (!raw[id]) delete ecShownFix[id];
+            }
+            ecHeldDriverIds = held;
+            return out;
+        }
+        function ecApplyDriverSnapshot() {
+            drivers = ecGateDriverLocations(ecRawDrivers);
+            ecIngestDriverPositions(); // new positions from the server pollers -> tracks + auto-complete
+            if (settingsOpen) {
+                refreshSettingsListIfDriversChanged();
+                return;
+            }
+            queueRender({ badges: true, markers: true, settings: true, control: true });
+            if (!dashboardLoaded) {
+                flushQueuedRender(); // first load: render right away
+                dashboardLoaded = true;
+            }
+        }
+        // A held position whose driver has now waited their full interval goes on the maps,
+        // even if no newer fix arrives (e.g. the driver stopped moving).
+        function ecReleaseHeldLocations() {
+            if (!ecHeldDriverIds.length) return;
+            const now = Date.now();
+            const due = ecHeldDriverIds.some(function(id) {
+                const shown = ecShownFix[id];
+                return !shown || now - shown.shownAt >= ecDriverGpsIntervalSec(ecRawDrivers[id]) * 1000;
+            });
+            if (due) ecApplyDriverSnapshot();
         }
 
         // Settings > List Devices (the server only allows the admin account)
@@ -6508,7 +6606,7 @@
             const awayMs = ecHiddenAt ? Date.now() - ecHiddenAt : 0;
             ecHiddenAt = 0;
             renderAttentionStrip();
-            ecPollNow(); // back on screen: refresh the dots now instead of up to 15 s later
+            ecPollNow(); // back on screen: refresh the dots now instead of waiting for the next tick
             if (ecIdlePaused) return; // paused for inactivity: ecResumeFromIdle catches up
             if (awayMs < 60 * 1000) return; // quick switch: nothing missed
             if (activeModalDriverId) refreshRouteTimeIndicator(activeModalDriverId, { force: true });
@@ -6550,7 +6648,7 @@
             db.goOnline(); // listeners re-sync to the latest data on their own
             ecShowIdleBanner(false);
             renderAttentionStrip();
-            ecPollNow(); // awake again: refresh the dots now instead of up to 15 s later
+            ecPollNow(); // awake again: refresh the dots now instead of waiting for the next tick
             if (pausedMs >= 5 * 60 * 1000 && !document.hidden) { // at least one 5-minute history poll was skipped
                 if (activeModalDriverId) refreshRouteTimeIndicator(activeModalDriverId, { force: true });
             }
@@ -10002,6 +10100,10 @@
                 <input type="color" value="${ecEsc(drv.color || '#f7c948')}" data-id="${id}" class="drv-color color-pick">
                 <label>Device ID</label>
                 <input type="text" value="${ecEsc(drv.deviceId || '')}" placeholder="Device ID" data-id="${id}" class="drv-device">
+                <label>GPS refresh (how often the map updates)</label>
+                <select data-id="${id}" class="drv-gps-interval">
+                  ${EC_GPS_INTERVAL_CHOICES.map(sec => `<option value="${sec}"${sec === ecDriverGpsIntervalSec(drv) ? ' selected' : ''}>Every ${sec} seconds</option>`).join('')}
+                </select>
                 <button class="remove-driver" onclick="removeDriver('${ecAttrJs(id)}')">✕ Remove Driver</button>
               </div>
             `;
@@ -10026,11 +10128,13 @@
             const nameInput = fields.querySelector('.drv-name');
             const colorInput = fields.querySelector('.drv-color');
             const deviceInput = fields.querySelector('.drv-device');
-            if (!nameInput || !colorInput || !deviceInput) return;
+            const intervalInput = fields.querySelector('.drv-gps-interval');
+            if (!nameInput || !colorInput || !deviceInput || !intervalInput) return;
             const name = nameInput.value;
             const color = colorInput.value;
             const deviceId = deviceInput.value;
-            getDriversRef().child(id).update({ name, color, deviceId }).catch(ecSaveError('driver settings'));
+            const gpsIntervalSec = ecDriverGpsIntervalSec({ gpsIntervalSec: intervalInput.value });
+            getDriversRef().child(id).update({ name, color, deviceId, gpsIntervalSec }).catch(ecSaveError('driver settings'));
             if (btn) {
                 const dot = btn.querySelector('.driver-row-toggle-dot');
                 const nameSpan = btn.querySelector('.driver-row-toggle-name');
@@ -10080,8 +10184,9 @@
                 const name = row.querySelector('.drv-name').value;
                 const color = row.querySelector('.drv-color').value;
                 const deviceId = row.querySelector('.drv-device').value;
+                const gpsIntervalSec = ecDriverGpsIntervalSec({ gpsIntervalSec: row.querySelector('.drv-gps-interval').value });
                 if (id) {
-                    getDriversRef().child(id).update({ name, color, deviceId }).catch(ecSaveError('driver settings'));
+                    getDriversRef().child(id).update({ name, color, deviceId, gpsIntervalSec }).catch(ecSaveError('driver settings'));
                 }
             });
             renderDriverBadges();
@@ -10122,17 +10227,8 @@
 
             getDriversRef().off('value');
             getDriversRef().on('value', snap => {
-                drivers = snap.val() || {};
-                ecIngestDriverPositions(); // new positions from the server pollers -> tracks + auto-complete
-                if (settingsOpen) {
-                    refreshSettingsListIfDriversChanged();
-                    return;
-                }
-                queueRender({ badges: true, markers: true, settings: true, control: true });
-                if (!dashboardLoaded) {
-                    flushQueuedRender(); // first load: render right away
-                    dashboardLoaded = true;
-                }
+                ecRawDrivers = snap.val() || {};
+                ecApplyDriverSnapshot();
             });
 
             getMasterRef().once('value').then(snap => {
