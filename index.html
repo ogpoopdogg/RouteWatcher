@@ -5803,6 +5803,38 @@
             });
         }
 
+        // ---------- SECURITY LOG ----------
+        // Failed and refused sign-ins are reported to the E&C security log (the Security section of the
+        // usage page). Firebase runs no server code when a password is wrong, so the page has to say so.
+        // The server adds the real IP address and checks the sign-in token sent with a refusal. Only the
+        // error code is sent, never the password. A report never blocks a sign-in, and is dropped if it
+        // can't be sent.
+        const EC_SECURITY_REPORT_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/auditSignInReport';
+        function ecSendSecurityReport(report) {
+            try {
+                const body = JSON.stringify(Object.assign({ app: 'routewatcher', at: Date.now(), page: location.pathname }, report));
+                // text/plain needs no CORS preflight, and a beacon is still sent when the page closes
+                if (navigator.sendBeacon && navigator.sendBeacon(EC_SECURITY_REPORT_URL, new Blob([body], { type: 'text/plain' }))) return;
+                fetch(EC_SECURITY_REPORT_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: body }).catch(function () {});
+            } catch (e) { /* never get in the way of signing in */ }
+        }
+        // A sign-in Firebase refused (wrong password, unknown email, too many tries...)
+        function ecReportFailedSignIn(email, err) {
+            const code = String((err && err.code) || 'unknown');
+            if (code === 'auth/network-request-failed') return; // nothing reaches the server anyway
+            ecSendSecurityReport({ kind: 'failed', email: String(email || '').trim().toLowerCase().slice(0, 200), code: code });
+        }
+        // A signed-in account this page turned away. Resolves once the report is sent (at most 2 seconds),
+        // so the page can sign out afterwards.
+        function ecReportRefusedSignIn(user, reason) {
+            if (!user) return Promise.resolve();
+            const token = user.getIdToken().catch(function () { return null; });
+            const wait = new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 2000); });
+            return Promise.race([token, wait]).then(function (idToken) {
+                ecSendSecurityReport({ kind: 'refused', email: String(user.email || '').toLowerCase().slice(0, 200), reason: String(reason || '').slice(0, 200), idToken: idToken });
+            });
+        }
+
         // ===== AUTH =====
         function login() {
             const email = document.getElementById('loginEmail').value.trim();
@@ -5812,6 +5844,7 @@
             if (!email || !password) { errorEl.textContent = 'Please enter email and password.'; return; }
             ecLoginBusy(true);
             auth.signInWithEmailAndPassword(email, password).catch(err => {
+                ecReportFailedSignIn(email, err);
                 ecLoginBusy(false);
                 errorEl.textContent = 'Login failed: ' + err.message;
             });
@@ -5888,8 +5921,10 @@
 
         let ecAllowWhy = ''; // short reason shown on the login screen when access is refused
         // Records why a sign-in was refused at developer/login_refusals, so the admin can read it
-        // from the database even when nobody can send a screenshot. Never blocks the login screen.
+        // from the database even when nobody can send a screenshot, and in the E&C security log
+        // (see SECURITY LOG). Never blocks the login screen.
         function ecLogRefusal(email) {
+            ecReportRefusedSignIn(auth.currentUser, ecAllowWhy || 'no reason recorded');
             try {
                 return db.ref('developer/login_refusals').push({
                     at: new Date().toISOString(),
