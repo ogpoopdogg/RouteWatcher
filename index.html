@@ -5818,6 +5818,21 @@
                 fetch(EC_SECURITY_REPORT_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: body }).catch(function () {});
             } catch (e) { /* never get in the way of signing in */ }
         }
+        // A sign-in that worked, so the security log can show which app it was (Firebase can't tell the
+        // server). Sent once per sign-in: reopening a page that is already signed in doesn't count.
+        function ecReportSignedIn(user) {
+            const t = Date.parse(user && user.metadata && user.metadata.lastSignInTime);
+            if (!t || Math.abs(Date.now() - t) > 10 * 60 * 1000) return;
+            try {
+                const key = 'ecSignInReported:' + user.uid;
+                if (localStorage.getItem(key) === String(t)) return;
+                localStorage.setItem(key, String(t));
+            } catch (e) { /* no storage: report anyway, the server only names the app once */ }
+            user.getIdToken().then(function (idToken) {
+                ecSendSecurityReport({ kind: 'signedin', email: String(user.email || '').toLowerCase().slice(0, 200), idToken: idToken });
+            }).catch(function () {});
+        }
+        firebase.auth().onAuthStateChanged(function (user) { if (user) ecReportSignedIn(user); });
         // A sign-in Firebase refused (wrong password, unknown email, too many tries...)
         function ecReportFailedSignIn(email, err) {
             const code = String((err && err.code) || 'unknown');
