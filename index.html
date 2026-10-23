@@ -12,10 +12,18 @@
     <link rel="preconnect" href="https://www.gstatic.com">
     <link rel="preconnect" href="https://eandccourier-36fcc-default-rtdb.firebaseio.com">
     <link rel="preconnect" href="https://us-central1-eandccourier-36fcc.cloudfunctions.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Start downloading the Firebase SDK right away instead of after the whole page has arrived -->
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" as="script">
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" as="script">
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" as="script">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon2.png" type="image/png">
     <link rel="apple-touch-icon" href="icon2.png">
-    <link href="//fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- The font no longer holds up the first paint: text shows in the fallback font until Inter arrives -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
     <style>
         * {
             box-sizing: border-box;
@@ -6118,13 +6126,21 @@
         }
 
         // ===== EARLY DATA DOWNLOAD (runs during the login checks) =====
-        const EC_WARM_PATHS = ['drivers', 'master_config']
+        const EC_WARM_PATHS = ['drivers', 'master_config', 'driver_nicknames']
             .map(k => 'developer/dispatch_dashboard/' + k);
+        // Per-account paths: the device lock (when a lock is already saved, its claim below doesn't need a
+        // second try to learn it), this user's driver groups and saved map view (so the first screen is
+        // filtered and placed sooner)
+        const EC_WARM_USER_PATHS = uid => [
+            'developer/dispatch_dashboard/active_sessions/' + uid,
+            'users/' + uid + '/dispatch_dashboard/groups',
+            'users/' + uid + '/dispatch_dashboard/map_view'
+        ];
         let ecWarmRefs = [];
         const ecWarmNoop = function() {};
-        function ecWarmStart() {
+        function ecWarmStart(uid) {
             if (ecWarmRefs.length) return;
-            ecWarmRefs = EC_WARM_PATHS.map(path => {
+            ecWarmRefs = EC_WARM_PATHS.concat(uid ? EC_WARM_USER_PATHS(uid) : []).map(path => {
                 const ref = db.ref(path);
                 ref.on('value', ecWarmNoop, function() {}); // errors (e.g. no access) are ignored here
                 return ref;
@@ -6143,7 +6159,7 @@
                     auth.signOut();
                     return;
                 }
-                ecWarmStart();
+                ecWarmStart(user.uid);
                 ecAccessGate(user).then(function(allowed) {
                 if (!allowed) { ecWarmStop(); return; }
                 currentUserId = user.uid;
@@ -6299,9 +6315,7 @@
                 updateNicknameButton();
                 ecRenderContactLists();
                 if (settingsOpen) return;
-                renderDriverBadges();
-                updateMapMarkers();
-                updateMapDriverControl();
+                queueRender({ badges: true, markers: true, control: true });
                 if (activeModalDriverId && drivers[activeModalDriverId]) {
                     const titleEl = document.getElementById('driverModalTitle');
                     if (titleEl) titleEl.textContent = getDriverDisplayName(activeModalDriverId, drivers[activeModalDriverId]);
@@ -6541,7 +6555,8 @@
                 refreshSettingsListIfDriversChanged();
                 return;
             }
-            queueRender({ badges: true, markers: true, settings: true, control: true });
+            // (the hidden Settings list is not rebuilt here: openSettings builds it fresh)
+            queueRender({ badges: true, markers: true, control: true });
             if (!dashboardLoaded) {
                 flushQueuedRender(); // first load: render right away
                 dashboardLoaded = true;
@@ -6738,11 +6753,12 @@
                 if (bat !== null && bat < ATTENTION_LOW_BATTERY) items.push({ level: 'amber', text: name + ': battery ' + bat + '%', driverId: id });
             }
 
-            if (items.length === 0) { strip.style.display = 'none'; strip.innerHTML = ''; return; }
+            if (items.length === 0) { strip.style.display = 'none'; strip.innerHTML = ''; strip._ecHtml = ''; return; }
             strip.style.display = 'flex';
-            strip.innerHTML = items.map(it => it.driverId
+            const html = items.map(it => it.driverId
                 ? `<button type="button" class="attention-chip level-${it.level}" onclick="openDriverModal('${ecAttrJs(it.driverId)}')">${ecEsc(it.text)}</button>`
                 : `<span class="attention-chip level-${it.level} no-action">${ecEsc(it.text)}</span>`).join('');
+            if (strip._ecHtml !== html) { strip.innerHTML = html; strip._ecHtml = html; } // unchanged: leave the chips alone
         }
 
         // ===== GPS TRACKING =====
@@ -8404,16 +8420,27 @@
             window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
         }
 
+        // Each pulse step makes Google Maps redraw the map (and re-blur the glass panels over it), so the
+        // rings step about 20 times a second instead of at the screen's full 60-120 Hz (each step is about
+        // 1 pixel, so the pulse still looks smooth)
+        const EC_PULSE_STEP_MS = 45; // every 3rd frame on a 60 Hz screen
+
         function startPulseAnimation() {
             if (pulseAnimationId) cancelAnimationFrame(pulseAnimationId);
             let startTime = performance.now();
+            let lastStepAt = 0;
             const pulseMapWrapper = document.getElementById('mainMapWrapper');
 
             function animate(time) {
-                if (pulseMapWrapper && pulseMapWrapper.classList.contains('hidden')) {
-                    pulseAnimationId = requestAnimationFrame(animate); // map hidden: skip Maps API redraws
+                // Map hidden, covered by the driver window or the track overlay, or paused for inactivity:
+                // skip the Maps API redraws
+                if ((pulseMapWrapper && pulseMapWrapper.classList.contains('hidden')) ||
+                    document.body.classList.contains('modal-open') || historicalOverlayOpen || ecIdlePaused ||
+                    time - lastStepAt < EC_PULSE_STEP_MS) {
+                    pulseAnimationId = requestAnimationFrame(animate);
                     return;
                 }
+                lastStepAt = time;
                 const elapsed = (time - startTime) / 1000;
                 const zoom = map ? map.getZoom() : 10;
                 const metersPerPixel = 156000 / Math.pow(2, zoom);
@@ -8983,14 +9010,13 @@
         }
 
         // ===== DRIVER BADGES =====
-        // First-load stagger: badges are rebuilt on every update, so the intro only runs once and a rebuild
+        // First-load stagger: badges are rebuilt whenever one changes, so the intro only runs once and a rebuild
         // during the intro continues from the same point instead of starting over
         let ecBadgeIntroStart = 0;
         const EC_BADGE_INTRO_MS = 1800;
         function renderDriverBadges() {
             renderAttentionStrip();
             const container = document.getElementById('driverBadges');
-            container.innerHTML = '';
             const entries = Object.entries(getFilteredDrivers());
             if (container.classList.contains('ec-intro') && performance.now() - ecBadgeIntroStart > EC_BADGE_INTRO_MS) {
                 container.classList.remove('ec-intro');
@@ -9002,19 +9028,14 @@
             if (container.classList.contains('ec-intro')) {
                 container.style.setProperty('--ec-intro-t', '-' + Math.round(performance.now() - ecBadgeIntroStart) + 'ms');
             }
-            let ecBadgeIndex = 0;
             if (entries.length === 0) {
+                container._ecBadgeSig = null;
                 container.innerHTML =
                     '<span style="color:var(--muted); font-size:13px; background:rgba(0,0,0,0.6); padding:4px 12px; border-radius:20px;">No drivers — add in Settings</span>';
                 return;
             }
+            const badgeRows = [];
             for (let [id, drv] of entries) {
-                const badge = document.createElement('div');
-                badge.className = 'driver-badge';
-                badge.dataset.driverId = id;
-                badge.style.borderLeftColor = drv.color || '#f7c948';
-                badge.style.setProperty('--drv', drv.color || '#f7c948');
-                badge.style.setProperty('--i', String(ecBadgeIndex++));
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 let lastUpdateText = '—';
@@ -9044,7 +9065,7 @@
                     alarmHtml = `<span class="alarm-badge">⚠️ ALARM</span>`;
                 }
 
-                badge.innerHTML = `
+                badgeRows.push({ id: id, color: drv.color || '#f7c948', html: `
               <div class="badge-row">
                 <span class="dot" style="background:${ecEsc(drv.color || '#f7c948')}"></span>
                 <span class="name${getDriverNickname(id) ? ' nick-name' : ''}">${ecEsc(getDriverNickname(id) || getDriverDisplayName(id, drv))}</span>
@@ -9053,20 +9074,40 @@
                 ${alarmHtml}
                 <span class="last-update">${lastUpdateText}</span>
               </div>
-            `;
-                badge.addEventListener('click', function() {
-                    openDriverModal(id);
+            ` });
+            }
+            // Most updates only move dots on the map: when no badge would look different, keep the ones on
+            // screen instead of rebuilding them all (rebuilding also restarted their glow animations)
+            const badgeSig = JSON.stringify(badgeRows);
+            if (badgeSig !== container._ecBadgeSig || container.classList.contains('ec-intro')) {
+                container._ecBadgeSig = badgeSig;
+                container.innerHTML = '';
+                badgeRows.forEach(function(row, ecBadgeIndex) {
+                    const id = row.id;
+                    const badge = document.createElement('div');
+                    badge.className = 'driver-badge';
+                    badge.dataset.driverId = id;
+                    badge.style.borderLeftColor = row.color;
+                    badge.style.setProperty('--drv', row.color);
+                    badge.style.setProperty('--i', String(ecBadgeIndex));
+                    badge.innerHTML = row.html;
+                    badge.addEventListener('click', function() {
+                        openDriverModal(id);
+                    });
+                    container.appendChild(badge);
                 });
-                container.appendChild(badge);
             }
             updateMapDriverControl();
         }
 
         // ===== DRIVER MODAL =====
+        let ecHeaderBottomPx = null;
         function updateDriverModalHeaderOffset() {
             const headerEl = document.querySelector('header');
             if (!headerEl) return;
             const headerBottom = Math.max(0, Math.ceil(headerEl.getBoundingClientRect().bottom));
+            if (headerBottom === ecHeaderBottomPx) return; // runs on every scroll: only restyle the page when it moved
+            ecHeaderBottomPx = headerBottom;
             document.documentElement.style.setProperty('--dispatch-header-bottom', headerBottom + 'px');
         }
         window.addEventListener('resize', updateDriverModalHeaderOffset);
@@ -9225,8 +9266,14 @@
         function startModalPulse(circle) {
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
             let startTime = performance.now();
+            let lastStepAt = 0;
 
             function animate(time) {
+                if (time - lastStepAt < EC_PULSE_STEP_MS || historicalOverlayOpen || ecIdlePaused) { // see startPulseAnimation
+                    modalPulseAnimationId = requestAnimationFrame(animate);
+                    return;
+                }
+                lastStepAt = time;
                 const elapsed = (time - startTime) / 1000;
                 const zoom = driverModalMap ? driverModalMap.getZoom() : 10;
                 const metersPerPixel = 156000 / Math.pow(2, zoom);
@@ -10118,7 +10165,7 @@
                 }
                 renderGroupManager();
                 updateShowAllButton();
-                applyFilter();
+                queueRender({ badges: true, markers: true, control: true });
                 renderHeaderGroupToggles();
             });
         }
@@ -10244,12 +10291,13 @@
         }
 
         // ===== RENDER COALESCING =====
-        // Merges render requests made in the same tick (drivers listener + GPS poll) into one pass.
+        // Merges render requests made before the next screen frame (drivers, nicknames and groups listeners,
+        // GPS poll) into one pass. A hidden tab draws nothing and catches up the moment it is shown again.
         let pendingRenderParts = null;
         function queueRender(parts) {
             if (!pendingRenderParts) {
                 pendingRenderParts = {};
-                Promise.resolve().then(flushQueuedRender);
+                requestAnimationFrame(flushQueuedRender);
             }
             Object.assign(pendingRenderParts, parts);
         }
