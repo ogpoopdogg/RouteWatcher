@@ -5679,11 +5679,6 @@
             return isFinite(n) ? n : null;
         }
 
-        // FleetHunt trucks don't report a battery level: always shown as 100% (green)
-        function ecIsFleetHunt(drv) {
-            return !!drv && /^fleet[\s_-]*hunt$/i.test(String(drv.provider || '').trim());
-        }
-
         // ===== MAP STYLES =====
         // Dark "midnight" map: quiet streets, warm highways, so the driver colours stand out
         const mapStyles = [
@@ -6242,7 +6237,6 @@
         let historicalMapClickHandler = null;
 
         const PAJ_API_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/pajApi'; // PAJ proxy (Cloud Function)
-        const FLEETHUNT_HISTORY_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/fleetHuntHistory';
         const POLL_NOW_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/pollNow'; // live GPS poll, on demand
         const STANDBY_THRESHOLD = 15 * 60 * 1000;
         const OFFLINE_THRESHOLD = 60 * 60 * 1000;
@@ -6463,7 +6457,7 @@
         // Nothing polls on a server timer: this page asks pollNow for fresh positions while it
         // is signed in, visible and not idle-paused, and stops the moment it is hidden, idle or
         // closed. pollNow shares one upstream call between everyone watching, so extra open
-        // pages don't mean extra requests to PAJ or FleetHunt.
+        // pages don't mean extra requests to PAJ.
         // Each driver has their own refresh interval (Settings > driver > GPS refresh: 5, 10 or
         // 15 s, saved as gpsIntervalSec). pollNow returns every driver at once, so the page polls
         // as often as the fastest driver needs, and each driver's dot only moves on the maps
@@ -6749,7 +6743,7 @@
                 if (!drv) continue;
                 const name = getDriverNickname(id) || getDriverDisplayName(id, drv);
                 if (drv.hasAlarm) items.push({ level: 'red', text: name + ': tracker alarm', driverId: id });
-                const bat = drv.provider === 'fleethunt' ? null : ecBatteryValue(drv);
+                const bat = ecBatteryValue(drv);
                 if (bat !== null && bat < ATTENTION_LOW_BATTERY) items.push({ level: 'amber', text: name + ': battery ' + bat + '%', driverId: id });
             }
 
@@ -7022,8 +7016,6 @@
             const resultEl = document.getElementById('historyResult');
             resultEl.textContent = 'Loading track...';
 
-            const isFleetHuntDrv = drv.provider === 'fleethunt';
-
             let toleranceMeters = 800;
             const slider = document.getElementById('historicalSimplifyTolerance');
             if (slider) {
@@ -7032,9 +7024,7 @@
             document.getElementById('historicalToleranceDisplay') && (document.getElementById('historicalToleranceDisplay').textContent = toleranceMeters + 'm');
 
             try {
-                const url = isFleetHuntDrv
-                    ? `${FLEETHUNT_HISTORY_URL}?asset_id=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`
-                    : `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
+                const url = `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
                 const response = await ecFetchFunction(url);
                 if (!response.ok) {
                     const errText = await response.text().catch(() => 'Unknown error');
@@ -7167,7 +7157,7 @@
                 document.getElementById('overlayStatus').textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
                 document.getElementById('overlayStatus').className = status.class;
 
-                let batteryVal = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
+                let batteryVal = ecBatteryValue(drv);
                 if (batteryVal === null) {
                     document.getElementById('overlayBattery').textContent = '🔋 —';
                     document.getElementById('overlayBattery').className = '';
@@ -9051,7 +9041,7 @@
                 }
 
                 let batteryHtml;
-                const batteryKnown = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
+                const batteryKnown = ecBatteryValue(drv);
                 if (batteryKnown === null) {
                     batteryHtml = `<span class="battery" title="Battery not reported"><span class="ec-batt ec-batt-unknown" aria-hidden="true"></span>—</span>`;
                 } else {
@@ -9159,7 +9149,7 @@
             statusHeader.textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
 
             if (drv) {
-                let batteryVal = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
+                let batteryVal = ecBatteryValue(drv);
                 if (batteryVal === null) {
                     batteryHeader.textContent = '🔋 —';
                     batteryHeader.className = '';
@@ -9504,10 +9494,7 @@
 
         // Fetch raw points for a window using the same endpoints/auth as loadHistoricalTrack (no shared state touched)
         async function fetchRouteTimePoints(drv, fromUnix, toUnix) {
-            const isFleetHuntDrv = drv.provider === 'fleethunt';
-            const url = isFleetHuntDrv
-                ? `${FLEETHUNT_HISTORY_URL}?asset_id=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`
-                : `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
+            const url = `${PAJ_API_URL}?action=history&deviceId=${encodeURIComponent(String(drv.deviceId).trim())}&dateStart=${fromUnix}&dateEnd=${toUnix}`;
             const response = await ecFetchFunction(url);
             if (!response.ok) throw new Error('API error (' + response.status + ')');
             const data = await response.json();
