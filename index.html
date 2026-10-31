@@ -699,6 +699,32 @@
             gap: 4px 8px;
             font-size: 13px;
         }
+        .driver-modal .modal-header .tc-driver-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 10px;
+            margin-top: 6px;
+            font-size: 13px;
+        }
+        .driver-modal .modal-header .tc-driver-row[hidden] { display: none; }
+        .driver-modal .modal-header .tc-driver-row label {
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .driver-modal .modal-header .tc-driver-select {
+            min-width: 0;
+            max-width: 100%;
+            flex: 0 1 280px;
+            padding: 6px 10px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .driver-modal .modal-header .tc-driver-select option,
+        .driver-modal .modal-header .tc-driver-select optgroup { background: var(--card); color: var(--text); }
+        .driver-modal .modal-header .tc-driver-select:disabled { opacity: 0.6; cursor: wait; }
+        .driver-modal .modal-header .tc-driver-msg { color: var(--muted); }
+        .driver-modal .modal-header .tc-driver-msg.err { color: #e74c3c; }
         .driver-modal .modal-header .header-address {
             font-size: 13px;
             color: var(--muted);
@@ -4703,6 +4729,12 @@
                     <span id="modalBatteryHeader" style="font-size:13px;"></span>
                     <span id="modalAlarmHeader" style="display:none; color:#e74c3c; font-weight:700;">⚠️ ALARM</span>
                 </div>
+                <!-- Who's driving this GPS, from the E&C Time Clock (only shown to Time Clock admins) -->
+                <div class="tc-driver-row" id="tcDriverRow" hidden>
+                    <label for="tcDriverSelect">Who's driving this?</label>
+                    <select id="tcDriverSelect" class="date-picker tc-driver-select" onchange="ecTcPick(this.value)"></select>
+                    <span class="tc-driver-msg" id="tcDriverMsg" role="status"></span>
+                </div>
                 <div class="route-time-box" id="routeTimeBox">
                     <div class="rt-main">
                         <span class="rt-label">Time on route</span>
@@ -6401,6 +6433,205 @@
             if (ref) ref.child(driverId).remove().catch(ecSaveError('the nickname removal'));
             applyNicknameChange(driverId, '');
             closeNicknameModal();
+        }
+
+        // ===== WHO'S DRIVING THIS? (E&C Time Clock, in the driver window) =====
+        // Lists the people on the clock in the Time Clock (timeclock/* in this database). Picking one gives them this GPS
+        // the same way Time Clock admin → Edit punch does (timeclock repo, admin.html saveShift):
+        //   - their shift gets the vehicle, plus a line in its vehicle history (how: "admin")
+        //   - the GPS is claimed for them (timeclock/vehicle_claims/{gpsId}); if another driver had it, the Time Clock
+        //     server (timeclockVanTaken) unassigns that driver and their clock asks them to pick their vehicle
+        //   - a vehicle they had before is freed, with the nickname they gave it
+        //   - the GPS nickname becomes the first name the Time Clock uses (the same name a driver's own pick writes)
+        //   - the change goes in the Time Clock change log (timeclock/audit)
+        // The database rules (timeclock repo, database.rules.json) let the Time Clock admins and Gil do this. Gil can read
+        // only what this list needs (names, and the vehicle fields of shifts still on the clock) and make only these
+        // writes. For anyone else the reads are refused and the row stays hidden.
+        // Keep the field names in step with the timeclock repo (tc-core.js lists the layout).
+        const EC_TC = 'timeclock/';
+        const EC_TC_NICK_MAX = 24; // the same limit as the nickname box
+        const ecTc = { driverId: null, seq: 0, people: [], claims: {}, busy: false };
+
+        // Same as displayName() / nicknameFor() in the timeclock repo's tc-core.js
+        function ecTcDisplayName(emp, ek) {
+            const name = emp && typeof emp.name === 'string' ? emp.name.trim() : '';
+            if (name) return name;
+            const email = String((emp && emp.email) || String(ek || '').replace(/,/g, '.')).trim().toLowerCase();
+            return email.split('@')[0].split(/[._-]+/).filter(Boolean)
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Employee';
+        }
+        function ecTcNickname(emp, ek) { return ecTcDisplayName(emp, ek).split(/\s+/)[0].slice(0, EC_TC_NICK_MAX); }
+        // The vehicle name the Time Clock shows for a GPS (gpsList() in tc-core.js)
+        function ecTcGpsName(drv) { return (String((drv && drv.name) || '').trim() || 'Unnamed GPS').slice(0, 60); }
+        // Vehicles with no GPS unit, added in Time Clock admin; they have no RouteWatcher nickname
+        function ecTcIsManual(id) { return String(id || '').startsWith('van_'); }
+        // The Time Clock only offers GPS units that have a Device ID
+        function ecTcHasDevice(drv) { return !!(drv && String(drv.deviceId || '').trim()); }
+
+        // Reads one value; null when it isn't there. With fail = true, a read the rules refuse also gives null.
+        function ecTcGet(path, fail) {
+            return db.ref(EC_TC + path).once('value').then(s => s.val(),
+                err => { if (fail && /permission/i.test(String(err && (err.code || err.message)))) return null; throw err; });
+        }
+
+        // Everyone on the clock now: [{ ek, emp, name, shift }], and who has which vehicle.
+        // Reads only the fields it needs, one by one: Gil (a dispatcher, not a Time Clock admin) may read just these,
+        // and only for shifts still on the clock (database.rules.json in the timeclock repo).
+        async function ecTcLoad() {
+            const [openMap, claims] = await Promise.all([ecTcGet('open'), ecTcGet('vehicle_claims')]);
+            // timeclock/open/{ek} = the id of that person's newest shift; it's on the clock while it has no punch out
+            const open = Object.entries(openMap || {}).filter(([, id]) => typeof id === 'string' && id);
+            const people = await Promise.all(open.map(async ([ek, id]) => {
+                const base = 'shifts/' + ek + '/' + id + '/';
+                // Gil can't read the punch out of a closed shift, which tells us the same thing: not on the clock
+                const out = await ecTcGet(base + 'out', true);
+                if (out !== null) return null;
+                const [inAt, vehicleId, vehicleName, shop, nickname, name, email] = await Promise.all([
+                    ecTcGet(base + 'in', true), ecTcGet(base + 'vehicleId', true), ecTcGet(base + 'vehicleName', true),
+                    ecTcGet(base + 'shop', true), ecTcGet(base + 'nickname', true),
+                    ecTcGet('employees/' + ek + '/name'), ecTcGet('employees/' + ek + '/email')]);
+                if (typeof inAt !== 'number') return null;
+                const emp = { name: name, email: email };
+                const shift = { id: id, in: inAt };
+                if (vehicleId) { shift.vehicleId = vehicleId; shift.vehicleName = vehicleName; shift.nickname = nickname; }
+                if (shop) shift.shop = true;
+                return { ek: ek, emp: emp, name: ecTcDisplayName(emp, ek), shift: shift };
+            })).then(list => list.filter(Boolean));
+            people.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+            return { people: people, claims: claims || {} };
+        }
+
+        function ecTcMsg(text, isErr) {
+            const el = document.getElementById('tcDriverMsg');
+            if (!el) return;
+            el.textContent = text || '';
+            el.classList.toggle('err', !!isErr);
+        }
+
+        // Called when the driver window opens or closes (driverId null)
+        async function ecTcShow(driverId) {
+            const row = document.getElementById('tcDriverRow');
+            const seq = ++ecTc.seq;
+            ecTc.driverId = driverId || null;
+            ecTc.people = [];
+            ecTc.claims = {};
+            if (!row) return;
+            row.hidden = true;
+            ecTcMsg('');
+            if (!driverId || !currentUserId || !ecTcHasDevice(drivers[driverId])) return;
+            try {
+                const data = await ecTcLoad();
+                if (seq !== ecTc.seq) return; // another driver window opened meanwhile
+                ecTc.people = data.people;
+                ecTc.claims = data.claims;
+                row.hidden = false;
+                ecTcRender();
+            } catch (err) {
+                // permission_denied: not a Time Clock admin or Gil, so the row stays hidden
+                if (seq === ecTc.seq && !(err && /permission/i.test(String(err.code || err.message)))) {
+                    row.hidden = false;
+                    document.getElementById('tcDriverSelect').innerHTML = '<option value="">Time Clock didn\'t load</option>';
+                    ecTcMsg('Couldn\'t load who is on the clock: ' + String((err && (err.code || err.message)) || err), true);
+                }
+                console.warn('Time Clock list not loaded:', err);
+            }
+        }
+
+        function ecTcRender() {
+            const sel = document.getElementById('tcDriverSelect');
+            if (!sel) return;
+            const gpsId = ecTc.driverId;
+            const c = ecTc.claims[gpsId];
+            const holder = c ? ecTc.people.find(p => p.ek === c.ek && p.shift.id === c.shiftId && p.shift.vehicleId === gpsId) : null;
+            const opt = (value, label) => '<option value="' + ecEsc(value) + '">' + ecEsc(label) + '</option>';
+            const others = ecTc.people.filter(p => p !== holder);
+            const none = others.filter(p => !p.shift.vehicleId && !p.shift.shop);
+            const shop = others.filter(p => !p.shift.vehicleId && p.shift.shop);
+            const other = others.filter(p => p.shift.vehicleId);
+            const group = (label, list, line) => list.length ? '<optgroup label="' + ecEsc(label) + '">' + list.map(p => opt(p.ek, line(p))).join('') + '</optgroup>' : '';
+            let html = holder ? opt(holder.ek, holder.name + ' (driving it now)')
+                : opt('', ecTc.people.length ? 'Pick who\'s driving…' : 'Nobody is on the clock');
+            html += group('No vehicle yet', none, p => p.name);
+            html += group('In the shop', shop, p => p.name + ' · Shop');
+            html += group('On another vehicle', other, p => p.name + ' · ' + (p.shift.vehicleName || p.shift.vehicleId));
+            sel.innerHTML = html;
+            sel.value = holder ? holder.ek : '';
+            sel.disabled = ecTc.busy || !others.length;
+            if (!ecTc.busy && !holder && c && (c.nickname || c.name)) ecTcMsg('Time Clock last had ' + (c.nickname || c.name) + ' on it.');
+        }
+
+        // Frees a vehicle the driver had, and the nickname they gave it (admin.html releaseClaim in the timeclock repo)
+        async function ecTcRelease(gpsId, shiftId) {
+            const c = ecTc.claims[gpsId];
+            await db.ref(EC_TC + 'vehicle_claims/' + gpsId).transaction(cur => (cur === null || cur.shiftId === shiftId) ? null : undefined);
+            if (c && c.nickname && !ecTcIsManual(gpsId) && c.shiftId === shiftId) {
+                await getNicknamesRef().child(gpsId).transaction(cur => (cur === null || cur === c.nickname) ? null : undefined)
+                    .catch(err => console.warn('Nickname not cleared:', err));
+            }
+        }
+
+        // The fields the Time Clock change log keeps (strip() in admin.html)
+        function ecTcStrip(s) {
+            const o = {};
+            ['in', 'out', 'vehicleId', 'vehicleName', 'shop', 'src'].forEach(k => { if (s && s[k] !== undefined && s[k] !== null) o[k] = s[k]; });
+            return o;
+        }
+
+        async function ecTcPick(ek) {
+            const gpsId = ecTc.driverId;
+            const p = ecTc.people.find(x => x.ek === ek);
+            if (!gpsId || !p || ecTc.busy || !drivers[gpsId]) { ecTcRender(); return; }
+            const shift = p.shift;
+            if (shift.vehicleId === gpsId) { ecTcRender(); return; }
+            const gpsName = ecTcGpsName(drivers[gpsId]);
+            const nick = ecTcNickname(p.emp, p.ek);
+            const c = ecTc.claims[gpsId];
+            const taken = c && c.shiftId !== shift.id;
+            let q = 'Give GPS ' + gpsName + ' to ' + p.name + ' in Time Clock?\n\nThe nickname here becomes "' + nick + '".';
+            if (taken) q += '\n\n' + (c.nickname || c.name || 'Another driver') + ' has this GPS now. They will be unassigned and asked to pick the vehicle they\'re in.';
+            if (shift.vehicleId) q += '\n\n' + p.name + ' is on ' + (shift.vehicleName || shift.vehicleId) + ' now. That vehicle will be freed.';
+            if (!confirm(q)) { ecTcRender(); return; }
+
+            ecTc.busy = true;
+            ecTcRender();
+            ecTcMsg('Saving…');
+            const by = String((auth.currentUser && auth.currentUser.email) || '').toLowerCase();
+            const TS = firebase.database.ServerValue.TIMESTAMP;
+            const base = EC_TC + 'shifts/' + ek + '/' + shift.id;
+            const entry = { at: TS, how: 'admin', by: by.slice(0, 60), vehicleId: gpsId, vehicleName: gpsName };
+            const u = {};
+            u[base + '/vehicleId'] = gpsId;
+            u[base + '/vehicleName'] = gpsName;
+            u[base + '/nickname'] = nick;
+            u[base + '/shop'] = null;
+            u[base + '/vans/' + db.ref(base + '/vans').push().key] = entry;
+            u[base + '/swapHint'] = null; // no vehicle swap needed any more (nothing happens if there was none)
+            u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle set in RouteWatcher' };
+            let done = false, nickOk = true;
+            try {
+                await db.ref().update(u);
+                if (shift.vehicleId && shift.vehicleId !== gpsId) {
+                    await ecTcRelease(shift.vehicleId, shift.id).catch(err => console.warn('Old vehicle not freed:', err));
+                }
+                await db.ref(EC_TC + 'vehicle_claims/' + gpsId).set({ ek: ek, email: String(p.emp.email || '').toLowerCase(), name: p.name,
+                    nickname: nick, shiftId: shift.id, vehicleName: gpsName, at: TS });
+                await getNicknamesRef().child(gpsId).set(nick).catch(err => { nickOk = false; console.warn('Nickname not set:', err); });
+                const after = Object.assign({}, shift, { vehicleId: gpsId, vehicleName: gpsName, shop: null });
+                db.ref(EC_TC + 'audit').push({ at: TS, by: by, ek: ek, shiftId: shift.id, action: 'edit',
+                    before: ecTcStrip(shift), after: ecTcStrip(after), note: 'Vehicle set in RouteWatcher' })
+                    .catch(err => console.warn('Change log not saved:', err));
+                done = true;
+            } catch (err) {
+                console.warn('Vehicle not assigned:', err);
+                ecTc.busy = false;
+                ecTcRender();
+                ecTcMsg('Couldn\'t save: ' + String((err && (err.code || err.message)) || err), true);
+                return;
+            }
+            ecTc.busy = false;
+            if (gpsId !== ecTc.driverId) return; // the window was closed or moved to another driver
+            await ecTcShow(gpsId);
+            if (done) ecTcMsg(nickOk ? p.name + ' is driving GPS ' + gpsName + '.' : p.name + ' has GPS ' + gpsName + ' in Time Clock, but the nickname couldn\'t be saved.', !nickOk);
         }
 
         // ===== ZOOM INDICATOR =====
@@ -9125,6 +9356,7 @@
             const drv = drivers[driverId];
             document.getElementById('driverModalTitle').textContent = drv ? getDriverDisplayName(driverId, drv) : 'Driver';
             updateNicknameButton();
+            ecTcShow(driverId); // Who's driving this? (Time Clock)
 
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
@@ -9306,6 +9538,7 @@
             closeNicknameModal();
             activeModalDriverId = null;
             updateNicknameButton();
+            ecTcShow(null);
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
