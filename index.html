@@ -8490,7 +8490,7 @@
                 let row = existingRows[String(id)];
                 if (!row) {
                     const temp = document.createElement('div');
-                    temp.innerHTML = `<div class="driver-entry" onclick="showDriverLocation('${id}')">
+                    temp.innerHTML = `<div class="driver-entry" onclick="showDriverLocation('${ecAttrJs(id)}')">
               <span class="driver-dot" style="background:${ecEsc(color)};"></span>
               <span class="driver-name${getDriverNickname(id) ? ' nick-name' : ''}">${nameHtml}</span>
               <span class="driver-status-dot${onlineClass}" style="background:${statusColor};" title="${statusTitle}" aria-label="${statusTitle}"></span>
@@ -10046,7 +10046,7 @@
                 const driverIds = group.driverIds || {};
                 const driverCount = Object.keys(driverIds).length;
 
-                html += `<div class="group-item${isActive ? ' active' : ''}" data-group-id="${id}">`;
+                html += `<div class="group-item${isActive ? ' active' : ''}" data-group-id="${ecEsc(id)}">`;
                 html += `<div class="group-row">`;
                 html += `<span class="group-name">${ecEsc(group.name || 'Unnamed')} (${driverCount})</span>`;
                 html += `<div class="group-actions">`;
@@ -10192,13 +10192,13 @@
               </button>
               <div class="driver-row-fields" id="driverRowFields-${id}" style="display:none;">
                 <label>Name</label>
-                <input type="text" value="${ecEsc(drv.name || '')}" placeholder="Name" data-id="${id}" class="drv-name">
+                <input type="text" value="${ecEsc(drv.name || '')}" placeholder="Name" data-id="${ecEsc(id)}" class="drv-name">
                 <label>Color</label>
-                <input type="color" value="${ecEsc(drv.color || '#f7c948')}" data-id="${id}" class="drv-color color-pick">
+                <input type="color" value="${ecEsc(drv.color || '#f7c948')}" data-id="${ecEsc(id)}" class="drv-color color-pick">
                 <label>Device ID</label>
-                <input type="text" value="${ecEsc(drv.deviceId || '')}" placeholder="Device ID" data-id="${id}" class="drv-device">
+                <input type="text" value="${ecEsc(drv.deviceId || '')}" placeholder="Device ID" data-id="${ecEsc(id)}" class="drv-device">
                 <label>GPS refresh (how often the map updates)</label>
-                <select data-id="${id}" class="drv-gps-interval">
+                <select data-id="${ecEsc(id)}" class="drv-gps-interval">
                   ${EC_GPS_INTERVAL_CHOICES.map(sec => `<option value="${sec}"${sec === ecDriverGpsIntervalSec(drv) ? ' selected' : ''}>Every ${sec} seconds</option>`).join('')}
                 </select>
                 <button class="remove-driver" onclick="removeDriver('${ecAttrJs(id)}')">✕ Remove Driver</button>
