@@ -6444,7 +6444,9 @@
         //   - a vehicle they had before is freed, with the nickname they gave it
         //   - the GPS nickname becomes the first name the Time Clock uses (the same name a driver's own pick writes)
         //   - the change goes in the Time Clock change log (timeclock/audit)
-        // Only Time Clock admins can read and change timeclock/*, so for anyone else the row stays hidden.
+        // The database rules (timeclock repo, database.rules.json) let the Time Clock admins and Gil do this. Gil can read
+        // only what this list needs (names, and the vehicle fields of shifts still on the clock) and make only these
+        // writes. For anyone else the reads are refused and the row stays hidden.
         // Keep the field names in step with the timeclock repo (tc-core.js lists the layout).
         const EC_TC = 'timeclock/';
         const EC_TC_NICK_MAX = 24; // the same limit as the nickname box
@@ -6466,27 +6468,37 @@
         // The Time Clock only offers GPS units that have a Device ID
         function ecTcHasDevice(drv) { return !!(drv && String(drv.deviceId || '').trim()); }
 
-        // Everyone on the clock now: [{ ek, emp, name, shift }], and who has which vehicle
+        // Reads one value; null when it isn't there. With fail = true, a read the rules refuse also gives null.
+        function ecTcGet(path, fail) {
+            return db.ref(EC_TC + path).once('value').then(s => s.val(),
+                err => { if (fail && /permission/i.test(String(err && (err.code || err.message)))) return null; throw err; });
+        }
+
+        // Everyone on the clock now: [{ ek, emp, name, shift }], and who has which vehicle.
+        // Reads only the fields it needs, one by one: Gil (a dispatcher, not a Time Clock admin) may read just these,
+        // and only for shifts still on the clock (database.rules.json in the timeclock repo).
         async function ecTcLoad() {
-            const [empSnap, openSnap, claimSnap] = await Promise.all([
-                db.ref(EC_TC + 'employees').once('value'),
-                db.ref(EC_TC + 'open').once('value'),
-                db.ref(EC_TC + 'vehicle_claims').once('value')
-            ]);
-            const employees = empSnap.val() || {};
+            const [openMap, claims] = await Promise.all([ecTcGet('open'), ecTcGet('vehicle_claims')]);
             // timeclock/open/{ek} = the id of that person's newest shift; it's on the clock while it has no punch out
-            const open = Object.entries(openSnap.val() || {}).filter(([, id]) => typeof id === 'string' && id);
-            const shifts = await Promise.all(open.map(([ek, id]) =>
-                db.ref(EC_TC + 'shifts/' + ek + '/' + id).once('value').then(s => s.val())));
-            const people = [];
-            open.forEach(([ek, id], i) => {
-                const s = shifts[i];
-                if (!s || typeof s.in !== 'number' || typeof s.out === 'number') return;
-                const emp = employees[ek] || {};
-                people.push({ ek: ek, emp: emp, name: ecTcDisplayName(emp, ek), shift: Object.assign({ id: id }, s) });
-            });
+            const open = Object.entries(openMap || {}).filter(([, id]) => typeof id === 'string' && id);
+            const people = await Promise.all(open.map(async ([ek, id]) => {
+                const base = 'shifts/' + ek + '/' + id + '/';
+                // Gil can't read the punch out of a closed shift, which tells us the same thing: not on the clock
+                const out = await ecTcGet(base + 'out', true);
+                if (out !== null) return null;
+                const [inAt, vehicleId, vehicleName, shop, nickname, name, email] = await Promise.all([
+                    ecTcGet(base + 'in', true), ecTcGet(base + 'vehicleId', true), ecTcGet(base + 'vehicleName', true),
+                    ecTcGet(base + 'shop', true), ecTcGet(base + 'nickname', true),
+                    ecTcGet('employees/' + ek + '/name'), ecTcGet('employees/' + ek + '/email')]);
+                if (typeof inAt !== 'number') return null;
+                const emp = { name: name, email: email };
+                const shift = { id: id, in: inAt };
+                if (vehicleId) { shift.vehicleId = vehicleId; shift.vehicleName = vehicleName; shift.nickname = nickname; }
+                if (shop) shift.shop = true;
+                return { ek: ek, emp: emp, name: ecTcDisplayName(emp, ek), shift: shift };
+            })).then(list => list.filter(Boolean));
             people.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-            return { people: people, claims: claimSnap.val() || {} };
+            return { people: people, claims: claims || {} };
         }
 
         function ecTcMsg(text, isErr) {
@@ -6515,7 +6527,7 @@
                 row.hidden = false;
                 ecTcRender();
             } catch (err) {
-                // permission_denied: not a Time Clock admin, so the row stays hidden
+                // permission_denied: not a Time Clock admin or Gil, so the row stays hidden
                 if (seq === ecTc.seq && !(err && /permission/i.test(String(err.code || err.message)))) {
                     row.hidden = false;
                     document.getElementById('tcDriverSelect').innerHTML = '<option value="">Time Clock didn\'t load</option>';
@@ -6593,9 +6605,8 @@
             u[base + '/nickname'] = nick;
             u[base + '/shop'] = null;
             u[base + '/vans/' + db.ref(base + '/vans').push().key] = entry;
-            if (shift.swapHint) u[base + '/swapHint'] = null; // no vehicle swap needed any more
+            u[base + '/swapHint'] = null; // no vehicle swap needed any more (nothing happens if there was none)
             u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle set in RouteWatcher' };
-            u[EC_TC + 'open/' + ek] = shift.id;
             let done = false, nickOk = true;
             try {
                 await db.ref().update(u);
