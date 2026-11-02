@@ -2238,7 +2238,7 @@
             color: #000;
         }
 
-        /* ===== Show Track: numbered stop chips + Compare to plan overlay ===== */
+        /* ===== Show Track: numbered stop chips ===== */
         #historicalOverlay .overlay-stop-list .stop-event .ec-stop-num {
             display: inline-flex;
             align-items: center;
@@ -2255,8 +2255,9 @@
             line-height: 1;
             box-shadow: 0 0 0 1px rgba(255,255,255,0.7);
         }
-        #historicalOverlay .overlay-stop-list .stop-event .ec-stop-num.ec-merged { background: #8e44ad; }
-        #historicalOverlay .overlay-header .ec-compare-tools {
+
+        /* ===== Show route: the route planner's line and stops (driver window + Show Track map) ===== */
+        #historicalOverlay .overlay-header .ec-route-tools {
             margin-left: auto;
             margin-right: 10px;
             display: flex;
@@ -2264,10 +2265,11 @@
             align-items: center;
             flex-shrink: 0;
         }
-        #historicalOverlay .overlay-header .ec-compare-btn {
-            padding: 7px 14px;
-            border-radius: 10px;
-            border: 1px solid #00d4ff;
+        .ec-route-btn,
+        #historyQuery .ec-btn.ec-btn-route {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1.5px solid #00d4ff;
             background: transparent;
             color: #00d4ff;
             font: inherit;
@@ -2276,21 +2278,23 @@
             cursor: pointer;
             white-space: nowrap;
         }
-        #historicalOverlay .overlay-header .ec-compare-btn.active {
+        .ec-route-btn.active,
+        #historyQuery .ec-btn.ec-btn-route.active {
             background: #00d4ff;
             color: #0b0b14;
         }
-        #historicalOverlay .overlay-header .ec-planline-btn { display: none; }
-        #historicalOverlay .overlay-header .ec-planline-btn.visible { display: inline-block; }
-        #historicalOverlay .overlay-header .ec-compare-btn:focus-visible { outline: 2px solid #00d4ff; outline-offset: 2px; }
-        body.light-mode #historicalOverlay .overlay-header .ec-compare-btn { border-color: #0088a8; color: #0088a8; }
-        body.light-mode #historicalOverlay .overlay-header .ec-compare-btn.active { background: #0088a8; color: #fff; }
-        .ec-plan-label {
-            color: #00ff00 !important;
-            font-weight: 700;
-            text-shadow: 0 0 2px #000, 0 0 4px #000;
+        .ec-route-btn:focus-visible { outline: 2px solid #00d4ff; outline-offset: 2px; }
+        body.light-mode .ec-route-btn,
+        body.light-mode #historyQuery .ec-btn.ec-btn-route { border-color: #0088a8; color: #0088a8; }
+        body.light-mode .ec-route-btn.active,
+        body.light-mode #historyQuery .ec-btn.ec-btn-route.active { background: #0088a8; color: #fff; }
+        .route-plan-msg {
+            display: none;
+            font-size: 12px;
+            color: var(--muted);
         }
-        #ecCompareNote {
+        .route-plan-msg.show { display: block; }
+        #ecRouteNote {
             display: none;
             position: absolute;
             top: 12px;
@@ -2307,22 +2311,67 @@
             line-height: 1.4;
             text-align: center;
         }
-        #ecCompareNote.show { display: block; }
-        .ec-compare-legend {
-            margin: 10px;
-            padding: 8px 12px;
-            border-radius: 10px;
-            background: rgba(11,11,20,0.88);
-            color: #fff;
-            font: 12px Inter, system-ui, sans-serif;
-            line-height: 1.5;
-        }
-        .ec-compare-legend div { display: flex; align-items: center; gap: 8px; }
-        .ec-compare-legend svg { flex-shrink: 0; }
+        #ecRouteNote.show { display: block; }
         @media (max-width: 760px) {
-            #historicalOverlay .overlay-header .ec-compare-btn { padding: 6px 10px; font-size: 12px; }
-            .ec-compare-legend { font-size: 11px; padding: 6px 9px; }
+            .ec-route-btn { padding: 6px 10px; font-size: 12px; }
         }
+
+        /* ===== Time on route: picking the start and end ===== */
+        .route-time-box .rt-btn {
+            background: var(--card2);
+            border: 1.5px solid var(--accent);
+            color: var(--accent);
+            border-radius: 20px;
+            padding: 5px 14px;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .route-time-box .rt-btn.active { background: var(--accent); color: #0b0b14; }
+        #driverMapBox.rt-picking { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 24px -4px var(--accent); }
+        .rt-pick-banner {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            margin: 0 auto;
+            width: fit-content;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 8px 7px 14px;
+            border-radius: 12px;
+            background: rgba(11,11,20,0.92);
+            border: 1.5px solid var(--accent);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+        .rt-pick-banner[hidden] { display: none; }
+        .rt-pick-banner .rt-pick-dot {
+            flex-shrink: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            animation: ecRtBlink 1s ease-in-out infinite;
+        }
+        @keyframes ecRtBlink { 50% { opacity: 0.25; } }
+        .start-points-list.rt-pickable .sp-chip { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+        .start-points-list.rt-pickable .sp-chip .sp-name { color: var(--accent); }
+
+        /* ===== Driver list beside From/To (E&C Time Clock) ===== */
+        .tc-shift-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+        .tc-shift-row[hidden] { display: none; }
+        .tc-shift-row label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+        .tc-shift-row .tc-shift-select { flex: 0 1 auto; min-width: 120px; max-width: 200px; }
+        .tc-shift-row .tc-shift-select option { background: var(--card); color: var(--text); }
+        .tc-shift-msg { font-size: 12px; color: var(--muted); }
+        .tc-shift-msg.err { color: #e74c3c; }
 
         /* Custom tooltip for arrows */
         .arrow-tooltip {
@@ -4737,7 +4786,7 @@
                 </div>
                 <div class="route-time-box" id="routeTimeBox">
                     <div class="rt-main">
-                        <span class="rt-label">Time on route</span>
+                        <button type="button" class="rt-btn" id="routeTimeBtn" onclick="ecRtStart()" title="Pick a start and an end, then see how long the drive took">Time on route</button>
                         <span class="rt-value" id="routeTimeValue">--:--</span>
                     </div>
                     <div class="rt-meta">
@@ -4754,18 +4803,26 @@
                         <input type="datetime-local" id="historyStart" class="date-picker" style="flex:0 1 auto; min-width:140px;">
                         <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
                         <input type="datetime-local" id="historyEnd" class="date-picker" style="flex:0 1 auto; min-width:140px;">
+                        <!-- Driver list from the E&C Time Clock: sets From/To to their punch in that day, plus 12 hours -->
+                        <span class="tc-shift-row" id="tcShiftRow" hidden>
+                            <label for="tcShiftSelect">Driver:</label>
+                            <select id="tcShiftSelect" class="date-picker tc-shift-select" onchange="ecShiftPick(this.value)"></select>
+                        </span>
+                        <span class="tc-shift-msg" id="tcShiftMsg" role="status"></span>
                     </div>
                     <div style="display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; flex:1 0 auto; justify-content:flex-start;">
                         <button onclick="loadHistoricalTrack()" class="ec-btn ec-btn-go">Show Track</button>
                         <button onclick="clearHistoricalTrack()" class="ec-btn ec-btn-danger">Clear Track</button>
+                        <button type="button" id="ecRouteBtn" class="ec-btn ec-btn-route" onclick="ecRouteToggle()" title="Show the route made for this driver in Route Planner">Show route</button>
                         <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
                     </div>
                 </div>
+                <span class="route-plan-msg" id="routePlanMsg" role="status"></span>
             </div>
             <!-- Start points -->
             <div id="startPointsArea" style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
                 <div class="start-points-bar">
-                    <span class="sp-title">Start Points:</span>
+                    <span class="sp-title">Saved points:</span>
                     <button type="button" class="sp-btn" onclick="startPointUseCurrentLocation()">Use Current Location</button>
                     <button type="button" class="sp-btn" id="startPointPinBtn" onclick="startPointTogglePinMode()">Drop Pin</button>
                     <span class="sp-hint" id="startPointPinHint" style="display:none;">Tap the map to place the start point <button type="button" class="sp-btn" onclick="cancelStartPointPinMode()">Cancel</button></span>
@@ -4775,7 +4832,8 @@
             </div>
             <!-- Row for map and manifest -->
             <div class="modal-map-row">
-                <div class="modal-map"><div id="driver-map"></div><div class="zoom-indicator" id="driverZoomIndicator"><span id="driverZoomValue">65%</span><span class="zoom-bar"><span id="driverZoomBar"></span></span></div></div>
+                <div class="modal-map" id="driverMapBox"><div id="driver-map"></div>
+                    <div class="rt-pick-banner" id="rtPickBanner" role="status" hidden><span class="rt-pick-dot" id="rtPickDot"></span><span id="rtPickText"></span><button type="button" class="sp-btn" onclick="ecRtCancel()">Cancel</button></div><div class="zoom-indicator" id="driverZoomIndicator"><span id="driverZoomValue">65%</span><span class="zoom-bar"><span id="driverZoomBar"></span></span></div></div>
                 <div class="modal-stops-container">
                     <div id="historicalStopList" class="ec-contact-list"></div>
                 </div>
@@ -4807,7 +4865,7 @@
                 </div>
 
                 <div class="field">
-                    <label>Workday (default window for Time on route)</label>
+                    <label>Workday (From/To when the Time Clock has no punch in for the driver)</label>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="time" id="workdayStart" value="06:00">
                         <span style="color:var(--muted);">to</span>
@@ -4893,15 +4951,14 @@
                 <span id="overlayStatus">Status: —</span>
                 <span id="overlayBattery">🔋 —</span>
             </div>
-            <div class="ec-compare-tools">
-                <button type="button" class="ec-compare-btn ec-planline-btn" id="ecPlanLineBtn" onclick="ecCompareToggleLine()" title="Show or hide your planned route line">Plan line: on</button>
-                <button type="button" class="ec-compare-btn" id="ecCompareBtn" onclick="ecToggleCompare()" title="Lay the route you planned for this driver over this track">Compare to plan</button>
+            <div class="ec-route-tools">
+                <button type="button" class="ec-route-btn" id="ecRouteOverlayBtn" onclick="ecRouteToggle()" title="Show the route made for this driver in Route Planner">Show route</button>
             </div>
             <button class="close-overlay" onclick="closeHistoricalOverlay()">✕</button>
         </div>
         <div class="overlay-map">
             <div id="historical-map"></div>
-            <div id="ecCompareNote" role="status"></div>
+            <div id="ecRouteNote" role="status"></div>
         </div>
         <div class="overlay-stop-list" id="overlayStopList"></div>
     </div>
@@ -6284,18 +6341,8 @@
         // Time-on-route tuning constants
         const ROUTE_SPIKE_FAR_M = 500;          // a spike point is at least this far from both neighbors
         const ROUTE_SPIKE_NEIGHBOR_M = 100;     // ...while its two neighbors are within this distance of each other
-        const EXIT_CONFIRM_POINTS = 3;          // outside the circle this many points in a row = confirmed exit
-        const EXIT_CONFIRM_MS = 2 * 60 * 1000;  // ...or outside for at least this long
-        const RETURN_CONFIRM_POINTS = 2;        // inside the circle this many points in a row = confirmed return
-        const RETURN_CONFIRM_MS = 2 * 60 * 1000; // ...or inside for at least this long
-        const ROUTE_TIME_DEBOUNCE_MS = 400;
-        const ROUTE_TIME_REFRESH_MS = 5 * 60 * 1000;
-        let routeTimeFetchSeq = 0;
-        let routeTimeInFlightKey = null;
-        let routeTimeDebounceTimer = null;
-        let routeTimeRefreshTimer = null;
-        let routeTimeCache = { key: null, points: null };
-        let routeTimeInputsBound = false;
+        const EXIT_CONFIRM_POINTS = 3;          // away this many points in a row = really left (round trips)
+        const EXIT_CONFIRM_MS = 2 * 60 * 1000;  // ...or away for at least this long
         let startPointPinListener = null;
         let startPointPending = null;
 
@@ -6903,9 +6950,6 @@
             ecHiddenAt = 0;
             renderAttentionStrip();
             ecPollNow(); // back on screen: refresh the dots now instead of waiting for the next tick
-            if (ecIdlePaused) return; // paused for inactivity: ecResumeFromIdle catches up
-            if (awayMs < 60 * 1000) return; // quick switch: nothing missed
-            if (activeModalDriverId) refreshRouteTimeIndicator(activeModalDriverId, { force: true });
         }
 
         // ===== INACTIVITY PAUSE: no mouse / key / touch for 5 minutes -> live data and API calls pause =====
@@ -6945,9 +6989,6 @@
             ecShowIdleBanner(false);
             renderAttentionStrip();
             ecPollNow(); // awake again: refresh the dots now instead of waiting for the next tick
-            if (pausedMs >= 5 * 60 * 1000 && !document.hidden) { // at least one 5-minute history poll was skipped
-                if (activeModalDriverId) refreshRouteTimeIndicator(activeModalDriverId, { force: true });
-            }
             setTimeout(function() { // still no connection after resuming: show the offline banner
                 if (ecIdlePaused) return;
                 db.ref('.info/connected').once('value').then(snap => {
@@ -7288,8 +7329,8 @@
                 // ---- STORE THE FULL UNSIMPLIFIED TRACK ----
                 historicalRawTracks[activeModalDriverId] = rawTrack;
 
-                // ---- TIME ON ROUTE (same From/To window) ----
-                try { applyRouteTimeFromTrack(activeModalDriverId, rawTrack); } catch (rtErr) { console.warn('Route time calc failed:', rtErr); }
+                // ---- TIME ON ROUTE reuses this track for the same From/To window (no second history call) ----
+                try { ecRtCacheTrack(activeModalDriverId, rawTrack); } catch (rtErr) { console.warn('Route time calc failed:', rtErr); }
 
                 // ---- DETECT STOPS ON RAW TRACK ----
                 const tempStopEvents = [];
@@ -7378,7 +7419,6 @@
             const overlay = document.getElementById('historicalOverlay');
             const mapContainer = document.getElementById('historical-map');
             const stopList = document.getElementById('overlayStopList');
-            ecCompareReset(); // a newly loaded track starts without the plan comparison
 
             const drv = drivers[driverId];
             if (drv) {
@@ -7744,7 +7784,7 @@
                     historicalMapInstance._overlayInfoWindow = null;
                 }
             });
-            if (ecCompare.on && ecCompare.plan) ecCompareApplyToTrack(); // stop signs were rebuilt, so re-colour the matched ones
+            ecRouteDrawOverlay(driverId); // Show route: the planned line and stops, on their own layer under the track
         }
 
         function ecLegacyCopy(text) {
@@ -7866,107 +7906,82 @@
                 clearHistoricalTrack();
                 historicalOverlayDriverId = null;
             }
-            ecCompareReset();
+            ecRouteClearLayers('overlay'); // the driver window keeps showing the route
             closeArrowTooltip();
         }
 
-        // ===== COMPARE TO PLAN: the route planner's stops laid over the Show Track =====
-        // Plan source: developer/route_planner/route_history/<driver>/<save time ms>, written by the route planner on every save.
-        // Falls back to developer/route_planner/saved_routes/<driver> (latest save only) when no dated copy exists yet.
-        // The driver's nickname here must match the username the route was saved under in the planner.
+        // ===== SHOW ROUTE: the route made in Route Planner, on the driver map and the Show Track map =====
+        // Source: developer/route_planner/route_history/<driver>/<save time ms>, written by the route planner on every Save,
+        // with the road line it drew (encoded in "path"). Falls back to saved_routes/<driver> (latest save, no road line).
+        // No Google calls: the saved line is decoded here and drawn on a map that's already open.
+        // Which save: the newest one saved before the "To" time.
+        // Which planner driver: the Time Clock person picked beside From/To (their sign-in, e.g. matt@ec.com saves as "matt"),
+        // then this GPS's nickname, then that person's first name.
+        // The planned route is a dashed blue line with green numbered stops, on its own layer: the Show Track line (solid
+        // orange) and its red stop signs stay as they are, drawn above it.
         const EC_DEPOT = { lat: 49.881157, lng: -99.959272 }; // same start point as the route planner (1604 Moreland Ave)
-        const EC_SHORT_STOP_SECONDS = 90;  // stops shorter than this only match a planned stop when no longer stop is in range
-        const EC_MATCH_METERS = 100;       // a planned stop and one of their stops this close together become one sign
-        const EC_MERGED_COLOR = '#8e44ad'; // their stop that was also on the plan
         const EC_PLAN_COLOR = '#10B981';   // same green as finalized stops in the route planner
-        const EC_HEX_PATH = 'M 0,-15 L 10,-5 L 10,5 L 0,15 L -10,5 L -10,-5 Z';
-        let ecCompare = { on: false, driverId: null, plan: null, result: null, showLine: true, departTime: 0, layers: [], listeners: [], recolored: [], legendEl: null, noteTimer: null, loadToken: 0 };
+        const EC_PLAN_LINE = '#00d4ff';    // same blue as the route planner's line
+        const ecRoute = { on: false, driverId: null, plan: null, seq: 0, modalLayers: [], overlayLayers: [], modalInfo: null, overlayInfo: null, noteTimer: null };
 
-        function ecToggleCompare() {
-            if (ecCompare.on) ecCompareReset();
-            else ecCompareOpen();
+        function ecRouteToggle() {
+            if (ecRoute.on) ecRouteOff();
+            else ecRouteLoad(activeModalDriverId || historicalOverlayDriverId, true);
         }
 
-        function ecCompareToggleLine() {
-            ecCompare.showLine = !ecCompare.showLine;
-            ecCompareSetButtons('on');
-            if (ecCompare.on && ecCompare.plan) ecCompareApplyToTrack();
-        }
-
-        function ecCompareSetButtons(state, label) {
-            const btn = document.getElementById('ecCompareBtn');
-            const lineBtn = document.getElementById('ecPlanLineBtn');
-            if (btn) {
-                btn.classList.toggle('active', state !== 'off');
-                if (state === 'off') btn.textContent = 'Compare to plan';
-                else if (label) btn.textContent = label;
-            }
-            if (lineBtn) {
-                lineBtn.classList.toggle('visible', state === 'on');
-                lineBtn.classList.toggle('active', ecCompare.showLine);
-                lineBtn.textContent = 'Plan line: ' + (ecCompare.showLine ? 'on' : 'off');
-            }
-        }
-
-        function ecCompareNote(text, ms) {
-            const el = document.getElementById('ecCompareNote');
-            if (!el) return;
-            if (ecCompare.noteTimer) { clearTimeout(ecCompare.noteTimer); ecCompare.noteTimer = null; }
-            if (!text) { el.classList.remove('show'); el.textContent = ''; return; }
-            el.textContent = text;
-            el.classList.add('show');
-            ecCompare.noteTimer = setTimeout(function() { el.classList.remove('show'); }, ms || 8000);
-        }
-
-        function ecCompareDur(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return (mins > 0 ? mins + 'm ' : '') + secs + 's';
-        }
-
-        // Removes the plan layers and puts the matched stop signs and chips back to red
-        function ecCompareClearLayers() {
-            ecCompare.layers.forEach(function(l) { l.setMap(null); });
-            ecCompare.layers = [];
-            ecCompare.listeners.forEach(function(h) { google.maps.event.removeListener(h); });
-            ecCompare.listeners = [];
-            ecCompare.recolored.forEach(function(ei) {
-                const m = historicalStopMarkers[ei];
-                if (m) m.setIcon(Object.assign({}, m.getIcon(), { fillColor: '#e74c3c' }));
+        // state: off | loading | on. The driver window keeps the text; the Show Track map shows it for a few seconds.
+        function ecRouteSetUi(state, text) {
+            ['ecRouteBtn', 'ecRouteOverlayBtn'].forEach(function(id) {
+                const b = document.getElementById(id);
+                if (!b) return;
+                b.classList.toggle('active', state !== 'off');
+                b.textContent = state === 'off' ? 'Show route' : (state === 'loading' ? 'Loading route…' : 'Hide route');
             });
-            ecCompare.recolored = [];
-            document.querySelectorAll('#overlayStopList .ec-stop-num.ec-merged').forEach(function(el) { el.classList.remove('ec-merged'); });
-        }
-
-        function ecCompareReset() {
-            ecCompare.loadToken++;
-            ecCompareClearLayers();
-            ecCompare.on = false;
-            ecCompare.driverId = null;
-            ecCompare.plan = null;
-            ecCompare.result = null;
-            ecCompare.departTime = 0;
-            if (ecCompare.legendEl && historicalMapInstance) {
-                const ctl = historicalMapInstance.controls[google.maps.ControlPosition.LEFT_BOTTOM];
-                const i = ctl.getArray().indexOf(ecCompare.legendEl);
-                if (i !== -1) ctl.removeAt(i);
+            const msg = document.getElementById('routePlanMsg');
+            if (msg) { msg.textContent = text || ''; msg.classList.toggle('show', !!text); }
+            const note = document.getElementById('ecRouteNote');
+            if (note) {
+                if (ecRoute.noteTimer) { clearTimeout(ecRoute.noteTimer); ecRoute.noteTimer = null; }
+                note.textContent = text || '';
+                note.classList.toggle('show', !!text);
+                if (text) ecRoute.noteTimer = setTimeout(function() { note.classList.remove('show'); }, 10000);
             }
-            ecCompare.legendEl = null;
-            ecCompareNote('');
-            ecCompareSetButtons('off');
         }
 
-        // When the truck first moved more than 300 m from where the track starts
-        function ecCompareDepartureTime(raw) {
-            if (!raw || raw.length === 0) return Date.now();
-            const first = raw[0];
-            for (let i = 1; i < raw.length; i++) {
-                if (haversineDistance(first.lat, first.lng, raw[i].lat, raw[i].lng) > 300) return raw[i].timestamp;
-            }
-            return first.timestamp;
+        function ecRouteClearLayers(which) {
+            const list = which === 'overlay' ? ecRoute.overlayLayers : ecRoute.modalLayers;
+            list.forEach(function(l) { l.setMap(null); });
+            list.length = 0;
+            const iw = which === 'overlay' ? 'overlayInfo' : 'modalInfo';
+            if (ecRoute[iw]) { ecRoute[iw].close(); ecRoute[iw] = null; }
         }
 
-        function ecComparePlanFromData(data, keyTime, source) {
+        function ecRouteOff() {
+            ecRoute.seq++;
+            ecRouteClearLayers('modal');
+            ecRouteClearLayers('overlay');
+            ecRoute.on = false;
+            ecRoute.driverId = null;
+            ecRoute.plan = null;
+            ecRouteSetUi('off', '');
+        }
+
+        // Planner usernames to try for this GPS, most accurate first
+        function ecRouteKeysFor(driverId) {
+            const keys = [];
+            const add = function(k) {
+                k = String(k || '').trim().toLowerCase();
+                if (k && !/[.#$\[\]\/]/.test(k) && keys.indexOf(k) === -1) keys.push(k);
+            };
+            const ek = ecShift.driverId === driverId ? ecShift.ek : '';
+            if (ek) add(String(ek).split('@')[0]);
+            add(getDriverNickname(driverId));
+            const person = ek ? ecShift.people.find(function(p) { return p.ek === ek; }) : null;
+            if (person) add(person.name.split(/\s+/)[0]);
+            return keys;
+        }
+
+        function ecRoutePlanFromData(data, keyTime) {
             if (!data || typeof data !== 'object' || !data.stops || typeof data.stops !== 'object') return null;
             let order = data.order;
             if (!Array.isArray(order)) order = (order && typeof order === 'object') ? Object.values(order) : Object.keys(data.stops);
@@ -7991,235 +8006,143 @@
                 try { path = google.maps.geometry.encoding.decodePath(data.path); } catch (e) { path = null; }
             }
             const savedAt = Number(data.timestamp) || keyTime || 0;
-            return { savedAt: savedAt, source: source, stops: stops, path: path };
+            return { savedAt: savedAt, label: String(data.label || ''), stops: stops, path: path };
         }
 
-        async function ecCompareOpen() {
-            const driverId = historicalOverlayDriverId;
-            if (!driverId || !historicalMapInstance) return;
-            const token = ++ecCompare.loadToken;
-            ecCompare.on = true;
-            ecCompare.driverId = driverId;
-            ecCompareSetButtons('loading', 'Loading plan…');
-
-            const fail = function(msg) {
-                if (token !== ecCompare.loadToken) return;
-                ecCompareReset();
-                ecCompareNote(msg, 10000);
-            };
-            const nick = getDriverNickname(driverId).trim().toLowerCase();
-            if (!nick) { fail('This driver has no nickname. Give them a nickname that matches their username in the route planner.'); return; }
-            if (/[.#$\[\]\/]/.test(nick)) { fail('The nickname "' + nick + '" has characters a planner username can\'t have (. # $ [ ] /).'); return; }
-
-            const raw = historicalRawTracks[driverId] || [];
-            const windowEnd = raw.length ? raw[raw.length - 1].timestamp : Date.now();
-            const departTime = ecCompareDepartureTime(raw);
-
-            try {
-                const plans = [];
-                const histSnap = await db.ref('developer/route_planner/route_history/' + nick)
-                    .orderByKey().endAt(String(windowEnd)).limitToLast(10).once('value');
-                if (token !== ecCompare.loadToken) return;
-                histSnap.forEach(function(child) {
-                    const plan = ecComparePlanFromData(child.val(), Number(child.key), 'history');
-                    if (plan) plans.push(plan);
-                });
-                if (plans.length === 0) {
-                    const curSnap = await db.ref('developer/route_planner/saved_routes/' + nick).once('value');
-                    if (token !== ecCompare.loadToken) return;
-                    const plan = ecComparePlanFromData(curSnap.val(), null, 'current');
-                    if (plan) plans.push(plan);
+        // The newest route saved before endMs for the first username that has one (one small read per username tried)
+        async function ecRouteFind(keys, endMs) {
+            for (const key of keys) {
+                const snap = await db.ref('developer/route_planner/route_history/' + key)
+                    .orderByKey().endAt(String(Math.floor(endMs))).limitToLast(1).once('value');
+                let plan = null;
+                snap.forEach(function(child) { plan = ecRoutePlanFromData(child.val(), Number(child.key)) || plan; });
+                if (!plan) {
+                    const cur = await db.ref('developer/route_planner/saved_routes/' + key).once('value');
+                    const p = ecRoutePlanFromData(cur.val(), null);
+                    if (p && p.savedAt && p.savedAt <= endMs) plan = p;
                 }
-                if (plans.length === 0) { fail('No saved route was found in the route planner for "' + nick + '".'); return; }
-                plans.sort(function(a, b) { return a.savedAt - b.savedAt; });
-                // The last plan saved before the truck first moved (routes are saved the night before)
-                let plan = plans[0];
-                plans.forEach(function(p) { if (p.savedAt <= departTime) plan = p; });
+                if (plan) { plan.key = key; return plan; }
+            }
+            return null;
+        }
 
-                ecCompare.plan = plan;
-                ecCompare.departTime = departTime;
+        async function ecRouteLoad(driverId, fit) {
+            if (!driverId) return;
+            const seq = ++ecRoute.seq;
+            ecRouteClearLayers('modal');
+            ecRouteClearLayers('overlay');
+            ecRoute.on = true;
+            ecRoute.driverId = driverId;
+            ecRoute.plan = null;
+            ecRouteSetUi('loading', 'Loading the planned route…');
+            const fail = function(text) {
+                if (seq !== ecRoute.seq) return;
+                ecRouteOff();
+                ecRouteSetUi('off', text);
+            };
+            const keys = ecRouteKeysFor(driverId);
+            if (keys.length === 0) { fail('Pick the driver beside From/To (or give this GPS a nickname that matches their Route Planner name) to show their route.'); return; }
+            const win = getRouteTimeWindow();
+            const endMs = isFinite(win.endMs) ? win.endMs : Date.now();
+            try {
+                const plan = await ecRouteFind(keys, endMs);
+                if (seq !== ecRoute.seq) return;
+                if (!plan) {
+                    fail('No route saved in Route Planner for ' + keys.map(function(k) { return '"' + k + '"'; }).join(' or ') + ' before ' +
+                        new Date(endMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(endMs) + '.');
+                    return;
+                }
+                ecRoute.plan = plan;
+                ecRouteDrawAll(fit);
                 const d = new Date(plan.savedAt);
-                ecCompareSetButtons('on', 'Plan saved ' + d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(plan.savedAt) + '  ✕');
-                ecCompareAddLegend();
-                ecCompareApplyToTrack();
-
-                const notes = [];
-                if (plan.savedAt > departTime) notes.push('This plan was saved after the truck started moving, so it may not be the route for this day.');
+                const who = plan.label || (plan.key.charAt(0).toUpperCase() + plan.key.slice(1));
+                const parts = [who + '\'s route, saved ' + d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' +
+                    formatTimestampTo12h(plan.savedAt) + ' · ' + plan.stops.length + ' stop' + (plan.stops.length === 1 ? '' : 's')];
+                if (isFinite(win.startMs) && plan.savedAt < win.startMs - 36 * 3600000) parts.push('saved well before From, so it may be an older route');
                 const noLoc = plan.stops.filter(function(s) { return s.lat === null; }).length;
-                if (noLoc) notes.push(noLoc + ' planned stop' + (noLoc === 1 ? ' has' : 's have') + ' no map location and can\'t be shown.');
-                if (!plan.path) notes.push('Plan line is straight lines between stops (this save has no road line stored).');
-                if (notes.length) ecCompareNote(notes.join(' '), 9000);
-
-                const bounds = new google.maps.LatLngBounds();
-                (historicalTracks[driverId] || []).forEach(function(p) { bounds.extend({ lat: p.lat, lng: p.lng }); });
-                plan.stops.forEach(function(s) { if (s.lat !== null) bounds.extend({ lat: s.lat, lng: s.lng }); });
-                if (!bounds.isEmpty()) historicalMapInstance.fitBounds(bounds);
+                if (noLoc) parts.push(noLoc + ' stop' + (noLoc === 1 ? ' has' : 's have') + ' no map location');
+                if (!plan.path) parts.push('straight lines between stops (this save has no road line)');
+                ecRouteSetUi('on', parts.join(' · '));
             } catch (e) {
-                console.warn('Compare: plan could not be loaded:', e);
+                console.warn('Show route: plan could not be loaded:', e);
                 fail('The planned route could not be loaded (' + (e && e.message ? e.message : 'unknown error') + ').');
             }
         }
 
-        // Pairs each planned stop with at most one of their stops (and the reverse), closest pairs first.
-        // Stops shorter than EC_SHORT_STOP_SECONDS (traffic lights, slow traffic) rank behind every longer stop in range.
-        function ecCompareMatch(plan, events) {
-            const pairs = [];
-            plan.stops.forEach(function(p, pi) {
-                if (p.lat === null) return;
-                events.forEach(function(e, ei) {
-                    const d = haversineDistance(p.lat, p.lng, e.lat, e.lng);
-                    if (d <= EC_MATCH_METERS) pairs.push({ pi: pi, ei: ei, d: d, score: d + (e.duration < EC_SHORT_STOP_SECONDS ? EC_MATCH_METERS : 0) });
-                });
-            });
-            pairs.sort(function(a, b) { return a.score - b.score || a.ei - b.ei; });
-            const planToEvent = plan.stops.map(function() { return -1; });
-            const eventToPlan = events.map(function() { return -1; });
-            const dist = plan.stops.map(function() { return null; });
-            pairs.forEach(function(pr) {
-                if (planToEvent[pr.pi] === -1 && eventToPlan[pr.ei] === -1) {
-                    planToEvent[pr.pi] = pr.ei;
-                    eventToPlan[pr.ei] = pr.pi;
-                    dist[pr.pi] = pr.d;
-                }
-            });
-            return { planToEvent: planToEvent, eventToPlan: eventToPlan, dist: dist };
-        }
-
-        function ecCompareApplyToTrack() {
-            ecCompareClearLayers();
-            const plan = ecCompare.plan;
-            if (!ecCompare.on || !plan || !historicalMapInstance) return;
-            const events = historicalStopEvents[ecCompare.driverId] || [];
-            const r = ecCompareMatch(plan, events);
-            ecCompare.result = r;
-
-            // Planned route: dashed line with arrows, same blue as the route planner's line
-            if (ecCompare.showLine) {
-                let path = plan.path;
-                if (!path || path.length < 2) {
-                    path = [EC_DEPOT].concat(plan.stops.filter(function(s) { return s.lat !== null; }).map(function(s) { return { lat: s.lat, lng: s.lng }; }));
-                }
-                if (path.length > 1) {
-                    ecCompare.layers.push(new google.maps.Polyline({
-                        path: path,
-                        geodesic: true,
-                        strokeOpacity: 0,
-                        clickable: false,
-                        zIndex: 1,
-                        icons: [
-                            { icon: { path: 'M 0,-1 0,1', strokeColor: '#00d4ff', strokeOpacity: 0.95, strokeWeight: 3, scale: 3 }, offset: '0', repeat: '14px' },
-                            { icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.6, fillColor: '#00d4ff', fillOpacity: 1, strokeColor: '#0b0b14', strokeWeight: 1 }, offset: '70px', repeat: '170px' }
-                        ],
-                        map: historicalMapInstance
-                    }));
-                }
+        function ecRouteDraw(map, which, fit) {
+            const plan = ecRoute.plan;
+            ecRouteClearLayers(which);
+            if (!map || !plan) return;
+            const layers = which === 'overlay' ? ecRoute.overlayLayers : ecRoute.modalLayers;
+            let path = plan.path;
+            if (!path || path.length < 2) {
+                path = [EC_DEPOT].concat(plan.stops.filter(function(s) { return s.lat !== null; }).map(function(s) { return { lat: s.lat, lng: s.lng }; }));
             }
-
-            plan.stops.forEach(function(s, pi) {
+            const bounds = new google.maps.LatLngBounds();
+            if (path.length > 1) {
+                path.forEach(function(p) { bounds.extend(p); });
+                // Dashes (not a solid line), so the Show Track line shows through wherever they overlap
+                layers.push(new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeOpacity: 0,
+                    clickable: false,
+                    zIndex: 1,
+                    icons: [
+                        { icon: { path: 'M 0,-1 0,1', strokeColor: EC_PLAN_LINE, strokeOpacity: 0.95, strokeWeight: 3, scale: 3 }, offset: '0', repeat: '14px' },
+                        { icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.6, fillColor: EC_PLAN_LINE, fillOpacity: 1, strokeColor: '#0b0b14', strokeWeight: 1 }, offset: '70px', repeat: '170px' }
+                    ],
+                    map: map
+                }));
+            }
+            plan.stops.forEach(function(s, i) {
                 if (s.lat === null) return;
-                const ei = r.planToEvent[pi];
-                if (ei !== -1 && historicalStopMarkers[ei]) {
-                    // Same place: their stop sign turns purple and gets a green plan tag
-                    const m = historicalStopMarkers[ei];
-                    m.setIcon(Object.assign({}, m.getIcon(), { fillColor: EC_MERGED_COLOR }));
-                    ecCompare.recolored.push(ei);
-                    ecCompare.listeners.push(m.addListener('click', function() { setTimeout(function() {
-                        // runs after the normal stop-sign click, which has just opened the time/duration window
-                        const iw = historicalMapInstance._overlayInfoWindow;
-                        const html = iw && iw.getContent();
-                        if (typeof html === 'string') {
-                            iw.setContent('<div style="font-family:Inter; padding:4px 8px 0; color:#000; max-width:240px;">' +
-                                '<div style="font-size:12px; font-weight:700; color:#0a8f63;">Planned stop P' + s.planNum + ' · their stop #' + (ei + 1) + '</div>' +
-                                '<div style="font-size:14px; font-weight:700;">' + ecEsc(s.name) + '</div>' +
-                                (s.city ? '<div style="font-size:12px; color:#555;">' + ecEsc(s.city) + '</div>' : '') +
-                            '</div>' + html);
-                        }
-                    }, 0); }));
-                    const chip = document.querySelector('#overlayStopList .stop-event[data-index="' + ei + '"] .ec-stop-num');
-                    if (chip) chip.classList.add('ec-merged');
-                    const tag = new google.maps.Marker({
-                        position: { lat: events[ei].lat, lng: events[ei].lng },
-                        map: historicalMapInstance,
-                        icon: {
-                            path: 'M -12,-8 L 12,-8 L 12,8 L -12,8 Z',
-                            fillColor: EC_PLAN_COLOR,
-                            fillOpacity: 1,
-                            strokeColor: '#ffffff',
-                            strokeWeight: 1.5,
-                            scale: 1,
-                            anchor: new google.maps.Point(-19, 20),
-                            labelOrigin: new google.maps.Point(0, 0)
-                        },
-                        label: { text: 'P' + s.planNum, color: '#0b0b14', fontSize: '10px', fontWeight: '700' },
-                        title: 'Planned stop P' + s.planNum + ': ' + s.name,
-                        zIndex: 3000 + pi
-                    });
-                    tag.addListener('click', function() { ecCompareOpenPlanInfo(tag, pi); });
-                    ecCompare.layers.push(tag);
-                } else {
-                    // On the plan but they never stopped here: big green waypoint with its name, like the route planner
-                    const marker = new google.maps.Marker({
-                        position: { lat: s.lat, lng: s.lng },
-                        map: historicalMapInstance,
-                        icon: {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            scale: 14,
-                            fillColor: EC_PLAN_COLOR,
-                            fillOpacity: 1,
-                            strokeColor: 'white',
-                            strokeWeight: 2
-                        },
-                        label: { text: 'P' + s.planNum + '. ' + s.name, color: '#00ff00', fontWeight: 'bold', fontSize: '12px', className: 'ec-plan-label' },
-                        title: 'Planned stop P' + s.planNum + ': ' + s.name,
-                        zIndex: 2000 + pi
-                    });
-                    marker.addListener('click', function() { ecCompareOpenPlanInfo(marker, pi); });
-                    ecCompare.layers.push(marker);
-                }
+                const pos = { lat: s.lat, lng: s.lng };
+                bounds.extend(pos);
+                const marker = new google.maps.Marker({
+                    position: pos,
+                    map: map,
+                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: EC_PLAN_COLOR, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
+                    label: { text: String(s.planNum), color: '#0b0b14', fontSize: '11px', fontWeight: '700' },
+                    title: 'Planned stop ' + s.planNum + ': ' + s.name,
+                    zIndex: 500 + i // below the Show Track stop signs (1000+)
+                });
+                marker.addListener('click', function() { ecRouteOpenInfo(map, which, marker, s); });
+                layers.push(marker);
             });
+            if (fit && !bounds.isEmpty()) {
+                const track = historicalTracks[ecRoute.driverId];
+                if (isHistoricalMode[ecRoute.driverId] && track) track.forEach(function(p) { bounds.extend({ lat: p.lat, lng: p.lng }); });
+                map.fitBounds(bounds);
+            }
         }
 
-        function ecCompareOpenPlanInfo(marker, pi) {
-            const plan = ecCompare.plan;
-            const r = ecCompare.result;
-            if (!plan || !r) return;
-            const s = plan.stops[pi];
-            const ei = r.planToEvent[pi];
-            const ev = ei !== -1 ? (historicalStopEvents[ecCompare.driverId] || [])[ei] : null;
-            const result = ev
-                ? 'Their stop #' + (ei + 1) + ' at ' + formatTimestampTo12h(ev.startTime) + ', stayed ' + ecCompareDur(ev.duration)
-                : 'They didn\'t stop within ' + EC_MATCH_METERS + ' m of this stop';
-            const content = '<div style="font-family:Inter; padding:4px 8px; color:#000; max-width:240px;">' +
-                '<div style="font-size:12px; font-weight:700; color:#0a8f63;">Planned stop P' + s.planNum + '</div>' +
-                '<div style="font-size:14px; font-weight:700;">' + ecEsc(s.name) + '</div>' +
-                (s.city ? '<div style="font-size:12px; color:#555;">' + ecEsc(s.city) + '</div>' : '') +
-                '<div style="font-size:12px; margin-top:4px;">' + ecEsc(result) + '</div>' +
-            '</div>';
-            if (historicalMapInstance._overlayInfoWindow) historicalMapInstance._overlayInfoWindow.close();
-            const info = new google.maps.InfoWindow({ content: content });
-            info.open(historicalMapInstance, marker);
-            historicalMapInstance._overlayInfoWindow = info;
-            if (ei !== -1) highlightOverlayStop(ei);
+        // Draws on whichever maps show this driver; fit = zoom the map in front to the route
+        function ecRouteDrawAll(fit) {
+            if (!ecRoute.on || !ecRoute.plan) return;
+            const overlayShown = historicalOverlayOpen && historicalMapInstance && historicalOverlayDriverId === ecRoute.driverId;
+            if (driverModalMap && activeModalDriverId === ecRoute.driverId) ecRouteDraw(driverModalMap, 'modal', fit && !overlayShown);
+            if (overlayShown) ecRouteDraw(historicalMapInstance, 'overlay', fit);
         }
 
-        function ecCompareAddLegend() {
-            if (ecCompare.legendEl || !historicalMapInstance) return;
-            const hex = function(color) {
-                return '<svg width="14" height="20" viewBox="-11 -16 22 32"><path d="' + EC_HEX_PATH + '" fill="' + color + '" stroke="#fff" stroke-width="2"/></svg>';
-            };
-            const el = document.createElement('div');
-            el.className = 'ec-compare-legend';
-            el.innerHTML =
-                '<div>' + hex('#e74c3c') + 'Their stop, not on your plan</div>' +
-                '<div>' + hex(EC_MERGED_COLOR) + '<svg width="20" height="13" viewBox="-13 -9 26 18"><rect x="-12" y="-8" width="24" height="16" fill="' + EC_PLAN_COLOR + '" stroke="#fff" stroke-width="1.5"/></svg>Planned stop they made (P# = your order)</div>' +
-                '<div><svg width="16" height="16" viewBox="-9 -9 18 18"><circle r="7" fill="' + EC_PLAN_COLOR + '" stroke="#fff" stroke-width="2"/></svg>Planned stop they didn\'t make</div>' +
-                '<div><svg width="22" height="8" viewBox="0 0 22 8"><line x1="0" y1="4" x2="22" y2="4" stroke="#00d4ff" stroke-width="3" stroke-dasharray="4 3"/></svg>Your planned route</div>' +
-                '<div><svg width="22" height="8" viewBox="0 0 22 8"><line x1="0" y1="4" x2="22" y2="4" stroke="#ff6b35" stroke-width="4"/></svg>Their route (arrows show direction)</div>';
-            ['click', 'dblclick', 'contextmenu', 'wheel', 'mousedown', 'pointerdown', 'touchstart'].forEach(function(evt) {
-                el.addEventListener(evt, function(e) { e.stopPropagation(); }, { passive: true });
-            });
-            historicalMapInstance.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(el);
-            ecCompare.legendEl = el;
+        // Called when the Show Track map draws its track
+        function ecRouteDrawOverlay(driverId) {
+            if (ecRoute.on && ecRoute.plan && ecRoute.driverId === driverId && historicalMapInstance) ecRouteDraw(historicalMapInstance, 'overlay', false);
+        }
+
+        function ecRouteOpenInfo(map, which, marker, s) {
+            const plan = ecRoute.plan;
+            if (!plan) return;
+            const iw = which === 'overlay' ? 'overlayInfo' : 'modalInfo';
+            if (ecRoute[iw]) ecRoute[iw].close();
+            const info = new google.maps.InfoWindow({ content:
+                '<div style="font-family:Inter; padding:4px 8px; color:#000; max-width:240px;">' +
+                    '<div style="font-size:12px; font-weight:700; color:#0a8f63;">Planned stop ' + s.planNum + ' of ' + plan.stops.length + '</div>' +
+                    '<div style="font-size:14px; font-weight:700;">' + ecEsc(s.name) + '</div>' +
+                    (s.city ? '<div style="font-size:12px; color:#555;">' + ecEsc(s.city) + '</div>' : '') +
+                '</div>' });
+            info.open(map, marker);
+            ecRoute[iw] = info;
         }
 
         let arrowTooltipElement = null;
@@ -9357,6 +9280,7 @@
             document.getElementById('driverModalTitle').textContent = drv ? getDriverDisplayName(driverId, drv) : 'Driver';
             updateNicknameButton();
             ecTcShow(driverId); // Who's driving this? (Time Clock)
+            if (ecRoute.on) ecRouteOff(); // Show route starts off for each driver window
 
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
@@ -9370,6 +9294,7 @@
             const localEnd = new Date(todayEnd.getTime() - offset);
             document.getElementById('historyStart').value = localStart.toISOString().slice(0,16);
             document.getElementById('historyEnd').value = localEnd.toISOString().slice(0,16);
+            ecShiftInit(driverId); // then From/To from the driver's punch in, when the Time Clock has one
 
             const statusHeader = document.getElementById('driverStatusHeader');
             const batteryHeader = document.getElementById('modalBatteryHeader');
@@ -9483,13 +9408,12 @@
                 // Update stop count in historical list maybe
                 renderHistoricalStops(driverId);
 
-                // Start points + time on route
+                // Saved points + time on route (nothing is fetched until Time on route is pressed)
                 if (activeModalDriverId === driverId) {
-                    bindRouteTimeInputs();
                     cancelStartPointPinMode();
+                    ecRtReset();
                     renderStartPoints(driverId);
                     drawStartPointCircles(driverId);
-                    refreshRouteTimeIndicator(driverId);
                 }
 
             }, 200);
@@ -9539,6 +9463,8 @@
             activeModalDriverId = null;
             updateNicknameButton();
             ecTcShow(null);
+            ecShiftInit(null);
+            ecRouteOff();
             if (modalPulseCircle) { modalPulseCircle.setMap(null);
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
@@ -9550,24 +9476,13 @@
         }
 
         // ===== TIME ON ROUTE: PURE CALCULATION (no DOM access) =====
-        // points: [{ lat, lng, timestamp(ms) }] sorted by time; startPoints: { key: { name, lat, lng } }
-        function computeRouteTime(points, startPoints, windowStartMs, windowEndMs, nowMs) {
-            const result = { status: 'none', startMs: null, endMs: null, durationMs: 0, startPointName: '', startedOut: false };
-            const spList = (startPoints && typeof startPoints === 'object')
-                ? Object.values(startPoints).filter(sp => sp && isFinite(Number(sp.lat)) && isFinite(Number(sp.lng)))
-                : [];
-            if (spList.length === 0) { result.status = 'no_start_point'; return result; }
-            const windowLen = Math.max(0, windowEndMs - windowStartMs);
-            const effectiveEnd = Math.min(nowMs, windowEndMs);
-
-            // a) keep only valid points inside the window
+        // Points in the window, minus single-point GPS spikes (far from both neighbors while the neighbors agree)
+        function ecRouteCleanPoints(points, windowStartMs, windowEndMs) {
             const inWin = (points || [])
                 .map(p => ({ lat: Number(p && p.lat), lng: Number(p && p.lng), timestamp: Number(p && p.timestamp) }))
                 .filter(p => isFinite(p.lat) && isFinite(p.lng) && isFinite(p.timestamp) && !(p.lat === 0 && p.lng === 0) &&
                     p.timestamp >= windowStartMs && p.timestamp <= windowEndMs)
                 .sort((a, b) => a.timestamp - b.timestamp);
-
-            // b) drop single-point GPS spikes (far from both neighbors while the neighbors agree)
             const pts = [];
             for (let i = 0; i < inWin.length; i++) {
                 const p = inWin[i];
@@ -9582,87 +9497,63 @@
                 }
                 pts.push(p);
             }
-            if (pts.length === 0) { result.status = 'no_data'; return result; }
+            return pts;
+        }
 
-            // c) choose the start point: nearest to the earliest in-window point
-            const first = pts[0];
-            let chosen = null;
-            let chosenDist = Infinity;
-            spList.forEach(sp => {
-                const d = haversineDistance(first.lat, first.lng, Number(sp.lat), Number(sp.lng));
-                if (d < chosenDist) { chosenDist = d; chosen = sp; }
-            });
-            const spLat = Number(chosen.lat);
-            const spLng = Number(chosen.lng);
-            const firstInside = chosenDist <= START_POINT_RADIUS_M;
-            result.startPointName = chosen.name || 'Start';
-
-            const inside = pts.map(p => haversineDistance(p.lat, p.lng, spLat, spLng) <= START_POINT_RADIUS_M);
-
-            // group consecutive points into inside/outside runs
-            const runs = [];
-            for (let i = 0; i < pts.length; i++) {
-                const last = runs[runs.length - 1];
-                if (last && last.inside === inside[i]) last.endIdx = i;
-                else runs.push({ inside: inside[i], startIdx: i, endIdx: i });
-            }
-            const exitConfirmed = (r) => !r.inside &&
-                ((r.endIdx - r.startIdx + 1) >= EXIT_CONFIRM_POINTS ||
-                 (pts[r.endIdx].timestamp - pts[r.startIdx].timestamp) >= EXIT_CONFIRM_MS);
-
-            // d) start time
-            let startRunIdx = -1;
-            if (!firstInside && (exitConfirmed(runs[0]) || runs.length === 1)) {
-                startRunIdx = 0;
-                result.startedOut = true;
+        // From when they left the start until they first arrived at the end, inside the window.
+        // start / end: { name, lat, lng }; each is a circle of START_POINT_RADIUS_M.
+        // points: [{ lat, lng, timestamp(ms) }]
+        // status: no_data | never_at_start | still_at_start | on_way | not_arrived | done
+        function computeTimeBetween(points, start, end, windowStartMs, windowEndMs, nowMs) {
+            const R = START_POINT_RADIUS_M;
+            const res = { status: 'no_data', leaveMs: null, arriveMs: null, durationMs: 0, startName: start.name, endName: end.name };
+            const pts = ecRouteCleanPoints(points, windowStartMs, windowEndMs);
+            if (pts.length === 0) return res;
+            const inS = pts.map(p => haversineDistance(p.lat, p.lng, start.lat, start.lng) <= R);
+            const inE = pts.map(p => haversineDistance(p.lat, p.lng, end.lat, end.lng) <= R);
+            const overlap = haversineDistance(start.lat, start.lng, end.lat, end.lng) < 2 * R;
+            let seenStart = false;
+            let leaveIdx = -1;
+            let arriveIdx = -1;
+            if (!overlap) {
+                // Two separate places: the last time they were at the start before they first got to the end
+                let lastS = -1;
+                for (let i = 0; i < pts.length; i++) {
+                    if (inS[i]) lastS = i;
+                    else if (inE[i] && lastS !== -1) { arriveIdx = i; break; }
+                }
+                seenStart = lastS !== -1;
+                if (seenStart && lastS < pts.length - 1) leaveIdx = lastS + 1;
             } else {
-                for (let r = 0; r < runs.length; r++) {
-                    if (exitConfirmed(runs[r])) { startRunIdx = r; break; }
+                // The same place (a round trip) or circles that overlap: they have to be away from both for a while
+                // (EXIT_CONFIRM_POINTS points in a row or EXIT_CONFIRM_MS) before coming back counts as arriving
+                let awayFirst = -1;
+                let awayCount = 0;
+                for (let i = 0; i < pts.length; i++) {
+                    if (leaveIdx === -1) {
+                        if (inS[i]) { seenStart = true; awayFirst = -1; awayCount = 0; continue; }
+                        if (!seenStart) continue;
+                        if (inE[i]) { awayFirst = -1; awayCount = 0; continue; }
+                        if (awayFirst === -1) awayFirst = i;
+                        awayCount++;
+                        if (awayCount >= EXIT_CONFIRM_POINTS || pts[i].timestamp - pts[awayFirst].timestamp >= EXIT_CONFIRM_MS) leaveIdx = awayFirst;
+                    } else if (inE[i]) { arriveIdx = i; break; }
                 }
             }
-            if (startRunIdx === -1) { result.status = 'none'; return result; }
-            const startMs = pts[runs[startRunIdx].startIdx].timestamp;
-            result.startMs = startMs;
-
-            // e) end time: first inside point after the LAST confirmed outside run
-            let lastOutRunIdx = startRunIdx;
-            for (let r = startRunIdx + 1; r < runs.length; r++) {
-                if (exitConfirmed(runs[r])) lastOutRunIdx = r;
-            }
-            let returnIdx = -1;
-            for (let i = runs[lastOutRunIdx].endIdx + 1; i < pts.length; i++) {
-                if (inside[i]) { returnIdx = i; break; }
-            }
-            let returnConfirmed = false;
-            if (returnIdx !== -1) {
-                let inRow = 0;
-                let stayUntil = effectiveEnd;
-                for (let i = returnIdx; i < pts.length; i++) {
-                    if (inside[i]) { inRow++; }
-                    else { stayUntil = pts[i].timestamp; break; }
-                }
-                const stayMs = stayUntil - pts[returnIdx].timestamp;
-                returnConfirmed = inRow >= RETURN_CONFIRM_POINTS || stayMs >= RETURN_CONFIRM_MS;
-            }
-
-            // f) status + duration
-            let durationMs;
-            if (returnConfirmed) {
-                result.status = 'done';
-                result.endMs = pts[returnIdx].timestamp;
-                durationMs = result.endMs - startMs;
-            } else if (nowMs >= windowEndMs) {
-                result.status = 'not_back';
-                result.endMs = windowEndMs;
-                durationMs = windowEndMs - startMs;
+            if (!seenStart) { res.status = 'never_at_start'; return res; }
+            if (leaveIdx === -1) { res.status = 'still_at_start'; return res; }
+            res.leaveMs = pts[leaveIdx].timestamp;
+            if (arriveIdx !== -1) {
+                res.status = 'done';
+                res.arriveMs = pts[arriveIdx].timestamp;
+                res.durationMs = Math.max(0, res.arriveMs - res.leaveMs);
+            } else if (nowMs < windowEndMs) {
+                res.status = 'on_way';
+                res.durationMs = Math.max(0, nowMs - res.leaveMs);
             } else {
-                result.status = 'out';
-                result.endMs = effectiveEnd;
-                durationMs = effectiveEnd - startMs;
+                res.status = 'not_arrived';
             }
-            // g) never negative, never longer than the window
-            result.durationMs = Math.min(Math.max(0, durationMs), windowLen);
-            return result;
+            return res;
         }
 
         function formatRouteDuration(ms) {
@@ -9714,24 +9605,23 @@
             el.textContent = dateStr + ', ' + formatRouteClock(win.startMs) + ' to ' + (endDateStr !== dateStr ? endDateStr + ', ' : '') + formatRouteClock(win.endMs);
         }
 
-        function renderRouteTimeResult(res, win) {
+        function renderTimeBetween(res, win) {
             if (!res) return;
-            const suffix = res.startPointName ? ' · ' + res.startPointName : '';
-            if (res.status === 'no_start_point') {
-                setRouteTimeDisplay('--:--', 'Add a start point to track route time', false);
-            } else if (res.status === 'no_data') {
-                setRouteTimeDisplay('--:--', 'No GPS data in this window', false);
-            } else if (res.status === 'none') {
-                setRouteTimeDisplay('--:--', 'Did not leave' + suffix, false);
-            } else if (res.status === 'out') {
-                const since = res.startedOut ? 'Still out since ' + formatRouteClock(res.startMs) + ' (started out)' : 'Still out since ' + formatRouteClock(res.startMs);
-                setRouteTimeDisplay(formatRouteDuration(res.durationMs), since + suffix, true);
-            } else if (res.status === 'not_back') {
-                const lead = res.startedOut ? 'Started out ' : 'Left ';
-                setRouteTimeDisplay(formatRouteDuration(res.durationMs), lead + formatRouteClock(res.startMs) + ' · Not back by ' + formatRouteClock(win.endMs) + suffix, false);
+            const t = formatTimestampTo12h;
+            const s = res.startName || 'the start';
+            const e = res.endName || 'the end';
+            if (res.status === 'no_data') {
+                setRouteTimeDisplay('--:--', 'No GPS data in this From/To window', false);
+            } else if (res.status === 'never_at_start') {
+                setRouteTimeDisplay('--:--', 'Wasn\'t at ' + s + ' during this From/To window', false);
+            } else if (res.status === 'still_at_start') {
+                setRouteTimeDisplay('--:--', 'Didn\'t leave ' + s, false);
+            } else if (res.status === 'on_way') {
+                setRouteTimeDisplay(formatRouteDuration(res.durationMs), 'Left ' + s + ' ' + t(res.leaveMs) + ' · not at ' + e + ' yet (as of ' + t(Date.now()) + ')', true);
+            } else if (res.status === 'not_arrived') {
+                setRouteTimeDisplay('--:--', 'Left ' + s + ' ' + t(res.leaveMs) + ' · didn\'t reach ' + e + ' by ' + t(win.endMs), false);
             } else if (res.status === 'done') {
-                const lead = res.startedOut ? 'Started out ' : 'Left ';
-                setRouteTimeDisplay(formatRouteDuration(res.durationMs), lead + formatRouteClock(res.startMs) + ' · Back ' + formatRouteClock(res.endMs) + suffix, false);
+                setRouteTimeDisplay(formatRouteDuration(res.durationMs), 'Left ' + s + ' ' + t(res.leaveMs) + ' · arrived at ' + e + ' ' + t(res.arriveMs), false);
             }
         }
 
@@ -9751,115 +9641,340 @@
                 .map(p => ({ lat: p.lat, lng: p.lng, timestamp: p.dateunix * 1000 }));
         }
 
-        function updateRouteTimeRefreshTimer() {
-            if (routeTimeRefreshTimer) { clearInterval(routeTimeRefreshTimer); routeTimeRefreshTimer = null; }
-            if (!activeModalDriverId) return;
-            const win = getRouteTimeWindow();
-            if (!win.valid || win.endMs <= Date.now()) return;
-            const drv = drivers[activeModalDriverId];
-            if (!drv || !drv.startPoints || Object.keys(drv.startPoints).length === 0) return;
-            routeTimeRefreshTimer = setInterval(function() {
-                if (!activeModalDriverId) { clearInterval(routeTimeRefreshTimer); routeTimeRefreshTimer = null; return; }
-                if (document.hidden || ecIsIdle()) return; // refreshed when the page is visible / active again
-                refreshRouteTimeIndicator(activeModalDriverId, { force: true });
-            }, ROUTE_TIME_REFRESH_MS);
+        // ===== TIME ON ROUTE: press the button, then pick a start and an end =====
+        // A start or end is one of this GPS's saved points (tap its chip under the map) or any spot tapped on the driver
+        // map; a tap within START_POINT_RADIUS_M of a saved point counts as that point. While picking, the map gets a
+        // crosshair cursor, an outline and a banner saying what to tap. GPS history is fetched only when the button is
+        // used, once per From/To window (a Show Track for the same window is reused, so it costs nothing).
+        const ecRt = { mode: null, driverId: null, start: null, end: null, listener: null, layers: [], seq: 0, cache: { key: null, points: null } };
+
+        function ecRtSetPickUi(text, color) {
+            const banner = document.getElementById('rtPickBanner');
+            const box = document.getElementById('driverMapBox');
+            const list = document.getElementById('startPointsList');
+            const btn = document.getElementById('routeTimeBtn');
+            const on = !!text;
+            if (banner) banner.hidden = !on;
+            const label = document.getElementById('rtPickText');
+            if (label) label.textContent = text || '';
+            const dot = document.getElementById('rtPickDot');
+            if (dot) dot.style.background = color || 'transparent';
+            if (box) box.classList.toggle('rt-picking', on);
+            if (list) list.classList.toggle('rt-pickable', on);
+            if (btn) btn.classList.toggle('active', on);
+            if (driverModalMap) driverModalMap.setOptions({ draggableCursor: on ? 'crosshair' : null });
         }
 
-        async function refreshRouteTimeIndicator(driverId, opts) {
-            opts = opts || {};
-            if (!driverId || driverId !== activeModalDriverId) return;
+        function ecRtClearLayers() {
+            ecRt.layers.forEach(function(l) { l.setMap(null); });
+            ecRt.layers = [];
+        }
+
+        function ecRtStart() {
+            const driverId = activeModalDriverId;
+            if (!driverId || !driverModalMap) return;
+            if (ecRt.mode) { ecRtCancel(); return; } // pressed again while picking
+            cancelStartPointPinMode();
+            ecRt.seq++; // a calculation still loading is now stale
+            ecRtClearLayers();
+            ecRt.driverId = driverId;
+            ecRt.start = null;
+            ecRt.end = null;
+            ecRt.mode = 'start';
+            ecRt.listener = driverModalMap.addListener('click', function(e) {
+                if (e && e.latLng) ecRtPickAt(e.latLng.lat(), e.latLng.lng());
+            });
+            document.addEventListener('keydown', ecRtKey, true);
+            ecRtSetPickUi('Pick the START: tap a saved point below the map, or tap the map', '#2ecc71');
+            setRouteTimeDisplay('--:--', 'Picking the start…', false);
+        }
+
+        function ecRtKey(e) {
+            if (e.key === 'Escape' && ecRt.mode) { e.preventDefault(); e.stopPropagation(); ecRtCancel(); }
+        }
+
+        function ecRtStopPicking() {
+            if (ecRt.listener) { google.maps.event.removeListener(ecRt.listener); ecRt.listener = null; }
+            document.removeEventListener('keydown', ecRtKey, true);
+            ecRt.mode = null;
+            ecRtSetPickUi('');
+        }
+
+        function ecRtCancel() {
+            if (!ecRt.mode) return;
+            ecRtStopPicking();
+            ecRtClearLayers();
+            ecRt.start = null;
+            ecRt.end = null;
+            setRouteTimeDisplay('--:--', 'Press Time on route, then pick a start and an end', false);
+        }
+
+        // A tap on the map: a saved point when it's inside one's circle (closest wins), otherwise that spot
+        function ecRtPickAt(lat, lng) {
+            const drv = drivers[ecRt.driverId];
+            const sps = drv && drv.startPoints ? Object.values(drv.startPoints) : [];
+            let best = null;
+            let bestD = Infinity;
+            sps.forEach(function(sp) {
+                if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
+                const d = haversineDistance(lat, lng, Number(sp.lat), Number(sp.lng));
+                if (d <= START_POINT_RADIUS_M && d < bestD) { bestD = d; best = sp; }
+            });
+            if (best) ecRtPick({ name: String(best.name || 'Saved point'), lat: Number(best.lat), lng: Number(best.lng) });
+            else ecRtPick({ name: 'the ' + (ecRt.mode === 'start' ? 'start' : 'end') + ' pin', lat: lat, lng: lng, pin: true });
+        }
+
+        // A tap on a saved point's chip while picking
+        function ecRtPickSaved(sp) {
+            if (!ecRt.mode || !sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
+            ecRtPick({ name: String(sp.name || 'Saved point'), lat: Number(sp.lat), lng: Number(sp.lng) });
+        }
+
+        function ecRtPick(pt) {
+            if (!ecRt.mode || !driverModalMap || activeModalDriverId !== ecRt.driverId) return;
+            const isStart = ecRt.mode === 'start';
+            const color = isStart ? '#2ecc71' : '#e74c3c';
+            ecRt.layers.push(new google.maps.Circle({
+                center: { lat: pt.lat, lng: pt.lng }, radius: START_POINT_RADIUS_M, clickable: false,
+                fillColor: color, fillOpacity: 0.15, strokeColor: color, strokeOpacity: 0.9, strokeWeight: 2, map: driverModalMap
+            }));
+            ecRt.layers.push(new google.maps.Marker({
+                position: { lat: pt.lat, lng: pt.lng }, map: driverModalMap, clickable: false, zIndex: 3000,
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 11, fillColor: color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
+                label: { text: isStart ? 'S' : 'E', color: '#ffffff', fontSize: '12px', fontWeight: '800' },
+                title: (isStart ? 'Start: ' : 'End: ') + pt.name
+            }));
+            if (isStart) {
+                ecRt.start = pt;
+                ecRt.mode = 'end';
+                ecRtSetPickUi('Now pick the END: tap a saved point below the map, or tap the map', '#e74c3c');
+                setRouteTimeDisplay('--:--', 'Start: ' + pt.name + ' · picking the end…', false);
+                return;
+            }
+            ecRt.end = pt;
+            ecRtStopPicking();
+            ecRtCompute();
+        }
+
+        async function ecRtCompute() {
+            const driverId = ecRt.driverId;
+            if (!driverId || !ecRt.start || !ecRt.end || activeModalDriverId !== driverId) return;
             const drv = drivers[driverId];
             const win = getRouteTimeWindow();
             renderRouteTimeWindowLabel(win);
-            if (!win.valid) {
-                routeTimeFetchSeq++;
-                routeTimeInFlightKey = null;
-                setRouteTimeDisplay('--:--', 'Pick an end time after the start (max 36 hours)', false);
-                updateRouteTimeRefreshTimer();
-                return;
-            }
-            const sps = drv && drv.startPoints ? drv.startPoints : null;
-            if (!sps || Object.keys(sps).length === 0) {
-                routeTimeFetchSeq++;
-                routeTimeInFlightKey = null;
-                setRouteTimeDisplay('--:--', 'Add a start point to track route time', false);
-                updateRouteTimeRefreshTimer();
-                return;
-            }
-            if (!drv.deviceId) {
-                setRouteTimeDisplay('--:--', 'No device ID for this driver', false);
-                updateRouteTimeRefreshTimer();
-                return;
-            }
+            if (!win.valid) { setRouteTimeDisplay('--:--', 'Pick an end time after the start (max 36 hours)', false); return; }
+            if (!drv || !drv.deviceId) { setRouteTimeDisplay('--:--', 'No device ID for this driver', false); return; }
             const key = driverId + '|' + win.key;
-            if (opts.useCache && routeTimeCache.key === key && Array.isArray(routeTimeCache.points)) {
-                renderRouteTimeResult(computeRouteTime(routeTimeCache.points, sps, win.startMs, win.endMs, Date.now()), win);
-                updateRouteTimeRefreshTimer();
-                return;
+            const seq = ++ecRt.seq;
+            let points = ecRt.cache.key === key ? ecRt.cache.points : null;
+            if (!points) {
+                setRouteTimeDisplay(null, 'Loading GPS history…', false);
+                try {
+                    points = await fetchRouteTimePoints(drv, Math.floor(win.startMs / 1000), Math.floor(win.endMs / 1000));
+                } catch (e) {
+                    console.warn('Route time fetch failed:', e);
+                    if (seq === ecRt.seq && activeModalDriverId === driverId) setRouteTimeDisplay('--:--', 'Could not load GPS data', false);
+                    return;
+                }
+                if (seq !== ecRt.seq || activeModalDriverId !== driverId) return;
+                ecRt.cache = { key: key, points: points };
             }
-            if (!opts.force && routeTimeInFlightKey === key) return; // same request already running
-            const seq = ++routeTimeFetchSeq;
-            routeTimeInFlightKey = key;
-            setRouteTimeDisplay(null, 'Loading...', false);
-            try {
-                const points = await fetchRouteTimePoints(drv, Math.floor(win.startMs / 1000), Math.floor(win.endMs / 1000));
-                if (seq !== routeTimeFetchSeq || activeModalDriverId !== driverId || (driverId + '|' + getRouteTimeWindow().key) !== key) return;
-                routeTimeInFlightKey = null;
-                routeTimeCache = { key: key, points: points };
-                const cur = drivers[driverId];
-                renderRouteTimeResult(computeRouteTime(points, cur ? cur.startPoints : null, win.startMs, win.endMs, Date.now()), win);
-            } catch (e) {
-                if (seq !== routeTimeFetchSeq || activeModalDriverId !== driverId) return;
-                routeTimeInFlightKey = null;
-                console.warn('Route time fetch failed:', e);
-                setRouteTimeDisplay('--:--', 'Could not load GPS data', false);
-            }
-            updateRouteTimeRefreshTimer();
+            renderTimeBetween(computeTimeBetween(points, ecRt.start, ecRt.end, win.startMs, win.endMs, Date.now()), win);
         }
 
-        // Called from loadHistoricalTrack with the raw track it already fetched
-        function applyRouteTimeFromTrack(driverId, rawTrack) {
+        // Called from loadHistoricalTrack with the track it already fetched: Time on route reuses it for free
+        function ecRtCacheTrack(driverId, rawTrack) {
             if (!driverId || driverId !== activeModalDriverId) return;
             const win = getRouteTimeWindow();
-            renderRouteTimeWindowLabel(win);
-            routeTimeFetchSeq++; // any in-flight fetch is now stale
-            routeTimeInFlightKey = null;
-            if (!win.valid) {
-                setRouteTimeDisplay('--:--', 'Pick an end time after the start (max 36 hours)', false);
-                updateRouteTimeRefreshTimer();
-                return;
+            ecRt.cache = { key: driverId + '|' + win.key, points: (rawTrack || []).map(p => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp })) };
+            if (!ecRt.mode && ecRt.start && ecRt.end && ecRt.driverId === driverId) ecRtCompute();
+        }
+
+        // The driver window opened or closed
+        function ecRtReset() {
+            ecRtStopPicking();
+            ecRtClearLayers();
+            ecRt.seq++;
+            ecRt.driverId = null;
+            ecRt.start = null;
+            ecRt.end = null;
+            ecRt.cache = { key: null, points: null };
+            setRouteTimeDisplay('--:--', activeModalDriverId ? 'Press Time on route, then pick a start and an end' : '', false);
+            renderRouteTimeWindowLabel(activeModalDriverId ? getRouteTimeWindow() : null);
+        }
+
+        // ===== FROM / TO: from when the driver punched in (E&C Time Clock) =====
+        // When a driver window opens, From/To become the punch in of whoever is driving this GPS today, to 12 hours later:
+        //   1. timeclock/vehicle_claims/{gpsId}: who has this GPS now (the punch in of that open shift)
+        //   2. otherwise today's shifts that used this GPS (its vehicle, or a line in its vehicle history); latest punch in
+        //   3. otherwise Settings > Workday, as before
+        // The Driver list beside From/To does the same for anyone: their first punch in on the From day, plus 12 hours.
+        // Time Clock admins can read all of it. Gil reads names, timeclock/open, the claims, and shifts through a query by
+        // punch-in time (database.rules.json in the timeclock repo). For anyone else the list stays hidden and Workday is used.
+        const EC_SHIFT_HOURS = 12;
+        const ecShift = { driverId: null, seq: 0, pickSeq: 0, people: [], ek: '', touched: false, bound: false };
+
+        function ecTcTry(path) {
+            return db.ref(EC_TC + path).once('value').then(s => s.val(), () => null);
+        }
+        // One person's shifts that started between from and to (ms), earliest first; null when the read is refused
+        function ecShiftsBetween(ek, from, to) {
+            return db.ref(EC_TC + 'shifts/' + ek).orderByChild('in').startAt(from).endAt(to).limitToFirst(10).once('value').then(snap => {
+                const out = [];
+                snap.forEach(c => { const v = c.val(); if (v && typeof v.in === 'number') out.push(Object.assign({}, v, { id: c.key })); });
+                return out.sort((a, b) => a.in - b.in);
+            }, () => null);
+        }
+        function ecShiftUsedGps(shift, gpsId) {
+            if (shift.vehicleId === gpsId) return true;
+            return !!(shift.vans && typeof shift.vans === 'object' && Object.values(shift.vans).some(v => v && v.vehicleId === gpsId));
+        }
+        function ecDayBounds(ms) {
+            const d = new Date(ms);
+            d.setHours(0, 0, 0, 0);
+            const start = d.getTime();
+            d.setDate(d.getDate() + 1);
+            return { start: start, end: d.getTime() - 1 };
+        }
+        function ecToLocalInput(ms) {
+            return new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        }
+        function ecSetWindowFromPunch(inMs) {
+            const start = Math.floor(inMs / 60000) * 60000;
+            document.getElementById('historyStart').value = ecToLocalInput(start);
+            document.getElementById('historyEnd').value = ecToLocalInput(start + EC_SHIFT_HOURS * 3600000);
+            ecWindowChanged();
+        }
+        function ecShiftMsg(text, isErr) {
+            const el = document.getElementById('tcShiftMsg');
+            if (!el) return;
+            el.textContent = text || '';
+            el.classList.toggle('err', !!isErr);
+        }
+        function ecShiftName(ek) {
+            const p = ecShift.people.find(x => x.ek === ek);
+            return p ? p.name : ecTcDisplayName(null, ek);
+        }
+
+        // Everyone for the list: [{ ek, name }], or null when this account can't read the Time Clock
+        async function ecShiftLoadPeople() {
+            const emps = await ecTcTry('employees'); // Time Clock admins
+            if (emps && typeof emps === 'object') {
+                return Object.keys(emps).filter(ek => emps[ek] && emps[ek].removed !== true)
+                    .map(ek => ({ ek: ek, name: ecTcDisplayName(emps[ek], ek) }));
             }
-            const points = (rawTrack || []).map(p => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp }));
-            routeTimeCache = { key: driverId + '|' + win.key, points: points };
-            const drv = drivers[driverId];
-            renderRouteTimeResult(computeRouteTime(points, drv ? drv.startPoints : null, win.startMs, win.endMs, Date.now()), win);
-            updateRouteTimeRefreshTimer();
+            const open = await ecTcTry('open'); // Gil: everyone who has punched in
+            if (!open || typeof open !== 'object') return null;
+            return Promise.all(Object.keys(open).map(async ek => {
+                const [name, email] = await Promise.all([ecTcTry('employees/' + ek + '/name'), ecTcTry('employees/' + ek + '/email')]);
+                return { ek: ek, name: ecTcDisplayName({ name: name, email: email }, ek) };
+            }));
         }
 
-        function scheduleRouteTimeRefresh() {
-            if (routeTimeDebounceTimer) clearTimeout(routeTimeDebounceTimer);
-            routeTimeDebounceTimer = setTimeout(function() {
-                routeTimeDebounceTimer = null;
-                if (activeModalDriverId) refreshRouteTimeIndicator(activeModalDriverId);
-            }, ROUTE_TIME_DEBOUNCE_MS);
+        // Who is driving this GPS today: { ek, in } or null
+        async function ecShiftFindForGps(gpsId, people) {
+            const now = Date.now();
+            const claim = await ecTcTry('vehicle_claims/' + gpsId);
+            if (claim && typeof claim.ek === 'string' && typeof claim.shiftId === 'string') {
+                const inAt = await ecTcTry('shifts/' + claim.ek + '/' + claim.shiftId + '/in');
+                if (typeof inAt === 'number' && inAt > now - 24 * 3600000 && inAt <= now + 60000) return { ek: claim.ek, in: inAt };
+            }
+            const day = ecDayBounds(now);
+            const lists = await Promise.all(people.map(p => ecShiftsBetween(p.ek, day.start, day.end).then(list => ({ ek: p.ek, list: list || [] }))));
+            let best = null;
+            lists.forEach(r => r.list.forEach(s => { if (ecShiftUsedGps(s, gpsId) && (!best || s.in > best.in)) best = { ek: r.ek, in: s.in }; }));
+            return best;
         }
 
-        function bindRouteTimeInputs() {
-            if (routeTimeInputsBound) return;
-            const startInput = document.getElementById('historyStart');
-            const endInput = document.getElementById('historyEnd');
-            if (!startInput || !endInput) return;
-            startInput.addEventListener('change', scheduleRouteTimeRefresh);
-            endInput.addEventListener('change', scheduleRouteTimeRefresh);
-            routeTimeInputsBound = true;
+        function ecShiftRender() {
+            const sel = document.getElementById('tcShiftSelect');
+            if (!sel) return;
+            const opt = (value, label) => '<option value="' + ecEsc(value) + '">' + ecEsc(label) + '</option>';
+            let html = opt('', 'Pick a driver…');
+            ecShift.people.forEach(p => { html += opt(p.ek, p.name); });
+            sel.innerHTML = html;
+            sel.value = ecShift.ek || '';
+        }
+
+        // The driver window opened (driverId) or closed (null)
+        async function ecShiftInit(driverId) {
+            const seq = ++ecShift.seq;
+            ecShift.pickSeq++;
+            ecShift.driverId = driverId || null;
+            ecShift.ek = '';
+            ecShift.touched = false;
+            const row = document.getElementById('tcShiftRow');
+            if (row) row.hidden = true;
+            ecShiftMsg('');
+            ecShiftBindInputs();
+            if (!driverId || !currentUserId) return;
+            let people = null;
+            try { people = await ecShiftLoadPeople(); } catch (e) { people = null; }
+            if (seq !== ecShift.seq) return;
+            if (!people || people.length === 0) return; // not allowed to read the Time Clock: Workday hours stay
+            people.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+            ecShift.people = people;
+            ecShiftRender();
+            if (row) row.hidden = false;
+            ecShiftMsg('Checking the Time Clock…');
+            let found = null;
+            try { found = await ecShiftFindForGps(driverId, people); } catch (e) { found = null; }
+            if (seq !== ecShift.seq) return;
+            if (!found) { ecShiftMsg('Nobody on the Time Clock used this GPS today, so From/To is your Workday hours.'); return; }
+            if (!people.some(p => p.ek === found.ek)) { people.push({ ek: found.ek, name: ecTcDisplayName(null, found.ek) }); }
+            ecShift.ek = found.ek;
+            ecShiftRender();
+            if (ecShift.touched) { ecShiftMsg(ecShiftName(found.ek) + ' punched in at ' + formatTimestampTo12h(found.in) + ' (your From/To kept)'); return; }
+            ecSetWindowFromPunch(found.in);
+            ecShiftMsg(ecShiftName(found.ek) + ' punched in at ' + formatTimestampTo12h(found.in));
+        }
+
+        // Picked someone in the Driver list: their first punch in on the From day, to 12 hours later
+        async function ecShiftPick(ek) {
+            const seq = ++ecShift.pickSeq;
+            ecShift.ek = ek || '';
+            if (!ek) { ecShiftMsg(''); return; }
+            const name = ecShiftName(ek);
+            const fromVal = new Date(document.getElementById('historyStart').value);
+            const day = ecDayBounds(isNaN(fromVal) ? Date.now() : fromVal.getTime());
+            const dayText = new Date(day.start).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+            ecShiftMsg('Looking up ' + name + '\'s punch in…');
+            const list = await ecShiftsBetween(ek, day.start, day.end);
+            if (seq !== ecShift.pickSeq) return;
+            if (list === null) { ecShiftMsg('Couldn\'t read the Time Clock.', true); return; }
+            if (list.length === 0) { ecShiftMsg(name + ' didn\'t punch in on ' + dayText + '. Change the From date to pick another day.'); ecWindowChanged(); return; }
+            ecSetWindowFromPunch(list[0].in);
+            ecShiftMsg(name + ' punched in at ' + formatTimestampTo12h(list[0].in) + ' on ' + dayText);
+        }
+
+        function ecShiftBindInputs() {
+            if (ecShift.bound) return;
+            const a = document.getElementById('historyStart');
+            const b = document.getElementById('historyEnd');
+            if (!a || !b) return;
+            const onEdit = function() { ecShift.touched = true; ecWindowChanged(); };
+            a.addEventListener('change', onEdit);
+            b.addEventListener('change', onEdit);
+            ecShift.bound = true;
+        }
+
+        // From/To changed (typed, or set from a punch in): the route and the time follow it
+        function ecWindowChanged() {
+            if (!activeModalDriverId) return;
+            renderRouteTimeWindowLabel(getRouteTimeWindow());
+            if (ecRoute.on && ecRoute.driverId === activeModalDriverId) ecRouteLoad(activeModalDriverId, false);
+            if (!ecRt.mode && ecRt.start && ecRt.end && ecRt.driverId === activeModalDriverId) {
+                // Time on route only loads GPS history when its button is pressed
+                ecRt.seq++;
+                ecRtClearLayers();
+                ecRt.start = null;
+                ecRt.end = null;
+                setRouteTimeDisplay('--:--', 'From/To changed. Press Time on route to pick the start and end again', false);
+            }
         }
 
         function cleanupRouteTimeOnClose() {
-            if (routeTimeDebounceTimer) { clearTimeout(routeTimeDebounceTimer); routeTimeDebounceTimer = null; }
-            if (routeTimeRefreshTimer) { clearInterval(routeTimeRefreshTimer); routeTimeRefreshTimer = null; }
-            routeTimeFetchSeq++;
-            routeTimeInFlightKey = null;
-            routeTimeCache = { key: null, points: null };
+            ecRtReset();
             cancelStartPointPinMode();
             closeStartPointNameModal();
             clearStartPointCircles();
@@ -9917,7 +10032,7 @@
             if (entries.length === 0) {
                 const empty = document.createElement('span');
                 empty.className = 'sp-empty';
-                empty.textContent = 'No start points saved for this driver.';
+                empty.textContent = 'No points saved for this driver yet. Add one with Use Current Location or Drop Pin.';
                 list.appendChild(empty);
                 return;
             }
@@ -9932,8 +10047,9 @@
                 nameBtn.type = 'button';
                 nameBtn.className = 'sp-name';
                 nameBtn.textContent = sp.name || 'Start';
-                nameBtn.title = 'Show on map';
+                nameBtn.title = 'Show on map (while picking for Time on route: use this point)';
                 nameBtn.addEventListener('click', function() {
+                    if (ecRt.mode) { ecRtPickSaved(sp); return; }
                     if (driverModalMap && isFinite(Number(sp.lat)) && isFinite(Number(sp.lng))) {
                         driverModalMap.panTo({ lat: Number(sp.lat), lng: Number(sp.lng) });
                     }
@@ -9957,7 +10073,6 @@
             if (activeModalDriverId !== driverId) return;
             renderStartPoints(driverId);
             drawStartPointCircles(driverId);
-            refreshRouteTimeIndicator(driverId, { useCache: true });
         }
 
         function getNextStartPointName(driverId) {
@@ -10037,6 +10152,7 @@
         function startPointUseCurrentLocation() {
             const driverId = activeModalDriverId;
             if (!driverId) return;
+            ecRtCancel();
             cancelStartPointPinMode();
             const drv = drivers[driverId];
             const loc = drv && drv.lastLocation ? drv.lastLocation : null;
@@ -10060,6 +10176,7 @@
 
         function startPointTogglePinMode() {
             if (startPointPinListener) { cancelStartPointPinMode(); return; }
+            ecRtCancel(); // not picking for Time on route at the same time
             const driverId = activeModalDriverId;
             if (!driverId || !driverModalMap) return;
             setStartPointMessage('');
