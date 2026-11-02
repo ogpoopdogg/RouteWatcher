@@ -2296,6 +2296,12 @@
             color: var(--muted);
         }
         .route-plan-msg.show { display: block; }
+        /* Show route: which saved route (the driver's last 10 saves) */
+        .ec-route-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .ec-route-pick[hidden] { display: none; }
+        .ec-route-pick label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+        .ec-route-pick .ec-route-select { flex: 0 1 340px; min-width: 0; max-width: 100%; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+        .ec-route-pick .ec-route-select option { background: var(--card); color: var(--text); }
         #ecRouteNote {
             display: none;
             position: absolute;
@@ -4762,6 +4768,8 @@
                 box-sizing: border-box;
             }
             #historyQuery .route-plan-msg { font-size: 12px; line-height: 1.35; }
+            #historyQuery .ec-route-pick:not([hidden]) { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+            #historyQuery .ec-route-pick .ec-route-select { width: 100%; height: 40px; font-size: 13px !important; }
 
             /* Saved points: title, then two equal buttons, chips under */
             #startPointsArea { gap: 8px !important; }
@@ -4974,6 +4982,10 @@
                         <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
                     </div>
                 </div>
+                <span class="ec-route-pick" id="ecRoutePickRow" hidden>
+                    <label for="ecRouteSelect">Route:</label>
+                    <select id="ecRouteSelect" class="date-picker ec-route-select" onchange="ecRoutePick(this.value)" title="Pick which saved route to show"></select>
+                </span>
                 <span class="route-plan-msg" id="routePlanMsg" role="status"></span>
             </div>
             <!-- Start points -->
@@ -8073,7 +8085,10 @@
         // Source: developer/route_planner/route_history/<driver>/<save time ms>, written by the route planner on every Save,
         // with the road line it drew (encoded in "path"). Falls back to saved_routes/<driver> (latest save, no road line).
         // No Google calls: the saved line is decoded here and drawn on a map that's already open.
-        // Which save: the newest one saved before the "To" time.
+        // Which save: the newest one saved before "From" (routes are made the night before, sometimes just after midnight),
+        // then any later save before "To" that keeps at least one of its stops: that's the same route edited during the day.
+        // A save with none of its stops is a different route (usually tomorrow's), so it isn't picked. The Route list
+        // beside Show route lists the driver's last 10 saves before To, to pick another.
         // Which planner driver: the Time Clock person picked beside From/To (their sign-in, e.g. matt@ec.com saves as "matt"),
         // then this GPS's nickname, then that person's first name.
         // Drawn the way the route planner draws a finished route: the blue road line with two arrows per leg, a green pin
@@ -8082,7 +8097,7 @@
         const EC_DEPOT = { lat: 49.881157, lng: -99.959272 }; // same start point as the route planner (1604 Moreland Ave)
         const EC_PLAN_COLOR = '#10B981';   // same green as finalized stops in the route planner
         const EC_PLAN_LINE = '#00d4ff';    // same blue as the route planner's line
-        const ecRoute = { on: false, driverId: null, plan: null, seq: 0, modalLayers: [], overlayLayers: [], modalInfo: null, overlayInfo: null, noteTimer: null, shop: null };
+        const ecRoute = { on: false, driverId: null, plan: null, seq: 0, modalLayers: [], overlayLayers: [], modalInfo: null, overlayInfo: null, noteTimer: null, shop: null, list: [], pickId: null };
 
         function ecRouteToggle() {
             if (ecRoute.on) ecRouteOff();
@@ -8123,6 +8138,10 @@
             ecRoute.on = false;
             ecRoute.driverId = null;
             ecRoute.plan = null;
+            ecRoute.list = [];
+            ecRoute.pickId = null;
+            ecRoute.defaultPlan = null;
+            ecRouteFillPicker();
             ecRouteSetUi('off', '');
         }
 
@@ -8167,24 +8186,88 @@
                 try { path = google.maps.geometry.encoding.decodePath(data.path); } catch (e) { path = null; }
             }
             const savedAt = Number(data.timestamp) || keyTime || 0;
-            return { savedAt: savedAt, label: String(data.label || ''), stops: stops, path: path };
+            const ids = order.filter(function(id) { return !!data.stops[id]; }).map(String); // job ids: kept when a route is edited
+            return { savedAt: savedAt, label: String(data.label || ''), stops: stops, path: path, ids: ids };
         }
 
-        // The newest route saved before endMs for the first username that has one (one small read per username tried)
-        async function ecRouteFind(keys, endMs) {
+        // The last 10 routes saved before endMs, oldest first, for the first username that has any (one read per username tried)
+        async function ecRouteList(keys, endMs) {
             for (const key of keys) {
                 const snap = await db.ref('developer/route_planner/route_history/' + key)
-                    .orderByKey().endAt(String(Math.floor(endMs))).limitToLast(1).once('value');
-                let plan = null;
-                snap.forEach(function(child) { plan = ecRoutePlanFromData(child.val(), Number(child.key)) || plan; });
-                if (!plan) {
+                    .orderByKey().endAt(String(Math.floor(endMs))).limitToLast(10).once('value');
+                const list = [];
+                snap.forEach(function(child) {
+                    const p = ecRoutePlanFromData(child.val(), Number(child.key));
+                    if (p) { p.key = key; p.id = String(child.key); list.push(p); }
+                });
+                if (list.length === 0) {
                     const cur = await db.ref('developer/route_planner/saved_routes/' + key).once('value');
                     const p = ecRoutePlanFromData(cur.val(), null);
-                    if (p && p.savedAt && p.savedAt <= endMs) plan = p;
+                    if (p && p.savedAt && p.savedAt <= endMs) { p.key = key; p.id = 'latest'; list.push(p); }
                 }
-                if (plan) { plan.key = key; return plan; }
+                if (list.length) { list.sort(function(x, y) { return x.savedAt - y.savedAt; }); return list; }
             }
-            return null;
+            return [];
+        }
+
+        // Index of the route to show: the newest saved before From, then its edits (later saves before To that keep a stop)
+        function ecRouteDefaultIndex(list, startMs) {
+            let base = -1;
+            list.forEach(function(p, i) { if (!isFinite(startMs) || p.savedAt <= startMs) base = i; });
+            if (base < 0) return list.length - 1; // nothing saved before From: newest before To
+            let cur = base;
+            let ids = new Set(list[base].ids);
+            for (let i = base + 1; i < list.length; i++) {
+                if (list[i].ids.some(function(id) { return ids.has(id); })) { cur = i; ids = new Set(list[i].ids); }
+            }
+            return cur;
+        }
+
+        function ecRouteOptionText(p) {
+            const d = new Date(p.savedAt);
+            return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(p.savedAt) +
+                ' · ' + p.stops.length + ' stop' + (p.stops.length === 1 ? '' : 's');
+        }
+
+        function ecRouteFillPicker() {
+            const row = document.getElementById('ecRoutePickRow');
+            const sel = document.getElementById('ecRouteSelect');
+            if (!row || !sel) return;
+            if (!ecRoute.on || !ecRoute.plan || ecRoute.list.length === 0) { row.hidden = true; sel.innerHTML = ''; return; }
+            sel.innerHTML = '';
+            ecRoute.list.slice().reverse().forEach(function(p) { // newest first
+                const o = document.createElement('option');
+                o.value = p.id;
+                o.textContent = ecRouteOptionText(p) + (p === ecRoute.defaultPlan ? ' (for this day)' : '');
+                sel.appendChild(o);
+            });
+            sel.value = ecRoute.plan.id;
+            row.hidden = false;
+        }
+
+        // The route list changed: show that save instead (nothing new is read)
+        function ecRoutePick(id) {
+            const p = ecRoute.list.find(function(x) { return x.id === id; });
+            if (!p || !ecRoute.on) return;
+            ecRoute.pickId = id;
+            ecRoute.plan = p;
+            ecRouteDrawAll(true);
+            ecRouteSetUi('on', ecRouteSummary(p, getRouteTimeWindow()));
+            ecRouteFillPicker();
+        }
+
+        function ecRouteSummary(plan, win) {
+            const d = new Date(plan.savedAt);
+            const who = plan.label || (plan.key.charAt(0).toUpperCase() + plan.key.slice(1));
+            const parts = [who + '\'s route, saved ' + d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' +
+                formatTimestampTo12h(plan.savedAt) + ' · ' + plan.stops.length + ' stop' + (plan.stops.length === 1 ? '' : 's')];
+            if (plan !== ecRoute.defaultPlan) parts.push('picked from the list');
+            else if (ecRoute.defaultEdited) parts.push('edited during the day');
+            if (plan === ecRoute.defaultPlan && isFinite(win.startMs) && plan.savedAt < win.startMs - 36 * 3600000) parts.push('saved well before From, so it may be an older route');
+            const noLoc = plan.stops.filter(function(s) { return s.lat === null; }).length;
+            if (noLoc) parts.push(noLoc + ' stop' + (noLoc === 1 ? ' has' : 's have') + ' no map location');
+            if (!plan.path) parts.push('straight lines between stops (this save has no road line)');
+            return parts.join(' · ');
         }
 
         async function ecRouteLoad(driverId, fit) {
@@ -8195,6 +8278,10 @@
             ecRoute.on = true;
             ecRoute.driverId = driverId;
             ecRoute.plan = null;
+            ecRoute.list = [];
+            ecRoute.pickId = null;
+            ecRoute.defaultPlan = null;
+            ecRouteFillPicker();
             ecRouteSetUi('loading', 'Loading the planned route…');
             const fail = function(text) {
                 if (seq !== ecRoute.seq) return;
@@ -8218,24 +8305,22 @@
                     }
                     if (seq !== ecRoute.seq) return;
                 }
-                const plan = await ecRouteFind(keys, endMs);
+                const list = await ecRouteList(keys, endMs);
                 if (seq !== ecRoute.seq) return;
+                const idx = list.length ? ecRouteDefaultIndex(list, win.startMs) : -1;
+                const plan = idx >= 0 ? list[idx] : null;
                 if (!plan) {
                     fail('No route saved in Route Planner for ' + keys.map(function(k) { return '"' + k + '"'; }).join(' or ') + ' before ' +
                         new Date(endMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(endMs) + '.');
                     return;
                 }
+                ecRoute.list = list;
+                ecRoute.defaultPlan = plan;
+                ecRoute.defaultEdited = list.slice(0, idx).some(function(p) { return isFinite(win.startMs) && p.savedAt <= win.startMs; }) && plan.savedAt > win.startMs;
                 ecRoute.plan = plan;
                 ecRouteDrawAll(fit);
-                const d = new Date(plan.savedAt);
-                const who = plan.label || (plan.key.charAt(0).toUpperCase() + plan.key.slice(1));
-                const parts = [who + '\'s route, saved ' + d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' +
-                    formatTimestampTo12h(plan.savedAt) + ' · ' + plan.stops.length + ' stop' + (plan.stops.length === 1 ? '' : 's')];
-                if (isFinite(win.startMs) && plan.savedAt < win.startMs - 36 * 3600000) parts.push('saved well before From, so it may be an older route');
-                const noLoc = plan.stops.filter(function(s) { return s.lat === null; }).length;
-                if (noLoc) parts.push(noLoc + ' stop' + (noLoc === 1 ? ' has' : 's have') + ' no map location');
-                if (!plan.path) parts.push('straight lines between stops (this save has no road line)');
-                ecRouteSetUi('on', parts.join(' · '));
+                ecRouteSetUi('on', ecRouteSummary(plan, win));
+                ecRouteFillPicker();
             } catch (e) {
                 console.warn('Show route: plan could not be loaded:', e);
                 fail('The planned route could not be loaded (' + (e && e.message ? e.message : 'unknown error') + ').');
