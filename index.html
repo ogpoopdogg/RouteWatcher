@@ -2257,6 +2257,8 @@
         }
 
         /* ===== Show route: the route planner's line and stops (driver window + Show Track map) ===== */
+        /* Stop names on the map, same look as the route planner's finished route */
+        .ec-plan-label { color: #00ff00 !important; font-weight: 800; text-shadow: 0 0 2px #000, 0 1px 3px #000; }
         #historicalOverlay .overlay-header .ec-route-tools {
             margin-left: auto;
             margin-right: 10px;
@@ -4632,6 +4634,161 @@
         }
         body.light-mode .ec-eta-notice .ec-eta-notice-ok {
             color: #fff;
+        }
+
+        /* =====================================================================
+           DRIVER WINDOW ON PHONES: whole screen, tidy rows, big map
+           ===================================================================== */
+        @media (max-width: 600px) {
+            .driver-modal {
+                top: 0 !important;
+                padding: 0 !important;
+                z-index: 10002; /* over the top bar; Show Track map and Nickname still open above it */
+                background: var(--card);
+                backdrop-filter: none;
+            }
+            .driver-modal .modal-card {
+                border: none !important;
+                border-radius: 0 !important;
+                max-height: none !important;
+                height: 100%;
+                padding: calc(8px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom)) !important;
+                gap: 10px !important;
+                box-shadow: none !important;
+            }
+            /* The header scrolls away with the rest, so the map gets the screen */
+            .driver-modal .modal-header {
+                position: static !important;
+                padding: 0 !important;
+                gap: 6px !important;
+            }
+            .driver-modal .modal-header .header-top { flex-wrap: nowrap !important; gap: 8px; }
+            .driver-modal .modal-header .header-top h2 { font-size: 18px !important; margin: 0 !important; }
+            .driver-modal .modal-header .header-top .close-modal-btn {
+                margin-left: auto;
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px;
+                font-size: 18px !important;
+                padding: 0 !important;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .driver-modal .modal-header .header-status { font-size: 12px !important; gap: 2px 8px !important; }
+            .driver-modal .modal-header .header-status span { font-size: 12px !important; }
+
+            /* Who's driving this?  [ select ........ ] */
+            .driver-modal .modal-header .tc-driver-row:not([hidden]) {
+                display: grid !important;
+                grid-template-columns: auto minmax(0, 1fr);
+                gap: 4px 10px;
+                margin-top: 2px;
+            }
+            .driver-modal .modal-header .tc-driver-row label { font-size: 12px; }
+            .driver-modal .modal-header .tc-driver-select { width: 100%; max-width: none; height: 38px; font-size: 14px; }
+            .driver-modal .modal-header .tc-driver-msg { grid-column: 1 / -1; font-size: 12px; }
+            .driver-modal .modal-header .tc-driver-msg:empty { display: none; }
+
+            /* Time on route: one row (button, time), notes under it */
+            .driver-modal .route-time-box {
+                align-self: stretch !important;
+                display: grid !important;
+                grid-template-columns: 1fr;
+                gap: 4px;
+                padding: 8px 12px !important;
+                margin-top: 2px;
+            }
+            .driver-modal .route-time-box .rt-main { align-items: center; justify-content: space-between; gap: 10px; }
+            .driver-modal .route-time-box .rt-btn { height: 38px; padding: 0 16px; font-size: 13px; }
+            .driver-modal .route-time-box .rt-value { font-size: 26px !important; }
+
+            /* From / To side by side, labels above; Driver on its own row */
+            #historyQuery { padding-top: 10px !important; gap: 10px !important; }
+            #historyQuery > div { display: flex !important; flex-direction: column !important; flex-wrap: nowrap !important; align-items: stretch !important; gap: 10px !important; }
+            #historyQuery > div > div { flex: none !important; }
+            #historyQuery > div > div:first-child {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+                grid-template-rows: auto auto auto auto !important;
+                gap: 4px 8px !important;
+                width: 100%;
+            }
+            #historyQuery > div > div:first-child > label:nth-child(1) { grid-column: 1 !important; grid-row: 1 !important; }
+            #historyQuery > div > div:first-child > label:nth-child(3) { grid-column: 2 !important; grid-row: 1 !important; }
+            #historyQuery > div > div:first-child > input:nth-child(2) { grid-column: 1 !important; grid-row: 2 !important; }
+            #historyQuery > div > div:first-child > input:nth-child(4) { grid-column: 2 !important; grid-row: 2 !important; }
+            #historyQuery > div > div:first-child > label { font-size: 12px !important; }
+            #historyQuery .date-picker {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                height: 40px;
+                box-sizing: border-box;
+                font-size: 13px !important;
+                padding: 0 8px !important;
+            }
+            #historyQuery #tcShiftRow:not([hidden]) {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                display: grid !important;
+                grid-template-columns: auto minmax(0, 1fr);
+                align-items: center;
+                gap: 8px;
+                margin-top: 4px;
+            }
+            #historyQuery #tcShiftRow label { font-size: 12px !important; }
+            #historyQuery #tcShiftRow .tc-shift-select { max-width: none !important; }
+            #historyQuery #tcShiftMsg { grid-column: 1 / -1; grid-row: 4; font-size: 12px; line-height: 1.35; }
+            #historyQuery #tcShiftMsg:empty { display: none; }
+
+            /* Show Track | Clear Track | Show route: three equal buttons */
+            #historyQuery > div > div:nth-child(2) {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px !important;
+                width: 100%;
+            }
+            #historyQuery .ec-btn,
+            #historyQuery .ec-btn.ec-btn-route {
+                height: 42px;
+                padding: 0 6px !important;
+                font-size: 13px !important;
+                border-radius: 12px !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                min-width: 0;
+                box-sizing: border-box;
+            }
+            #historyQuery .route-plan-msg { font-size: 12px; line-height: 1.35; }
+
+            /* Saved points: title, then two equal buttons, chips under */
+            #startPointsArea { gap: 8px !important; }
+            .driver-modal .start-points-bar {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                gap: 6px 8px;
+            }
+            .driver-modal .start-points-bar .sp-title { grid-column: 1 / -1; }
+            .driver-modal .start-points-bar > .sp-btn { height: 38px; font-size: 13px; border-radius: 12px; }
+            .driver-modal .start-points-bar .sp-hint,
+            .driver-modal .start-points-bar .sp-msg { grid-column: 1 / -1; }
+            .driver-modal .start-points-bar .sp-msg:empty { display: none; }
+
+            /* The map: most of the screen, edge to edge */
+            .driver-modal .modal-map-row { margin-top: 0 !important; gap: 10px !important; }
+            .driver-modal .modal-map {
+                height: calc(100vh - 140px) !important;
+                height: calc(100dvh - 140px) !important;
+                min-height: 340px !important;
+                flex: none !important;
+                margin: 0 -12px;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+            }
+            .driver-modal .modal-stops-container { max-height: 50vh !important; }
         }
     </style>
 </head>
@@ -7220,6 +7377,7 @@
                 strokeColor: polyColor,
                 strokeOpacity: 0.8,
                 strokeWeight: 4,
+                zIndex: 5, // above Show route's line
                 map: driverModalMap
             });
 
@@ -7710,6 +7868,7 @@
                 strokeColor: '#ff6b35',
                 strokeOpacity: 0.8,
                 strokeWeight: 4,
+                zIndex: 5, // above Show route's line
                 icons: [{
                     // direction of travel, spaced in screen pixels so it reads at any zoom
                     icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.6, fillColor: '#ffffff', fillOpacity: 1, strokeColor: '#b8401a', strokeWeight: 1 },
@@ -7917,12 +8076,13 @@
         // Which save: the newest one saved before the "To" time.
         // Which planner driver: the Time Clock person picked beside From/To (their sign-in, e.g. matt@ec.com saves as "matt"),
         // then this GPS's nickname, then that person's first name.
-        // The planned route is a dashed blue line with green numbered stops, on its own layer: the Show Track line (solid
-        // orange) and its red stop signs stay as they are, drawn above it.
+        // Drawn the way the route planner draws a finished route: the blue road line with two arrows per leg, a green pin
+        // per stop labelled "number. customer name", and the shop pin. It's on its own layer under the Show Track line and
+        // its red stop signs, so both stay visible.
         const EC_DEPOT = { lat: 49.881157, lng: -99.959272 }; // same start point as the route planner (1604 Moreland Ave)
         const EC_PLAN_COLOR = '#10B981';   // same green as finalized stops in the route planner
         const EC_PLAN_LINE = '#00d4ff';    // same blue as the route planner's line
-        const ecRoute = { on: false, driverId: null, plan: null, seq: 0, modalLayers: [], overlayLayers: [], modalInfo: null, overlayInfo: null, noteTimer: null };
+        const ecRoute = { on: false, driverId: null, plan: null, seq: 0, modalLayers: [], overlayLayers: [], modalInfo: null, overlayInfo: null, noteTimer: null, shop: null };
 
         function ecRouteToggle() {
             if (ecRoute.on) ecRouteOff();
@@ -7992,8 +8152,9 @@
                 const lat = Number(st.lat);
                 const lng = Number(st.lng);
                 const hasPos = st.lat !== null && st.lat !== undefined && st.lng !== null && st.lng !== undefined && isFinite(lat) && isFinite(lng);
+                const n = data.assignedIndices && Number(data.assignedIndices[id]);
                 stops.push({
-                    planNum: stops.length + 1,
+                    planNum: n > 0 ? n : stops.length + 1, // the number the planner put on this stop
                     name: String(st.name || st.pickup_location || 'Stop'),
                     city: st.city ? String(st.city) : '',
                     lat: hasPos ? lat : null,
@@ -8045,6 +8206,18 @@
             const win = getRouteTimeWindow();
             const endMs = isFinite(win.endMs) ? win.endMs : Date.now();
             try {
+                if (!ecRoute.shop) {
+                    try {
+                        const shopSnap = await db.ref('developer/route_planner/settings/shop').once('value');
+                        const sh = shopSnap.val();
+                        ecRoute.shop = (sh && isFinite(Number(sh.lat)) && isFinite(Number(sh.lng)))
+                            ? { lat: Number(sh.lat), lng: Number(sh.lng), address: String(sh.address || '') }
+                            : { lat: EC_DEPOT.lat, lng: EC_DEPOT.lng, address: '1604 Moreland Ave, Brandon MB' };
+                    } catch (shopErr) {
+                        ecRoute.shop = { lat: EC_DEPOT.lat, lng: EC_DEPOT.lng, address: '1604 Moreland Ave, Brandon MB' };
+                    }
+                    if (seq !== ecRoute.seq) return;
+                }
                 const plan = await ecRouteFind(keys, endMs);
                 if (seq !== ecRoute.seq) return;
                 if (!plan) {
@@ -8069,32 +8242,92 @@
             }
         }
 
+        // Splits the saved road line back into one piece per leg (shop → stop 1, stop 1 → stop 2, …), the way the route planner
+        // keeps it. Each leg ends at the point of the line nearest its stop, searching forward so a later pass doesn't count.
+        function ecRouteSplitLegs(path, stops) {
+            const pts = path.map(function(p) { return { lat: typeof p.lat === 'function' ? p.lat() : p.lat, lng: typeof p.lng === 'function' ? p.lng() : p.lng }; });
+            const KX = 0.644; // a degree of longitude is this much shorter than a degree of latitude here
+            const d2 = function(a, b) { const y = a.lat - b.lat, x = (a.lng - b.lng) * KX; return x * x + y * y; };
+            const NEAR = Math.pow(80 / 111320, 2); // 80 m
+            const legs = [];
+            let from = 0;
+            stops.forEach(function(s, k) {
+                if (from >= pts.length - 1) return;
+                let end;
+                if (k === stops.length - 1) end = pts.length - 1;
+                else {
+                    end = -1;
+                    for (let i = from + 1; i < pts.length; i++) {
+                        if (d2(pts[i], s) <= NEAR) { // first time the line comes close: follow it to the closest point
+                            end = i;
+                            while (end + 1 < pts.length && d2(pts[end + 1], s) <= d2(pts[end], s)) end++;
+                            break;
+                        }
+                    }
+                    if (end < 0) { // never within 80 m: nearest point left on the line
+                        let best = Infinity;
+                        for (let i = from + 1; i < pts.length; i++) { const dd = d2(pts[i], s); if (dd < best) { best = dd; end = i; } }
+                    }
+                }
+                if (end > from) { legs.push(path.slice(from, end + 1)); from = end; }
+            });
+            return legs;
+        }
+
         function ecRouteDraw(map, which, fit) {
             const plan = ecRoute.plan;
             ecRouteClearLayers(which);
             if (!map || !plan) return;
             const layers = which === 'overlay' ? ecRoute.overlayLayers : ecRoute.modalLayers;
-            let path = plan.path;
-            if (!path || path.length < 2) {
-                path = [EC_DEPOT].concat(plan.stops.filter(function(s) { return s.lat !== null; }).map(function(s) { return { lat: s.lat, lng: s.lng }; }));
+            const shop = ecRoute.shop || EC_DEPOT;
+            const located = plan.stops.filter(function(s) { return s.lat !== null; });
+            let legs;
+            if (plan.path && plan.path.length > 1) legs = ecRouteSplitLegs(plan.path, located);
+            else { // no road line saved: straight legs between the stops
+                legs = [];
+                let prev = { lat: shop.lat, lng: shop.lng };
+                located.forEach(function(s) { const next = { lat: s.lat, lng: s.lng }; legs.push([prev, next]); prev = next; });
             }
             const bounds = new google.maps.LatLngBounds();
-            if (path.length > 1) {
-                path.forEach(function(p) { bounds.extend(p); });
-                // Dashes (not a solid line), so the Show Track line shows through wherever they overlap
+            const geo = google.maps.geometry && google.maps.geometry.spherical;
+            // Same line and arrows as the route planner: blue, 6 px, an arrow a third and two thirds along each leg
+            legs.forEach(function(seg) {
+                if (seg.length < 2) return;
+                seg.forEach(function(p) { bounds.extend(p); });
                 layers.push(new google.maps.Polyline({
-                    path: path,
-                    geodesic: true,
-                    strokeOpacity: 0,
-                    clickable: false,
-                    zIndex: 1,
-                    icons: [
-                        { icon: { path: 'M 0,-1 0,1', strokeColor: EC_PLAN_LINE, strokeOpacity: 0.95, strokeWeight: 3, scale: 3 }, offset: '0', repeat: '14px' },
-                        { icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.6, fillColor: EC_PLAN_LINE, fillOpacity: 1, strokeColor: '#0b0b14', strokeWeight: 1 }, offset: '70px', repeat: '170px' }
-                    ],
-                    map: map
+                    path: seg, geodesic: true, strokeColor: EC_PLAN_LINE, strokeOpacity: 0.8, strokeWeight: 6,
+                    clickable: false, zIndex: 1, map: map
                 }));
-            }
+                if (!geo) return;
+                const segPath = seg.map(function(p) { return p instanceof google.maps.LatLng ? p : new google.maps.LatLng(p.lat, p.lng); });
+                const total = geo.computeLength(segPath);
+                if (total < 10) return;
+                [1 / 3, 2 / 3].forEach(function(frac) {
+                    const target = total * frac;
+                    let acc = 0;
+                    for (let i = 0; i < segPath.length - 1; i++) {
+                        const len = geo.computeDistanceBetween(segPath[i], segPath[i + 1]);
+                        if (acc + len >= target || i === segPath.length - 2) {
+                            const f = len === 0 ? 0 : Math.min(1, (target - acc) / len);
+                            layers.push(new google.maps.Marker({
+                                position: geo.interpolate(segPath[i], segPath[i + 1], f),
+                                map: map,
+                                clickable: false,
+                                zIndex: 2,
+                                icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, fillColor: EC_PLAN_LINE, fillOpacity: 1, strokeColor: '#000000', strokeWeight: 1, scale: 4,
+                                    rotation: geo.computeHeading(segPath[i], segPath[i + 1]) }
+                            }));
+                            break;
+                        }
+                        acc += len;
+                    }
+                });
+            });
+            // The shop (start), as the route planner shows it
+            const shopPos = { lat: shop.lat, lng: shop.lng };
+            bounds.extend(shopPos);
+            layers.push(new google.maps.Marker({ position: shopPos, map: map, title: (shop.address || 'Shop') + ' (start)', zIndex: 3 }));
+            // Green stop pins labelled "number. customer name", like the route planner
             plan.stops.forEach(function(s, i) {
                 if (s.lat === null) return;
                 const pos = { lat: s.lat, lng: s.lng };
@@ -8102,8 +8335,8 @@
                 const marker = new google.maps.Marker({
                     position: pos,
                     map: map,
-                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: EC_PLAN_COLOR, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
-                    label: { text: String(s.planNum), color: '#0b0b14', fontSize: '11px', fontWeight: '700' },
+                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: EC_PLAN_COLOR, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
+                    label: { text: s.planNum + '. ' + s.name, color: '#00b32d', fontSize: '12px', fontWeight: 'bold', className: 'ec-plan-label' },
                     title: 'Planned stop ' + s.planNum + ': ' + s.name,
                     zIndex: 500 + i // below the Show Track stop signs (1000+)
                 });
@@ -9938,6 +10171,7 @@
             const fromVal = new Date(document.getElementById('historyStart').value);
             const day = ecDayBounds(isNaN(fromVal) ? Date.now() : fromVal.getTime());
             const dayText = new Date(day.start).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+            ecShift.pickDay = day.start;
             ecShiftMsg('Looking up ' + name + '\'s punch in…');
             const list = await ecShiftsBetween(ek, day.start, day.end);
             if (seq !== ecShift.pickSeq) return;
@@ -9953,7 +10187,12 @@
             const b = document.getElementById('historyEnd');
             if (!a || !b) return;
             const onEdit = function() { ecShift.touched = true; ecWindowChanged(); };
-            a.addEventListener('change', onEdit);
+            // A driver is picked and the From day changed: look up their punch in on the new day
+            a.addEventListener('change', function() {
+                const v = new Date(a.value);
+                if (ecShift.ek && !isNaN(v) && ecDayBounds(v.getTime()).start !== ecShift.pickDay) { ecShift.touched = true; ecShiftPick(ecShift.ek); return; }
+                onEdit();
+            });
             b.addEventListener('change', onEdit);
             ecShift.bound = true;
         }
