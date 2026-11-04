@@ -5873,10 +5873,75 @@
         const auth = firebase.auth();
         const db = firebase.database();
 
+        // ===== BRANDON TIME =====
+        // Every time on this page is Brandon, MB time, whatever the phone or computer is set to (same as the Time Clock's tc-core.js).
+        // Manitoba stopped changing its clocks: it stays on UTC-5 all year from 2026-11-01 (it no longer falls back).
+        // A device whose time zone data is older than that thinks Manitoba went to UTC-6 and shows every time an hour
+        // behind, so from then on this page works out Brandon time itself. Earlier times use the America/Winnipeg rules,
+        // which are right for the past. If Manitoba ever changes its clocks again, this is the place to change.
+        const EC_TZ = 'America/Winnipeg';
+        const EC_FIXED_OFFSET_FROM = Date.UTC(2026, 10, 1, 7); // 2026-11-01 2:00 AM CDT, already UTC-5 on both sides
+        const EC_FIXED_OFFSET_MS = -5 * 3600000;
+        const ecFmtCache = {};
+        // The instant to format and the zone to format it in, so the formatted wall time is Brandon's
+        function ecWallBase(ms) {
+            return ms >= EC_FIXED_OFFSET_FROM ? { date: new Date(ms + EC_FIXED_OFFSET_MS), zone: 'UTC' } : { date: new Date(ms), zone: EC_TZ };
+        }
+        function ecFormatter(locale, zone, opts) {
+            const key = (locale || '') + '|' + zone + '|' + JSON.stringify(opts || {});
+            if (!ecFmtCache[key]) {
+                try { ecFmtCache[key] = new Intl.DateTimeFormat(locale, Object.assign({}, opts, { timeZone: zone })); }
+                catch (e) { ecFmtCache[key] = new Intl.DateTimeFormat(locale, opts); } // very old browser: device time
+            }
+            return ecFmtCache[key];
+        }
+        // Brandon wall-clock parts of an instant: { y, m (1-12), d, hh, mm, ss, dow (0 = Sunday) }
+        function ecWall(ms) {
+            const w = ecWallBase(Number(ms));
+            if (w.zone === 'UTC') {
+                const d = w.date;
+                return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), hh: d.getUTCHours(), mm: d.getUTCMinutes(), ss: d.getUTCSeconds(), dow: d.getUTCDay() };
+            }
+            const out = {};
+            ecFormatter('en-US', w.zone, { hourCycle: 'h23', weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                .formatToParts(w.date).forEach(function(p) { out[p.type] = p.value; });
+            return { y: +out.year, m: +out.month, d: +out.day, hh: parseInt(out.hour, 10) % 24, mm: +out.minute, ss: +out.second,
+                dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(out.weekday) };
+        }
+        function ecTzOffset(ms) {
+            const z = ecWall(ms);
+            return Date.UTC(z.y, z.m - 1, z.d, z.hh, z.mm, z.ss) - Math.floor(ms / 1000) * 1000;
+        }
+        // Brandon wall-clock time -> epoch ms (handles the old daylight saving changes; month is 1-12, day may overflow)
+        function ecFromWall(y, m, d, hh, mm, ss) {
+            const guess = Date.UTC(y, m - 1, d, hh || 0, mm || 0, ss || 0);
+            const first = guess - ecTzOffset(guess);
+            return guess - ecTzOffset(first);
+        }
+        // Brandon time as text, like toLocaleString / toLocaleDateString / toLocaleTimeString with these options
+        function ecFormat(ms, opts, locale) {
+            const w = ecWallBase(Number(ms));
+            return ecFormatter(locale, w.zone, opts).format(w.date);
+        }
+        function ecDayKey(ms) {
+            const z = ecWall(ms);
+            return z.y + '-' + String(z.m).padStart(2, '0') + '-' + String(z.d).padStart(2, '0');
+        }
+        // A datetime-local input's value ("YYYY-MM-DDTHH:MM") read as Brandon time -> epoch ms (NaN if blank or bad)
+        function ecParseLocalInput(value) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(value || ''));
+            return m ? ecFromWall(+m[1], +m[2], +m[3], +m[4], +m[5], +(m[6] || 0)) : NaN;
+        }
+        // Epoch ms -> a datetime-local input's value in Brandon time
+        function ecToLocalInput(ms) {
+            const z = ecWall(ms), p = n => String(n).padStart(2, '0');
+            return z.y + '-' + p(z.m) + '-' + p(z.d) + 'T' + p(z.hh) + ':' + p(z.mm);
+        }
+
         // ===== GOOGLE API USAGE TRACKING =====
         // Each Google API call made by this page adds 1 to
         //   developer/api_usage/{YYYY-MM-DD}/{uid}/{app}/{api}/{HH}/{ok|err}
-        // with Firebase's atomic server-side increment (device local date and hour).
+        // with Firebase's atomic server-side increment (Brandon date and hour).
         // Calls made before sign-in (e.g. the map loading behind the login screen) are held
         // in memory and written once someone signs in. Tracking never blocks the app.
         const EC_API_APP = 'watcher';
@@ -5888,11 +5953,9 @@
                 if (ecApiPending.length < 500) ecApiPending.push(item);
                 return;
             }
-            const d = item.at;
-            const pad = n => String(n).padStart(2, '0');
-            const date = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-            const path = 'developer/api_usage/' + date + '/' + user.uid + '/' + EC_API_APP + '/' +
-                item.api + '/' + pad(d.getHours()) + '/' + (item.ok ? 'ok' : 'err');
+            const at = item.at.getTime();
+            const path = 'developer/api_usage/' + ecDayKey(at) + '/' + user.uid + '/' + EC_API_APP + '/' +
+                item.api + '/' + String(ecWall(at).hh).padStart(2, '0') + '/' + (item.ok ? 'ok' : 'err');
             db.ref(path).set(firebase.database.ServerValue.increment(1))
                 .catch(err => console.warn('API usage count not saved (' + item.api + '):', err && err.message));
         }
@@ -7425,8 +7488,7 @@
                     let durStr = '';
                     if (mins > 0) durStr += `${mins}m `;
                     durStr += `${secs}s`;
-                    const startTime = new Date(event.startTime);
-                    const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const timeStr = ecFormat(event.startTime, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const content = `
                         <div style="font-family:Inter; padding:4px 8px; font-weight:600;">
                             <div style="font-size:15px; color:#f7c948;">🕒 ${timeStr}</div>
@@ -7453,8 +7515,8 @@
             if (!drv || !drv.deviceId) { alert('No device ID for this driver.'); return; }
             const startInput = document.getElementById('historyStart');
             const endInput = document.getElementById('historyEnd');
-            const startDate = new Date(startInput.value);
-            const endDate = new Date(endInput.value);
+            const startDate = new Date(ecParseLocalInput(startInput.value));
+            const endDate = new Date(ecParseLocalInput(endInput.value));
             if (isNaN(startDate) || isNaN(endDate) || startDate >= endDate) {
                 alert('Please select valid start and end dates.');
                 return;
@@ -7855,7 +7917,7 @@
                         strokeWeight: 1,
                         rotation: heading
                     },
-                    title: new Date(pt.timestamp).toLocaleString()
+                    title: ecFormat(pt.timestamp, { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })
                 });
                 arrowMarker.set('timestamp', pt.timestamp);
                 google.maps.event.addListener(arrowMarker, 'click', function(e) {
@@ -7922,8 +7984,7 @@
                     let durStr = '';
                     if (mins > 0) durStr += `${mins}m `;
                     durStr += `${secs}s`;
-                    const startTime = new Date(event.startTime);
-                    const timeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const timeStr = ecFormat(event.startTime, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const content = `
                         <div style="font-family:Inter; padding:4px 8px; font-weight:600;">
                             <div class="stop-copy-row">
@@ -8224,8 +8285,7 @@
         }
 
         function ecRouteOptionText(p) {
-            const d = new Date(p.savedAt);
-            return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(p.savedAt) +
+            return ecFormat(p.savedAt, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(p.savedAt) +
                 ' · ' + p.stops.length + ' stop' + (p.stops.length === 1 ? '' : 's');
         }
 
@@ -8257,9 +8317,8 @@
         }
 
         function ecRouteSummary(plan, win) {
-            const d = new Date(plan.savedAt);
             const who = plan.label || (plan.key.charAt(0).toUpperCase() + plan.key.slice(1));
-            const parts = [who + '\'s route, saved ' + d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' +
+            const parts = [who + '\'s route, saved ' + ecFormat(plan.savedAt, { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' +
                 formatTimestampTo12h(plan.savedAt) + ' · ' + plan.stops.length + ' stop' + (plan.stops.length === 1 ? '' : 's')];
             if (plan !== ecRoute.defaultPlan) parts.push('picked from the list');
             else if (ecRoute.defaultEdited) parts.push('edited during the day');
@@ -8311,7 +8370,7 @@
                 const plan = idx >= 0 ? list[idx] : null;
                 if (!plan) {
                     fail('No route saved in Route Planner for ' + keys.map(function(k) { return '"' + k + '"'; }).join(' or ') + ' before ' +
-                        new Date(endMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(endMs) + '.');
+                        ecFormat(endMs, { month: 'short', day: 'numeric' }) + ', ' + formatTimestampTo12h(endMs) + '.');
                     return;
                 }
                 ecRoute.list = list;
@@ -8466,9 +8525,9 @@
         let arrowTooltipElement = null;
 
         function formatTimestampTo12h(timestamp) {
-            const date = new Date(timestamp);
-            const hours = date.getHours();
-            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const z = ecWall(timestamp);
+            const hours = z.hh;
+            const minutes = String(z.mm).padStart(2, '0');
             const ampm = hours >= 12 ? 'PM' : 'AM';
             const hour12 = hours % 12 || 12;
             return `${hour12}:${minutes} ${ampm}`;
@@ -8610,9 +8669,8 @@
             if (entry.updatedAt) {
                 const updated = document.createElement('div');
                 updated.className = 'ecl-updated';
-                const when = new Date(entry.updatedAt);
-                const sameDay = when.toDateString() === new Date().toDateString();
-                updated.textContent = 'Updated ' + (sameDay ? '' : when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ') + formatTimestampTo12h(entry.updatedAt);
+                const sameDay = ecDayKey(entry.updatedAt) === ecDayKey(Date.now());
+                updated.textContent = 'Updated ' + (sameDay ? '' : ecFormat(entry.updatedAt, { month: 'short', day: 'numeric' }) + ' · ') + formatTimestampTo12h(entry.updatedAt);
                 container.appendChild(updated);
             }
 
@@ -9604,14 +9662,8 @@
                 modalPulseCircle = null; }
             if (modalPulseAnimationId) cancelAnimationFrame(modalPulseAnimationId);
 
-            const now = new Date();
-            const todayStart = ecTodayAt(workdayStart); // Settings > Workday
-            const todayEnd = ecTodayAt(workdayEnd);
-            const offset = now.getTimezoneOffset() * 60000;
-            const localStart = new Date(todayStart.getTime() - offset);
-            const localEnd = new Date(todayEnd.getTime() - offset);
-            document.getElementById('historyStart').value = localStart.toISOString().slice(0,16);
-            document.getElementById('historyEnd').value = localEnd.toISOString().slice(0,16);
+            document.getElementById('historyStart').value = ecToLocalInput(ecTodayAt(workdayStart).getTime()); // Settings > Workday
+            document.getElementById('historyEnd').value = ecToLocalInput(ecTodayAt(workdayEnd).getTime());
             ecShiftInit(driverId); // then From/To from the driver's punch in, when the Time Clock has one
 
             const statusHeader = document.getElementById('driverStatusHeader');
@@ -9882,8 +9934,8 @@
         }
 
         function formatRouteClock(ms) {
-            const d = new Date(ms);
-            return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            const z = ecWall(ms);
+            return String(z.hh).padStart(2, '0') + ':' + String(z.mm).padStart(2, '0');
         }
 
         // ===== TIME ON ROUTE: WINDOW + DISPLAY =====
@@ -9893,8 +9945,8 @@
             const win = { valid: false, startMs: NaN, endMs: NaN, key: '' };
             if (!startInput || !endInput) return win;
             win.key = startInput.value + '|' + endInput.value;
-            const startDate = new Date(startInput.value);
-            const endDate = new Date(endInput.value);
+            const startDate = new Date(ecParseLocalInput(startInput.value));
+            const endDate = new Date(ecParseLocalInput(endInput.value));
             if (isNaN(startDate) || isNaN(endDate)) return win;
             win.startMs = startDate.getTime();
             win.endMs = endDate.getTime();
@@ -9916,10 +9968,8 @@
             const el = document.getElementById('routeTimeWindow');
             if (!el) return;
             if (!win || isNaN(win.startMs) || isNaN(win.endMs)) { el.textContent = ''; return; }
-            const s = new Date(win.startMs);
-            const e = new Date(win.endMs);
-            const dateStr = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            const endDateStr = e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const dateStr = ecFormat(win.startMs, { month: 'short', day: 'numeric' }, 'en-US');
+            const endDateStr = ecFormat(win.endMs, { month: 'short', day: 'numeric' }, 'en-US');
             el.textContent = dateStr + ', ' + formatRouteClock(win.startMs) + ' to ' + (endDateStr !== dateStr ? endDateStr + ', ' : '') + formatRouteClock(win.endMs);
         }
 
@@ -10148,14 +10198,8 @@
             return !!(shift.vans && typeof shift.vans === 'object' && Object.values(shift.vans).some(v => v && v.vehicleId === gpsId));
         }
         function ecDayBounds(ms) {
-            const d = new Date(ms);
-            d.setHours(0, 0, 0, 0);
-            const start = d.getTime();
-            d.setDate(d.getDate() + 1);
-            return { start: start, end: d.getTime() - 1 };
-        }
-        function ecToLocalInput(ms) {
-            return new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            const z = ecWall(ms);
+            return { start: ecFromWall(z.y, z.m, z.d, 0, 0), end: ecFromWall(z.y, z.m, z.d + 1, 0, 0) - 1 };
         }
         function ecSetWindowFromPunch(inMs) {
             const start = Math.floor(inMs / 60000) * 60000;
@@ -10253,9 +10297,9 @@
             ecShift.ek = ek || '';
             if (!ek) { ecShiftMsg(''); return; }
             const name = ecShiftName(ek);
-            const fromVal = new Date(document.getElementById('historyStart').value);
+            const fromVal = new Date(ecParseLocalInput(document.getElementById('historyStart').value));
             const day = ecDayBounds(isNaN(fromVal) ? Date.now() : fromVal.getTime());
-            const dayText = new Date(day.start).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+            const dayText = ecFormat(day.start, { weekday: 'short', month: 'short', day: 'numeric' });
             ecShift.pickDay = day.start;
             ecShiftMsg('Looking up ' + name + '\'s punch in…');
             const list = await ecShiftsBetween(ek, day.start, day.end);
@@ -10274,7 +10318,7 @@
             const onEdit = function() { ecShift.touched = true; ecWindowChanged(); };
             // A driver is picked and the From day changed: look up their punch in on the new day
             a.addEventListener('change', function() {
-                const v = new Date(a.value);
+                const v = new Date(ecParseLocalInput(a.value));
                 if (ecShift.ek && !isNaN(v) && ecDayBounds(v.getTime()).start !== ecShift.pickDay) { ecShift.touched = true; ecShiftPick(ecShift.ek); return; }
                 onEdit();
             });
@@ -10545,11 +10589,11 @@
             if (b) b.value = workdayEnd;
         }
 
-        // Today at "HH:MM" local time
+        // Today at "HH:MM" Brandon time
         function ecTodayAt(hhmm) {
-            const d = new Date();
+            const z = ecWall(Date.now());
             const parts = String(hhmm || '00:00').split(':').map(Number);
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), parts[0] || 0, parts[1] || 0, 0);
+            return new Date(ecFromWall(z.y, z.m, z.d, parts[0] || 0, parts[1] || 0, 0));
         }
 
         function openSettings() {
