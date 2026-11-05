@@ -6567,6 +6567,23 @@
         const POLL_NOW_URL = 'https://us-central1-eandccourier-36fcc.cloudfunctions.net/pollNow'; // live GPS poll, on demand
         const STANDBY_THRESHOLD = 15 * 60 * 1000;
         const OFFLINE_THRESHOLD = 60 * 60 * 1000;
+        // Ages of GPS fixes (Online / Standby / Offline, "Last update ... ago") use Firebase server time,
+        // not this computer's clock. A computer clock set by hand (for example moved an hour ahead) would
+        // otherwise make every vehicle look 15+ minutes old on that computer only.
+        let ecServerTimeOffsetMs = 0; // server time minus this computer's clock, from .info/serverTimeOffset
+        function ecServerNow() { return Date.now() + ecServerTimeOffsetMs; }
+        function ecWatchServerClock() {
+            if (ecWatchServerClock._on) return;
+            ecWatchServerClock._on = true;
+            db.ref('.info/serverTimeOffset').on('value', snap => {
+                const v = Number(snap.val());
+                const next = isFinite(v) ? v : 0;
+                const changed = Math.abs(next - ecServerTimeOffsetMs) >= 30 * 1000;
+                ecServerTimeOffsetMs = next;
+                if (Math.abs(next) >= 60 * 1000) console.warn('This computer\'s clock is off by ' + Math.round(next / 60000) + ' min; GPS ages use server time.');
+                if (changed && dashboardLoaded) queueRender({ badges: true, markers: true, control: true });
+            });
+        }
         const TRACK_FILTER_DISTANCE = 10;
         const STOP_DETECTION_THRESHOLD = 30;
         const START_POINT_RADIUS_M = 200;
@@ -6944,14 +6961,14 @@
                 const connStatus = deviceStatuses[deviceId];
                 if (connStatus === 1) {
                     // Connected, but the last position is old: show Standby instead of a green Online
-                    if (lastUpdated && (Date.now() - lastUpdated) >= STANDBY_THRESHOLD) return { status: 'standby', label: '◐ Standby', class: 'status-standby' };
+                    if (lastUpdated && (ecServerNow() - lastUpdated) >= STANDBY_THRESHOLD) return { status: 'standby', label: '◐ Standby', class: 'status-standby' };
                     return { status: 'online', label: '● Online', class: 'status-online' };
                 }
                 else if (connStatus === 2) return { status: 'standby', label: '◐ Standby', class: 'status-standby' };
                 else return { status: 'offline', label: '○ Offline', class: 'status-offline' };
             }
             if (!lastUpdated) return { status: 'offline', label: '○ Offline', class: 'status-offline' };
-            const diff = Date.now() - lastUpdated;
+            const diff = ecServerNow() - lastUpdated;
             if (diff < STANDBY_THRESHOLD) return { status: 'online', label: '● Online', class: 'status-online' };
             if (diff < OFFLINE_THRESHOLD) return { status: 'standby', label: '◐ Standby', class: 'status-standby' };
             return { status: 'offline', label: '○ Offline', class: 'status-offline' };
@@ -7658,7 +7675,7 @@
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 let lastUp = '—';
                 if (drv.lastLocation?.updatedAt) {
-                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                    const totalMinutes = (ecServerNow() - drv.lastLocation.updatedAt) / 60000;
                     const hours = Math.floor(totalMinutes / 60);
                     const minutes = Math.floor(totalMinutes % 60);
                     let formatted = '';
@@ -9570,7 +9587,7 @@
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 let lastUpdateText = '—';
                 if (drv.lastLocation?.updatedAt) {
-                    const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                    const totalMinutes = (ecServerNow() - drv.lastLocation.updatedAt) / 60000;
                     const hours = Math.floor(totalMinutes / 60);
                     const minutes = Math.floor(totalMinutes % 60);
                     let formatted = '';
@@ -9674,7 +9691,7 @@
             const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
             let lastUp = '—';
             if (drv?.lastLocation?.updatedAt) {
-                const totalMinutes = (Date.now() - drv.lastLocation.updatedAt) / 60000;
+                const totalMinutes = (ecServerNow() - drv.lastLocation.updatedAt) / 60000;
                 const hours = Math.floor(totalMinutes / 60);
                 const minutes = Math.floor(totalMinutes % 60);
                 let formatted = '';
@@ -10528,10 +10545,10 @@
                 setStartPointMessage('No current location for this driver.');
                 return;
             }
-            if (!loc.updatedAt || (Date.now() - loc.updatedAt) > STANDBY_THRESHOLD) {
+            if (!loc.updatedAt || (ecServerNow() - loc.updatedAt) > STANDBY_THRESHOLD) {
                 let ageText = 'unknown';
                 if (loc.updatedAt) {
-                    const totalMinutes = Math.floor((Date.now() - loc.updatedAt) / 60000);
+                    const totalMinutes = Math.floor((ecServerNow() - loc.updatedAt) / 60000);
                     const h = Math.floor(totalMinutes / 60);
                     const m = totalMinutes % 60;
                     ageText = (h > 0 ? h + ' H ' : '') + m + ' Min';
@@ -11080,6 +11097,7 @@
             // Batch D: connection banner, catch-up after the page was hidden, attention strip refresh
             ecStartIdleWatch();
             ecWatchConnection();
+            ecWatchServerClock();
             document.removeEventListener('visibilitychange', ecOnVisibilityChange);
             document.addEventListener('visibilitychange', ecOnVisibilityChange);
             if (ecAttentionInterval) clearInterval(ecAttentionInterval);
