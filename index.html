@@ -4893,6 +4893,13 @@
         .ec-voice-help h4:first-child { margin-top: 0; }
         .ec-voice-help .ec-voice-chip { margin: 0 4px 6px 0; }
         .ec-voice-help p { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+        /* Phones: mic bottom right (above the Install App button while that shows) */
+        @media (max-width: 600px) {
+            .ec-voice-btn { left: auto; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+            .ec-voice-panel { left: auto; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+            .install-app-btn[style*="flex"] ~ .ec-voice-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+            .install-app-btn[style*="flex"] ~ .ec-voice-panel { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); }
+        }
     </style>
 </head>
 <body>
@@ -11292,7 +11299,7 @@
             }
         });
 
-        // ===== VOICE QUESTIONS (mic button, bottom left) =====
+        // ===== VOICE QUESTIONS (mic button: bottom left, bottom right on phones) =====
         // Tap the mic, ask "Where is Sheldon?" or "How far is 21 from the shop?", and the answer shows and is read out loud.
         // A driver can be named by their nickname, the GPS / vehicle name from Settings ("21", "Van 14"), or the name of
         // whoever has that vehicle in the Time Clock (timeclock/vehicle_claims). "He", "she" and "they" mean the last one asked about.
