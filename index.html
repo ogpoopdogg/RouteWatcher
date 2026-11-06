@@ -2750,6 +2750,23 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.18);
         }
+        .nickname-modal .nick-tc {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 12px 0 0 0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(53, 208, 127, 0.12);
+            border: 1px solid rgba(53, 208, 127, 0.35);
+            font-size: 13px;
+            line-height: 1.35;
+            cursor: pointer;
+            text-align: left;
+        }
+        .nickname-modal .nick-tc[hidden], .nickname-modal .nick-tc-note[hidden] { display: none; }
+        .nickname-modal .nick-tc input { width: 18px; height: 18px; margin: 1px 0 0 0; flex: none; accent-color: #35d07f; }
+        .nickname-modal .nick-tc-note { margin: 10px 0 0 0; font-size: 12px; opacity: 0.75; text-align: left; }
         .nickname-modal .nickname-actions {
             display: flex;
             gap: 8px;
@@ -5351,8 +5368,10 @@
         <div class="nickname-card">
             <h3>Driver Nickname</h3>
             <div class="nickname-sub" id="nicknameDriverLabel"></div>
-            <input type="text" id="nicknameInput" maxlength="24" placeholder="Enter a nickname" autocomplete="off">
+            <input type="text" id="nicknameInput" maxlength="24" placeholder="Enter a nickname" autocomplete="off" oninput="ecNickTcHint()">
             <div class="nickname-sub" style="margin:10px 0 0 0;">Everyone on the dashboard will see this nickname.</div>
+            <label class="nick-tc" id="nicknameTcRow" hidden><input type="checkbox" id="nicknameTcLink" checked><span id="nicknameTcText"></span></label>
+            <div class="nick-tc-note" id="nicknameTcNote" hidden></div>
             <div class="nickname-actions">
                 <button type="button" class="nick-save" onclick="saveDriverNickname()">Save</button>
                 <button type="button" class="nick-remove" onclick="removeDriverNickname()">Remove</button>
@@ -6979,6 +6998,9 @@
             if (label) label.textContent = 'Driver: ' + ((drv && drv.name) ? drv.name : 'Driver');
             const input = document.getElementById('nicknameInput');
             if (input) input.value = getDriverNickname(nicknameTargetDriverId);
+            const link = document.getElementById('nicknameTcLink');
+            if (link) link.checked = true;
+            ecNickTcHint();
             const modal = document.getElementById('nicknameModal');
             if (modal) modal.style.display = 'flex';
             setTimeout(() => { if (input) { input.focus(); input.select(); } }, 60);
@@ -7003,11 +7025,37 @@
             }
         }
 
+        // Under the nickname box: when the name typed is someone on the clock, offer to give them this GPS in the
+        // Time Clock as well, so the nickname comes off when they punch out (ecTcMatchNickname).
+        function ecNickTcMatch() {
+            const id = nicknameTargetDriverId;
+            const input = document.getElementById('nicknameInput');
+            const value = input ? input.value.trim().slice(0, EC_TC_NICK_MAX) : '';
+            if (!id || id !== ecTc.driverId || !value) return null;
+            return ecTcMatchNickname(id, value, ecTc.people, ecTc.claims);
+        }
+        function ecNickTcHint() {
+            const row = document.getElementById('nicknameTcRow');
+            const note = document.getElementById('nicknameTcNote');
+            if (!row || !note) return;
+            const m = ecNickTcMatch();
+            row.hidden = !(m && m.person && !m.already);
+            note.hidden = !(m && (m.note || m.already));
+            if (m && m.person && !m.already) {
+                document.getElementById('nicknameTcText').textContent = 'Take it off when ' + m.person.name + ' punches out (gives '
+                    + m.person.name + ' this vehicle in Time Clock)';
+            }
+            note.textContent = m ? (m.already ? 'It comes off when ' + m.person.name + ' punches out.' : (m.note || '')) : '';
+        }
+
         function saveDriverNickname() {
             if (!nicknameTargetDriverId) { closeNicknameModal(); return; }
             const driverId = nicknameTargetDriverId;
             const input = document.getElementById('nicknameInput');
             const value = input ? input.value.trim().slice(0, 24) : '';
+            const m = value ? ecNickTcMatch() : null;
+            const link = document.getElementById('nicknameTcLink');
+            const doLink = !!(m && m.person && (m.already || (link && link.checked)));
             const ref = getNicknamesRef();
             if (ref) {
                 if (value) ref.child(driverId).set(value).catch(ecSaveError('the nickname'));
@@ -7015,6 +7063,16 @@
             }
             applyNicknameChange(driverId, value);
             closeNicknameModal();
+            if (doLink && !ecTc.busy) {
+                const claims = ecTc.claims;
+                ecTc.busy = true;
+                ecTcAssign(driverId, m.person, value, claims).then(() => {
+                    if (!m.already) ecShowNotice(value + ' comes off ' + ecTcGpsName(drivers[driverId]) + ' when ' + m.person.name + ' punches out.');
+                }, ecSaveError('the vehicle in Time Clock')).finally(() => {
+                    ecTc.busy = false;
+                    if (ecTc.driverId === driverId) ecTcShow(driverId);
+                });
+            }
         }
 
         function removeDriverNickname() {
@@ -7152,8 +7210,8 @@
         }
 
         // Frees a vehicle the driver had, and the nickname they gave it (admin.html releaseClaim in the timeclock repo)
-        async function ecTcRelease(gpsId, shiftId) {
-            const c = ecTc.claims[gpsId];
+        async function ecTcRelease(gpsId, shiftId, claims) {
+            const c = (claims || ecTc.claims)[gpsId];
             await db.ref(EC_TC + 'vehicle_claims/' + gpsId).transaction(cur => (cur === null || cur.shiftId === shiftId) ? null : undefined);
             if (c && c.nickname && !ecTcIsManual(gpsId) && c.shiftId === shiftId) {
                 await getNicknamesRef().child(gpsId).transaction(cur => (cur === null || cur === c.nickname) ? null : undefined)
@@ -7186,32 +7244,9 @@
             ecTc.busy = true;
             ecTcRender();
             ecTcMsg('Saving…');
-            const by = String((auth.currentUser && auth.currentUser.email) || '').toLowerCase();
-            const TS = firebase.database.ServerValue.TIMESTAMP;
-            const base = EC_TC + 'shifts/' + ek + '/' + shift.id;
-            const entry = { at: TS, how: 'admin', by: by.slice(0, 60), vehicleId: gpsId, vehicleName: gpsName };
-            const u = {};
-            u[base + '/vehicleId'] = gpsId;
-            u[base + '/vehicleName'] = gpsName;
-            u[base + '/nickname'] = nick;
-            u[base + '/shop'] = null;
-            u[base + '/vans/' + db.ref(base + '/vans').push().key] = entry;
-            u[base + '/swapHint'] = null; // no vehicle swap needed any more (nothing happens if there was none)
-            u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle set in RouteWatcher' };
-            let done = false, nickOk = true;
+            let nickOk;
             try {
-                await db.ref().update(u);
-                if (shift.vehicleId && shift.vehicleId !== gpsId) {
-                    await ecTcRelease(shift.vehicleId, shift.id).catch(err => console.warn('Old vehicle not freed:', err));
-                }
-                await db.ref(EC_TC + 'vehicle_claims/' + gpsId).set({ ek: ek, email: String(p.emp.email || '').toLowerCase(), name: p.name,
-                    nickname: nick, shiftId: shift.id, vehicleName: gpsName, at: TS });
-                await getNicknamesRef().child(gpsId).set(nick).catch(err => { nickOk = false; console.warn('Nickname not set:', err); });
-                const after = Object.assign({}, shift, { vehicleId: gpsId, vehicleName: gpsName, shop: null });
-                db.ref(EC_TC + 'audit').push({ at: TS, by: by, ek: ek, shiftId: shift.id, action: 'edit',
-                    before: ecTcStrip(shift), after: ecTcStrip(after), note: 'Vehicle set in RouteWatcher' })
-                    .catch(err => console.warn('Change log not saved:', err));
-                done = true;
+                nickOk = await ecTcAssign(gpsId, p, nick, ecTc.claims);
             } catch (err) {
                 console.warn('Vehicle not assigned:', err);
                 ecTc.busy = false;
@@ -7222,7 +7257,88 @@
             ecTc.busy = false;
             if (gpsId !== ecTc.driverId) return; // the window was closed or moved to another driver
             await ecTcShow(gpsId);
-            if (done) ecTcMsg(nickOk ? p.name + ' is driving GPS ' + gpsName + '.' : p.name + ' has GPS ' + gpsName + ' in Time Clock, but the nickname couldn\'t be saved.', !nickOk);
+            ecTcMsg(nickOk ? p.name + ' is driving GPS ' + gpsName + '.' : p.name + ' has GPS ' + gpsName + ' in Time Clock, but the nickname couldn\'t be saved.', !nickOk);
+        }
+
+        // Gives GPS gpsId to person p (from ecTcLoad) in the Time Clock, with nickname nick on the shift, the claim and
+        // here. The Time Clock frees the GPS and takes that nickname off when they punch out or pick another vehicle.
+        // Throws if the shift couldn't be saved; returns false if only the nickname here couldn't be.
+        async function ecTcAssign(gpsId, p, nick, claims) {
+            const shift = p.shift, ek = p.ek;
+            const gpsName = ecTcGpsName(drivers[gpsId]);
+            const by = String((auth.currentUser && auth.currentUser.email) || '').toLowerCase();
+            const TS = firebase.database.ServerValue.TIMESTAMP;
+            const base = EC_TC + 'shifts/' + ek + '/' + shift.id;
+            const u = {};
+            u[base + '/nickname'] = nick;
+            if (shift.vehicleId !== gpsId) {
+                u[base + '/vehicleId'] = gpsId;
+                u[base + '/vehicleName'] = gpsName;
+                u[base + '/shop'] = null;
+                u[base + '/vans/' + db.ref(base + '/vans').push().key] = { at: TS, how: 'admin', by: by.slice(0, 60), vehicleId: gpsId, vehicleName: gpsName };
+                u[base + '/swapHint'] = null; // no vehicle swap needed any more (nothing happens if there was none)
+            }
+            u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle set in RouteWatcher' };
+            await db.ref().update(u);
+            if (shift.vehicleId && shift.vehicleId !== gpsId) {
+                await ecTcRelease(shift.vehicleId, shift.id, claims).catch(err => console.warn('Old vehicle not freed:', err));
+            }
+            await db.ref(EC_TC + 'vehicle_claims/' + gpsId).set({ ek: ek, email: String(p.emp.email || '').toLowerCase(), name: p.name,
+                nickname: nick, shiftId: shift.id, vehicleName: gpsName, at: TS });
+            let nickOk = true;
+            await getNicknamesRef().child(gpsId).set(nick).catch(err => { nickOk = false; console.warn('Nickname not set:', err); });
+            if (shift.vehicleId !== gpsId) {
+                const after = Object.assign({}, shift, { vehicleId: gpsId, vehicleName: gpsName, shop: null });
+                db.ref(EC_TC + 'audit').push({ at: TS, by: by, ek: ek, shiftId: shift.id, action: 'edit',
+                    before: ecTcStrip(shift), after: ecTcStrip(after), note: 'Vehicle set in RouteWatcher' })
+                    .catch(err => console.warn('Change log not saved:', err));
+            }
+            return nickOk;
+        }
+
+        // Undoes ecTcAssign for a person who had no vehicle before (the voice "Undo"): the shift goes back to how it
+        // was and the GPS is free again. The nickname here is put back by the caller.
+        async function ecTcUnassign(gpsId, p) {
+            const shift = p.shift, ek = p.ek;
+            const by = String((auth.currentUser && auth.currentUser.email) || '').toLowerCase();
+            const TS = firebase.database.ServerValue.TIMESTAMP;
+            const base = EC_TC + 'shifts/' + ek + '/' + shift.id;
+            const u = {};
+            u[base + '/vehicleId'] = null;
+            u[base + '/vehicleName'] = null;
+            u[base + '/nickname'] = null;
+            u[base + '/shop'] = shift.shop ? true : null;
+            u[base + '/vans/' + db.ref(base + '/vans').push().key] = shift.shop ? { at: TS, how: 'shop', by: by.slice(0, 60) } : { at: TS, how: 'admin', by: by.slice(0, 60) };
+            u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle undone in RouteWatcher' };
+            await db.ref().update(u);
+            await db.ref(EC_TC + 'vehicle_claims/' + gpsId).transaction(cur => (cur === null || cur.shiftId === shift.id) ? null : undefined);
+            const before = Object.assign({}, shift, { vehicleId: gpsId });
+            db.ref(EC_TC + 'audit').push({ at: TS, by: by, ek: ek, shiftId: shift.id, action: 'edit',
+                before: ecTcStrip(before), after: ecTcStrip(shift), note: 'Vehicle undone in RouteWatcher' })
+                .catch(err => console.warn('Change log not saved:', err));
+        }
+
+        // A nickname typed by hand (Nickname button, or "21 nickname Matt"): when it's the name of exactly one person on
+        // the clock in the Time Clock, that person can get this GPS in the Time Clock too, so the nickname comes off
+        // when they punch out. Matches their first name or full name, or the start of their first name ("Matt" for
+        // Matthew) when nobody matches exactly. people/claims from ecTcLoad.
+        // { person, already } when it can link, { note } when it can't but should say why, or null.
+        function ecTcMatchNickname(gpsId, value, people, claims) {
+            const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            if (!v || !gpsId || ecTcIsManual(gpsId) || !ecTcHasDevice(drivers[gpsId]) || !people || !people.length) return null;
+            const first = p => ecTcNickname(p.emp, p.ek).toLowerCase();
+            let list = people.filter(p => first(p) === v || p.name.toLowerCase() === v
+                || String(p.shift.nickname || '').trim().toLowerCase() === v);
+            if (!list.length && v.length >= 3 && !/\s/.test(v)) list = people.filter(p => first(p).startsWith(v));
+            if (!list.length) return null;
+            if (list.length > 1) return { note: 'More than one person on the clock is called ' + value + ', so this nickname stays until you change it.' };
+            const p = list[0];
+            if (p.shift.vehicleId === gpsId) return { person: p, already: true };
+            if (p.shift.vehicleId) return { note: p.name + ' is on ' + (p.shift.vehicleName || p.shift.vehicleId) + ' in Time Clock, so this nickname stays until you change it.' };
+            const c = claims && claims[gpsId];
+            const holder = c ? people.find(q => q.ek === c.ek && q.shift.id === c.shiftId && q.shift.vehicleId === gpsId) : null;
+            if (holder) return { note: holder.name + ' has this vehicle in Time Clock, so this nickname stays until you change it.' };
+            return { person: p };
         }
 
         // ===== ZOOM INDICATOR =====
@@ -12247,7 +12363,30 @@
             if (nick === before) return { text: vehicle + '\'s nickname is already ' + nick + '.' };
             ecVoiceSetNickname(id, nick);
             ecVoice.lastId = id;
-            return { text: vehicle + '\'s nickname is now ' + nick + '.', choices: [{ label: 'Undo', run: () => ecVoiceSetNickname(id, before) }] };
+            const text = vehicle + '\'s nickname is now ' + nick + '.';
+            // Someone on the clock by that name: give them this vehicle in the Time Clock too, so it comes off when they punch out
+            return ecVoiceNickTcLink(id, nick).then(link => ({
+                text: link && link.person ? text + ' It comes off when ' + link.person.name + ' punches out.' : text,
+                choices: [{ label: 'Undo', run: () => {
+                    ecVoiceSetNickname(id, before);
+                    if (link && link.person && !link.already) ecTcUnassign(id, link.person).catch(ecSaveError('the Time Clock undo'));
+                } }] }));
+        }
+        // { person, already } once linked in the Time Clock, or null (nobody by that name on the clock, no access, or failed)
+        async function ecVoiceNickTcLink(id, nick) {
+            if (!currentUserId) return null;
+            try {
+                const data = await ecTcLoad();
+                const m = ecTcMatchNickname(id, nick, data.people, data.claims);
+                if (!m || !m.person) return null;
+                await ecTcAssign(id, m.person, nick, data.claims);
+                if (ecTc.driverId === id) ecTcShow(id);
+                return m;
+            } catch (err) {
+                // permission_denied: not a Time Clock admin or Gil, so the nickname is just a nickname
+                if (!(err && /permission/i.test(String(err.code || err.message)))) ecSaveError('the vehicle in Time Clock')(err);
+                return null;
+            }
         }
         // Saves a nickname for everyone (shared list), or removes it when value is empty
         function ecVoiceSetNickname(id, value) {
