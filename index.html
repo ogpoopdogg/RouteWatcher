@@ -4934,6 +4934,120 @@
             .install-app-btn[style*="flex"] ~ .ec-voice-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
             .install-app-btn[style*="flex"] ~ .ec-voice-caption { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); }
         }
+        /* ===== Easy 12-hour pickers: From/To day + times, and Settings > Workday ===== */
+        .ec-dt { display: flex; flex-direction: column; gap: 8px; flex: 1 1 320px; min-width: 0; }
+        .ec-dt-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .ec-dt-step, .ec-dt-day, .ec-dt-chip, .ec-dt-time, .ec-wd-time {
+            background: var(--card2);
+            color: var(--text);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+        }
+        .ec-dt-step:active, .ec-dt-day:active, .ec-dt-chip:active, .ec-dt-time:active, .ec-wd-time:active { transform: scale(0.96); }
+        .ec-dt-step:hover, .ec-dt-day:hover, .ec-dt-chip:hover, .ec-dt-time:hover, .ec-wd-time:hover { border-color: var(--accent); }
+        .ec-dt-step { width: 40px; height: 40px; font-size: 22px; line-height: 1; padding: 0; }
+        .ec-dt-daywrap { position: relative; display: inline-flex; flex: 0 1 auto; }
+        .ec-dt-day { height: 40px; padding: 0 14px; font-size: 15px; font-weight: 700; min-width: 128px; }
+        .ec-dt-dateinput { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+        .ec-dt-chip { height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; }
+        .ec-dt-chip.is-on { border-color: var(--accent); color: var(--accent); }
+        body.light-mode .ec-dt-chip.is-on { color: var(--text); background: rgba(247, 201, 72, 0.25); }
+        .ec-dt-times { flex-wrap: nowrap; }
+        .ec-dt-time {
+            flex: 1 1 0;
+            min-width: 0;
+            height: 52px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 0 12px;
+            text-align: left;
+        }
+        .ec-dt-cap { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .ec-dt-val { font-size: 18px; font-weight: 700; white-space: nowrap; }
+        .ec-dt-val small { font-size: 11px; font-weight: 600; color: var(--accent); margin-left: 4px; }
+        body.light-mode .ec-dt-val small { color: #9a6b00; }
+        .ec-dt-arrow { color: var(--muted); font-size: 18px; flex: none; }
+        .ec-wd-time { height: 40px; padding: 0 14px; font-size: 15px; font-weight: 700; min-width: 104px; }
+        body.light-mode .ec-dt-step, body.light-mode .ec-dt-day, body.light-mode .ec-dt-chip,
+        body.light-mode .ec-dt-time, body.light-mode .ec-wd-time { background: #f5f5f5; border-color: #ccc; color: #000; }
+
+        .ec-tp-backdrop { position: fixed; inset: 0; z-index: 100002; background: rgba(0, 0, 0, 0.35); }
+        .ec-tp-backdrop[hidden], .ec-tp[hidden] { display: none; }
+        .ec-tp {
+            position: fixed;
+            z-index: 100003;
+            width: 300px;
+            max-width: calc(100vw - 24px);
+            box-sizing: border-box;
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+            animation: ecTpIn 0.16s ease-out;
+        }
+        @keyframes ecTpIn { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+        .ec-tp-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+        .ec-tp-head span { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ec-tp-head strong { font-size: 24px; }
+        .ec-tp-sec { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 0 4px; }
+        .ec-tp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+        .ec-tp-grid button, .ec-tp-ampm button {
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--card2);
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            padding: 0;
+        }
+        .ec-tp-grid button.is-on, .ec-tp-ampm button.is-on { background: var(--accent); color: #0b0b14; border-color: var(--accent); }
+        .ec-tp-ampm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+        .ec-tp-ampm button { height: 44px; font-size: 16px; }
+        .ec-tp-done {
+            width: 100%;
+            height: 44px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 10px;
+            background: var(--accent);
+            color: #0b0b14;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        body.light-mode .ec-tp-grid button:not(.is-on), body.light-mode .ec-tp-ampm button:not(.is-on) { background: #f5f5f5; border-color: #ccc; color: #000; }
+        /* Phones: the time picker is a sheet along the bottom */
+        @media (max-width: 600px) {
+            .ec-tp {
+                left: 0 !important;
+                right: 0;
+                top: auto !important;
+                bottom: 0;
+                width: 100%;
+                max-width: none;
+                border-radius: 18px 18px 0 0;
+                padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+                animation-name: ecTpUp;
+            }
+            @keyframes ecTpUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+            .ec-tp-grid button { height: 46px; font-size: 16px; }
+            #historyQuery #ecDtBox { grid-column: 1 / -1 !important; grid-row: 1 / span 2 !important; }
+            .ec-dt-day { flex: 1 1 auto; }
+            .ec-dt-daywrap { flex: 1 1 auto; }
+        }
+        @media (prefers-reduced-motion: reduce) { .ec-tp { animation: none; } }
     </style>
 </head>
 <body>
@@ -5110,10 +5224,31 @@
             <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:0; padding-top:8px; display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
                 <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                     <div style="display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; flex:1 1 auto;">
-                        <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
-                        <input type="datetime-local" id="historyStart" class="date-picker" style="flex:0 1 auto; min-width:140px;">
-                        <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
-                        <input type="datetime-local" id="historyEnd" class="date-picker" style="flex:0 1 auto; min-width:140px;">
+                        <!-- From / To: a day with arrows and two 12-hour time buttons (script: EASY 12-HOUR PICKERS).
+                             The hidden inputs keep the values the rest of the page reads ("YYYY-MM-DDTHH:MM", Brandon time). -->
+                        <div class="ec-dt" id="ecDtBox">
+                            <input type="hidden" id="historyStart">
+                            <input type="hidden" id="historyEnd">
+                            <div class="ec-dt-row">
+                                <button type="button" class="ec-dt-step" id="ecDtPrev" aria-label="Previous day">‹</button>
+                                <span class="ec-dt-daywrap">
+                                    <button type="button" class="ec-dt-day" id="ecDtDay" aria-label="Pick a day">Today</button>
+                                    <input type="date" class="ec-dt-dateinput" id="ecDtDate" tabindex="-1" aria-hidden="true">
+                                </span>
+                                <button type="button" class="ec-dt-step" id="ecDtNext" aria-label="Next day">›</button>
+                                <button type="button" class="ec-dt-chip" id="ecDtToday">Today</button>
+                            </div>
+                            <div class="ec-dt-row ec-dt-times">
+                                <button type="button" class="ec-dt-time" id="ecDtFrom"><span class="ec-dt-cap">From</span><span class="ec-dt-val" id="ecDtFromVal">--</span></button>
+                                <span class="ec-dt-arrow" aria-hidden="true">→</span>
+                                <button type="button" class="ec-dt-time" id="ecDtTo"><span class="ec-dt-cap">To</span><span class="ec-dt-val" id="ecDtToVal">--</span></button>
+                            </div>
+                            <div class="ec-dt-row ec-dt-quick">
+                                <button type="button" class="ec-dt-chip" data-quick="workday">Workday</button>
+                                <button type="button" class="ec-dt-chip" data-quick="1">Last hour</button>
+                                <button type="button" class="ec-dt-chip" data-quick="3">Last 3 hours</button>
+                            </div>
+                        </div>
                         <!-- Driver list from the E&C Time Clock: sets From/To to their punch in that day, plus 12 hours -->
                         <span class="tc-shift-row" id="tcShiftRow" hidden>
                             <label for="tcShiftSelect">Driver:</label>
@@ -5279,6 +5414,20 @@
     </div>
 
     <!-- Firebase + Google Maps (loaded directly) -->
+    <!-- 12-hour time picker (EASY 12-HOUR PICKERS): hour, minute, AM/PM; each tap applies right away -->
+    <div class="ec-tp-backdrop" id="ecTpBackdrop" hidden></div>
+    <div class="ec-tp" id="ecTp" role="dialog" aria-labelledby="ecTpTitle" hidden>
+        <div class="ec-tp-head"><span id="ecTpTitle">From</span><strong id="ecTpValue">--</strong></div>
+        <div class="ec-tp-sec">Hour</div>
+        <div class="ec-tp-grid" id="ecTpHours"></div>
+        <div class="ec-tp-sec">Minute</div>
+        <div class="ec-tp-grid" id="ecTpMins"></div>
+        <div class="ec-tp-ampm" id="ecTpAmPm">
+            <button type="button" data-ap="am">AM</button>
+            <button type="button" data-ap="pm">PM</button>
+        </div>
+        <button type="button" class="ec-tp-done" id="ecTpDone">Done</button>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -10366,6 +10515,7 @@
         }
         function ecSetWindowFromPunch(inMs) {
             const start = Math.floor(inMs / 60000) * 60000;
+            ecShift.pickDay = ecDayBounds(start).start; // a later time change on this day is a plain edit, not a new day
             document.getElementById('historyStart').value = ecToLocalInput(start);
             document.getElementById('historyEnd').value = ecToLocalInput(start + EC_SHIFT_HOURS * 3600000);
             ecWindowChanged();
@@ -11292,6 +11442,246 @@
             }
         });
 
+        // ===== EASY 12-HOUR PICKERS (From/To in the driver window, Settings > Workday) =====
+        // From/To: a day button with ‹ › arrows (tap the day for a calendar), two big time buttons, and quick choices.
+        // A time button opens a picker: tap the hour, the minute and AM/PM; each tap applies right away.
+        // The hidden inputs #historyStart / #historyEnd still hold "YYYY-MM-DDTHH:MM" (Brandon time) for the rest of the page.
+        // Anything that sets their value (punch in, voice, Workday) updates the buttons, and a change made here fires a
+        // 'change' event on them like the old boxes did. To is on From's day, or the next day when its time is earlier.
+        const ecTp = { onPick: null, h: 12, m: 0, ap: 'am', anchor: null };
+        const EC_VALUE_PROP = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+        // Calls render() whenever code sets input.value
+        function ecPickWatch(input, render) {
+            if (!input || input._ecWatched) return;
+            input._ecWatched = true;
+            Object.defineProperty(input, 'value', {
+                configurable: true,
+                get() { return EC_VALUE_PROP.get.call(this); },
+                set(v) { EC_VALUE_PROP.set.call(this, v); try { render(); } catch (e) { console.warn('Picker refresh failed:', e); } }
+            });
+        }
+        function ecFmt12(hh, mm) {
+            return ((hh % 12) || 12) + ':' + String(mm).padStart(2, '0') + ' ' + (hh >= 12 ? 'PM' : 'AM');
+        }
+        function ecDtVals() {
+            return { start: ecParseLocalInput(document.getElementById('historyStart').value),
+                end: ecParseLocalInput(document.getElementById('historyEnd').value) };
+        }
+        function ecDtDayLabel(ms) {
+            const day = ecDayBounds(ms).start;
+            const today = ecDayBounds(Date.now()).start;
+            const diff = Math.round((day - today) / 86400000);
+            const date = ecFormat(ms, { weekday: 'short', month: 'short', day: 'numeric' });
+            return diff === 0 ? 'Today · ' + date.replace(/^\w+,\s*/, '') : diff === -1 ? 'Yesterday · ' + date.replace(/^\w+,\s*/, '') : date;
+        }
+        function ecDtRender() {
+            const v = ecDtVals();
+            const day = document.getElementById('ecDtDay');
+            if (!day) return;
+            if (!isFinite(v.start)) { day.textContent = 'Pick a day'; return; }
+            day.textContent = ecDtDayLabel(v.start);
+            const zs = ecWall(v.start);
+            document.getElementById('ecDtFromVal').textContent = ecFmt12(zs.hh, zs.mm);
+            const toEl = document.getElementById('ecDtToVal');
+            if (isFinite(v.end)) {
+                const ze = ecWall(v.end);
+                const days = Math.round((ecDayBounds(v.end).start - ecDayBounds(v.start).start) / 86400000);
+                toEl.innerHTML = ecEsc(ecFmt12(ze.hh, ze.mm)) + (days > 0 ? '<small>+' + days + ' day' + (days > 1 ? 's' : '') + '</small>' : '');
+            } else toEl.textContent = '--';
+            const todayStart = ecDayBounds(Date.now()).start;
+            document.getElementById('ecDtToday').classList.toggle('is-on', ecDayBounds(v.start).start === todayStart);
+            const dateIn = document.getElementById('ecDtDate');
+            if (dateIn) EC_VALUE_PROP.set.call(dateIn, ecToLocalInput(v.start).slice(0, 10));
+        }
+        // Sets From/To (ms) and tells the page, like a person editing the old boxes. which: 'start' | 'end' | 'both'
+        // newDay: true for the day arrows / calendar, which (with a driver picked) look up that driver's punch in that day
+        function ecDtSet(start, end, which, newDay) {
+            const a = document.getElementById('historyStart');
+            const b = document.getElementById('historyEnd');
+            if (!newDay) ecShift.pickDay = ecDayBounds(start).start;
+            a.value = ecToLocalInput(start);
+            b.value = ecToLocalInput(end);
+            if (which !== 'end') a.dispatchEvent(new Event('change', { bubbles: true }));
+            if (which !== 'start') b.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        // "HH:MM" on the day of dayMs (Brandon time)
+        function ecDtAt(dayMs, hh, mm, plusDays) {
+            const z = ecWall(dayMs);
+            return ecFromWall(z.y, z.m, z.d + (plusDays || 0), hh, mm, 0);
+        }
+        // To at hh:mm: From's day, or the next day when that isn't after From
+        function ecDtEndAt(start, hh, mm) {
+            const e = ecDtAt(start, hh, mm, 0);
+            return e > start ? e : ecDtAt(start, hh, mm, 1);
+        }
+        function ecDtMoveDays(n) {
+            const v = ecDtVals();
+            if (!isFinite(v.start)) return;
+            const zs = ecWall(v.start);
+            const start = ecDtAt(v.start, zs.hh, zs.mm, n);
+            const len = isFinite(v.end) && v.end > v.start ? v.end - v.start : 12 * 3600000;
+            ecDtSet(start, start + len, 'start', true);
+        }
+        function ecDtPickDay(value) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+            const v = ecDtVals();
+            if (!m || !isFinite(v.start)) return;
+            const zs = ecWall(v.start);
+            const start = ecFromWall(+m[1], +m[2], +m[3], zs.hh, zs.mm, 0);
+            const len = isFinite(v.end) && v.end > v.start ? v.end - v.start : 12 * 3600000;
+            ecDtSet(start, start + len, 'start', true);
+        }
+        function ecDtQuick(kind) {
+            const v = ecDtVals();
+            if (kind === 'workday') {
+                const base = isFinite(v.start) ? v.start : Date.now();
+                const [sh, sm] = workdayStart.split(':').map(Number), [eh, em] = workdayEnd.split(':').map(Number);
+                const start = ecDtAt(base, sh, sm, 0);
+                ecDtSet(start, ecDtEndAt(start, eh, em), 'both');
+                return;
+            }
+            const end = Math.ceil(Date.now() / 300000) * 300000; // now, up to the next 5 minutes
+            ecDtSet(end - Number(kind) * 3600000, end, 'both');
+        }
+
+        // ----- the time picker -----
+        function ecTpOpen(anchor, title, hh, mm, onPick) {
+            ecTp.onPick = onPick;
+            ecTp.anchor = anchor;
+            ecTp.h = (hh % 12) || 12;
+            ecTp.m = mm;
+            ecTp.ap = hh >= 12 ? 'pm' : 'am';
+            document.getElementById('ecTpTitle').textContent = title;
+            const hours = document.getElementById('ecTpHours');
+            if (!hours.children.length) {
+                [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(h => {
+                    const b = document.createElement('button');
+                    b.type = 'button'; b.textContent = h; b.dataset.h = h;
+                    b.addEventListener('click', () => { ecTp.h = h; ecTpApply(); });
+                    hours.appendChild(b);
+                });
+                const mins = document.getElementById('ecTpMins');
+                for (let m = 0; m < 60; m += 5) {
+                    const b = document.createElement('button');
+                    b.type = 'button'; b.textContent = ':' + String(m).padStart(2, '0'); b.dataset.m = m;
+                    b.addEventListener('click', () => { ecTp.m = m; ecTpApply(); });
+                    mins.appendChild(b);
+                }
+                document.querySelectorAll('#ecTpAmPm button').forEach(b => b.addEventListener('click', () => { ecTp.ap = b.dataset.ap; ecTpApply(); }));
+                document.getElementById('ecTpDone').addEventListener('click', ecTpClose);
+                document.getElementById('ecTpBackdrop').addEventListener('click', ecTpClose);
+            }
+            ecTpRender();
+            const tp = document.getElementById('ecTp');
+            document.getElementById('ecTpBackdrop').hidden = false;
+            tp.hidden = false;
+            if (window.innerWidth > 600) { // beside the button on computers; a bottom sheet on phones (CSS)
+                const r = anchor.getBoundingClientRect();
+                const w = tp.offsetWidth, h = tp.offsetHeight;
+                let left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+                let top = r.bottom + 6;
+                if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+                tp.style.left = left + 'px';
+                tp.style.top = top + 'px';
+            }
+            const on = tp.querySelector('.is-on');
+            (on || tp.querySelector('button')).focus({ preventScroll: true });
+        }
+        function ecTpRender() {
+            document.querySelectorAll('#ecTpHours button').forEach(b => b.classList.toggle('is-on', Number(b.dataset.h) === ecTp.h));
+            document.querySelectorAll('#ecTpMins button').forEach(b => b.classList.toggle('is-on', Number(b.dataset.m) === ecTp.m));
+            document.querySelectorAll('#ecTpAmPm button').forEach(b => b.classList.toggle('is-on', b.dataset.ap === ecTp.ap));
+            document.getElementById('ecTpValue').textContent = ecTp.h + ':' + String(ecTp.m).padStart(2, '0') + ' ' + ecTp.ap.toUpperCase();
+        }
+        function ecTpApply() {
+            ecTpRender();
+            const hh = (ecTp.h % 12) + (ecTp.ap === 'pm' ? 12 : 0);
+            if (ecTp.onPick) ecTp.onPick(hh, ecTp.m);
+        }
+        function ecTpClose() {
+            const tp = document.getElementById('ecTp');
+            if (!tp || tp.hidden) return;
+            tp.hidden = true;
+            document.getElementById('ecTpBackdrop').hidden = true;
+            ecTp.onPick = null;
+            if (ecTp.anchor) ecTp.anchor.focus({ preventScroll: true });
+        }
+        document.addEventListener('keydown', function(e) {
+            const tp = document.getElementById('ecTp');
+            if (e.key === 'Escape' && tp && !tp.hidden) { e.stopPropagation(); ecTpClose(); }
+        }, true);
+
+        function ecPickersInit() {
+            const a = document.getElementById('historyStart');
+            const b = document.getElementById('historyEnd');
+            if (!a || !b || a._ecWatched) return;
+            ecPickWatch(a, ecDtRender);
+            ecPickWatch(b, ecDtRender);
+            document.getElementById('ecDtPrev').addEventListener('click', () => ecDtMoveDays(-1));
+            document.getElementById('ecDtNext').addEventListener('click', () => ecDtMoveDays(1));
+            document.getElementById('ecDtToday').addEventListener('click', () => {
+                const v = ecDtVals();
+                if (!isFinite(v.start)) return;
+                ecDtMoveDays(Math.round((ecDayBounds(Date.now()).start - ecDayBounds(v.start).start) / 86400000));
+            });
+            const dateIn = document.getElementById('ecDtDate');
+            document.getElementById('ecDtDay').addEventListener('click', () => {
+                try { dateIn.showPicker(); } catch (e) { dateIn.style.pointerEvents = 'auto'; dateIn.focus(); dateIn.click(); }
+            });
+            dateIn.addEventListener('change', () => ecDtPickDay(dateIn.value));
+            document.getElementById('ecDtFrom').addEventListener('click', e => {
+                const v = ecDtVals();
+                if (!isFinite(v.start)) return;
+                const z = ecWall(v.start);
+                ecTpOpen(e.currentTarget, 'From', z.hh, z.mm, (hh, mm) => {
+                    const cur = ecDtVals();
+                    const start = ecDtAt(cur.start, hh, mm, 0);
+                    const len = isFinite(cur.end) && cur.end > cur.start ? cur.end - cur.start : 12 * 3600000;
+                    // To stays where it is if it's still after From; otherwise it moves with From (same length)
+                    const end = isFinite(cur.end) && cur.end > start && cur.end - start <= 24 * 3600000 ? cur.end : start + len;
+                    ecDtSet(start, end, 'start');
+                });
+            });
+            document.getElementById('ecDtTo').addEventListener('click', e => {
+                const v = ecDtVals();
+                if (!isFinite(v.start)) return;
+                const z = ecWall(isFinite(v.end) ? v.end : v.start);
+                ecTpOpen(e.currentTarget, 'To', z.hh, z.mm, (hh, mm) => {
+                    const cur = ecDtVals();
+                    ecDtSet(cur.start, ecDtEndAt(cur.start, hh, mm), 'end');
+                });
+            });
+            document.querySelectorAll('#ecDtBox [data-quick]').forEach(btn => btn.addEventListener('click', () => ecDtQuick(btn.dataset.quick)));
+            ecDtRender();
+
+            // Settings > Workday: the same time picker in place of the two time boxes
+            [['workdayStart', 'Workday starts'], ['workdayEnd', 'Workday ends']].forEach(([id, title]) => {
+                const input = document.getElementById(id);
+                if (!input || input._ecWatched) return;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'ec-wd-time';
+                btn.id = id + 'Btn';
+                const show = () => {
+                    const m = /^(\d{2}):(\d{2})/.exec(input.value || '');
+                    btn.textContent = m ? ecFmt12(+m[1], +m[2]) : '--';
+                };
+                ecPickWatch(input, show);
+                input.hidden = true;
+                input.insertAdjacentElement('afterend', btn);
+                btn.addEventListener('click', () => {
+                    const m = /^(\d{2}):(\d{2})/.exec(input.value || '') || [0, '06', '00'];
+                    ecTpOpen(btn, title, +m[1], +m[2], (hh, mm) => {
+                        input.value = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                });
+                show();
+            });
+        }
+        ecPickersInit();
+
         // ===== VOICE QUESTIONS (mic button: bottom left, bottom right on phones) =====
         // Tap the mic, ask "Where is Sheldon?" or "How far is 21 from the shop?", and the answer is read out loud with a caption.
         // It can also act: "Show track for Sheldon" (driver window + Show Track from the punch in), "21 nickname Sheldon".
@@ -11616,8 +12006,11 @@
 
         // Answers one question: { text, choices?: [{ label, q }], action?: fn }
         async function ecVoiceAnswer(raw) {
-            // "from 5 p.m. to 10 p.m." is taken out first so its numbers aren't read as vehicle names
-            const range = ecVoiceTimeRange(raw);
+            // A day ("on November 1st, 2026") and times ("from 5 p.m. to 10 p.m.") are taken out first,
+            // so their numbers aren't read as vehicle names
+            const date = ecVoiceDate(raw);
+            if (date) raw = date.rest;
+            const range = ecVoiceTimeRange(raw, date ? date.day : Date.now());
             if (range) raw = range.rest;
             const words = ecVoiceNorm(raw);
             if (!words.length) return { text: 'I didn\'t catch that. Tap the mic and try again.' };
@@ -11665,7 +12058,7 @@
                 if (!intent) return { text: 'I heard "' + raw + '" but didn\'t understand it. Tap "What can I say?" for ideas.' };
                 return { text: 'I couldn\'t find a driver or vehicle in "' + raw + '".' + (names.length ? ' I know: ' + names.join(', ') + '.' : '') };
             }
-            return ecVoiceAboutDriver(id, intent || (range ? 'track' : 'where'), words, found, { me: mentionsMe, shop: mentionsShop, range: range });
+            return ecVoiceAboutDriver(id, intent || (range || date ? 'track' : 'where'), words, found, { me: mentionsMe, shop: mentionsShop, range: range, date: date });
         }
 
         async function ecVoiceAboutDriver(id, intent, words, found, mention) {
@@ -11684,7 +12077,7 @@
                     : 'Nobody has ' + vehicle + ' in the Time Clock that I can see.' };
             }
             if (intent === 'open') { openDriverModal(id); return { text: 'Opening ' + label + '.' }; }
-            if (intent === 'track') return ecVoiceShowTrack(id, words, mention && mention.range);
+            if (intent === 'track') return ecVoiceShowTrack(id, words, mention && mention.range, mention && mention.date);
             if (intent === 'route') {
                 openDriverModal(id);
                 setTimeout(() => { if (activeModalDriverId === id) ecRouteLoad(id, true); }, 300);
@@ -11872,7 +12265,61 @@
         // "from 5 p.m. to 10 p.m.", "from 9 to 5:30", "between 7 and 11 a.m." (today, or yesterday when said):
         // { start, end (ms), rest: the question without the times } or null. With no a.m./p.m. at all, 1 to 6 is p.m. and
         // 7 to 11 is a.m.; an end before the start is the next day ("10 p.m. to 2 a.m.").
-        function ecVoiceTimeRange(raw) {
+        // A day in the question: "on November 1st, 2026", "Nov 1", "the 3rd of November", "11/1", "today", "yesterday",
+        // "day before yesterday", "3 days ago", "on Monday" / "last Monday" (the latest one, today included for "on").
+        // { day (ms, noon that day in Brandon), rest: the question without it } or null
+        const EC_VOICE_MONTH_RE = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec';
+        const EC_VOICE_ORD = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10,
+            eleventh: 11, twelfth: 12, thirteenth: 13, fourteenth: 14, fifteenth: 15, sixteenth: 16, seventeenth: 17, eighteenth: 18,
+            nineteenth: 19, twentieth: 20, thirtieth: 30 };
+        function ecVoiceDate(raw) {
+            let t = String(raw || '');
+            const ORD = Object.keys(EC_VOICE_ORD).join('|');
+            const ordNum = (tens, w) => (tens ? (/^twenty/i.test(tens) ? 20 : 30) : 0) + EC_VOICE_ORD[w.toLowerCase()];
+            // ordinal words only right after a month ("November first") or before "of <month>" ("the first of November")
+            t = t.replace(new RegExp('\\b(' + EC_VOICE_MONTH_RE + ')\\.?\\s+(?:the\\s+)?(twenty[\\s-]+|thirty[\\s-]+)?(' + ORD + ')\\b', 'gi'),
+                (m, mon, tens, w) => mon + ' ' + ordNum(tens, w));
+            t = t.replace(new RegExp('\\bthe\\s+(twenty[\\s-]+|thirty[\\s-]+)?(' + ORD + ')\\s+of\\s+(' + EC_VOICE_MONTH_RE + ')\\b', 'gi'),
+                (m, tens, w, mon) => mon + ' ' + ordNum(tens, w));
+            const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            const nowZ = ecWall(Date.now());
+            const todayNoon = ecFromWall(nowZ.y, nowZ.m, nowZ.d, 12, 0);
+            const at = (y, mo, d) => ecFromWall(y, mo, d, 12, 0);
+            const done = (day, m) => ({ day: day, rest: t.replace(m[0], ' ').replace(/\s+/g, ' ').trim() });
+            const pastYear = (mo, d, yTxt) => {
+                if (yTxt) return at(Number(yTxt.length === 2 ? '20' + yTxt : yTxt), mo, d);
+                const thisYear = at(nowZ.y, mo, d);
+                return thisYear > todayNoon ? at(nowZ.y - 1, mo, d) : thisYear; // "December 20" in January is last year
+            };
+            let m = t.match(new RegExp('(?:\\bon\\s+)?(?:\\bthe\\s+)?\\b(' + EC_VOICE_MONTH_RE + ')\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4})\\b)?', 'i'));
+            if (m && Number(m[2]) >= 1 && Number(m[2]) <= 31) return done(pastYear(months.indexOf(m[1].slice(0, 3).toLowerCase()) + 1, Number(m[2]), m[3]), m);
+            m = t.match(new RegExp('(?:\\bon\\s+)?\\bthe\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s+of\\s+(' + EC_VOICE_MONTH_RE + ')\\b(?:,?\\s+(\\d{4})\\b)?', 'i'));
+            if (m && Number(m[1]) >= 1 && Number(m[1]) <= 31) return done(pastYear(months.indexOf(m[2].slice(0, 3).toLowerCase()) + 1, Number(m[1]), m[3]), m);
+            m = t.match(/(?:\bon\s+)?\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?\b/);
+            if (m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31) return done(pastYear(+m[1], +m[2], m[3]), m);
+            m = t.match(/(?:\bon\s+)?\b(?:the\s+)?day before yesterday\b/i);
+            if (m) return done(at(nowZ.y, nowZ.m, nowZ.d - 2), m);
+            m = t.match(/(?:\bon\s+)?\byesterday\b/i);
+            if (m) return done(at(nowZ.y, nowZ.m, nowZ.d - 1), m);
+            m = t.match(/\b(\d{1,2}|one|two|three|four|five|six|seven)\s+days?\s+ago\b/i);
+            if (m) {
+                const n = /\d/.test(m[1]) ? Number(m[1]) : ['one', 'two', 'three', 'four', 'five', 'six', 'seven'].indexOf(m[1].toLowerCase()) + 1;
+                return done(at(nowZ.y, nowZ.m, nowZ.d - n), m);
+            }
+            m = t.match(/\b(on|last)?\s*\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)s?\b/i);
+            if (m) {
+                const want = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(m[2].toLowerCase());
+                const todayDow = new Date(Date.UTC(nowZ.y, nowZ.m - 1, nowZ.d)).getUTCDay();
+                let back = (todayDow - want + 7) % 7;
+                if (back === 0 && /last/i.test(m[1] || '')) back = 7;
+                return done(at(nowZ.y, nowZ.m, nowZ.d - back), m);
+            }
+            m = t.match(/(?:\bfor\s+|\bon\s+)?\btoday\b/i);
+            if (m) return done(todayNoon, m);
+            return null;
+        }
+
+        function ecVoiceTimeRange(raw, dayMs) {
             const T = '(\\d{1,2})(?:[:.](\\d{2}))?\\s*(a\\.?\\s?m\\.?|p\\.?\\s?m\\.?|noon|midnight)?';
             const re = new RegExp('\\b(?:from|between)\\s+' + T + '\\s*(?:to|until|till|and|-)\\s*' + T + '(?=\\W|$)', 'i');
             const m = String(raw || '').match(re);
@@ -11887,39 +12334,47 @@
             else if (b.ap) { hb = to24(b, b.ap); ha = to24(a, b.ap); if (ha > hb) ha = to24(a, b.ap === 'pm' ? 'am' : 'pm'); } // "9 to 5 p.m."
             else if (a.ap) { ha = to24(a, a.ap); hb = to24(b, a.ap); if (hb <= ha) hb = to24(b, a.ap === 'pm' ? 'am' : 'pm'); }
             else { const guess = x => (x.h >= 1 && x.h <= 6) || x.h === 12 ? 'pm' : 'am'; ha = to24(a, guess(a)); hb = to24(b, guess(b)); if (hb <= ha && hb + 12 < 24 && b.h < 12) hb += 12; }
-            const yesterday = /\byesterday/i.test(raw);
-            const z = ecWall(Date.now() - (yesterday ? 24 * 3600000 : 0));
+            const z = ecWall(isFinite(dayMs) ? dayMs : Date.now());
             const start = ecFromWall(z.y, z.m, z.d, ha, a.m);
             let end = ecFromWall(z.y, z.m, z.d, hb, b.m);
             if (end <= start) end = ecFromWall(z.y, z.m, z.d + 1, hb, b.m);
             return { start: start, end: end, rest: raw.replace(m[0], ' ').replace(/\s+/g, ' ').trim() };
         }
 
-        async function ecVoiceShowTrack(id, words, range) {
+        // range: { start, end } said times; date: { day } said day. Neither: today's punch in (the driver window finds it).
+        // A day without times: the first punch in that day on this GPS, plus 12 hours, or that day's Workday hours.
+        async function ecVoiceShowTrack(id, words, range, date) {
             const drv = ecVoiceDriver(id);
             const label = String((drv && drv.name) || '').trim() || ecVoiceLabel(id); // the vehicle; the punch in names the person
             if (!drv || !String(drv.deviceId || '').trim()) return { text: label + ' has no GPS device ID, so there is no track to show.' };
-            const yesterday = words.includes('yesterday') || words.includes('yesterdays');
             openDriverModal(id);
             try { await ecShift.ready; } catch (e) {}
             if (activeModalDriverId !== id) return { text: '' };
-            let from = 'Workday hours';
+            const today = ecDayBounds(Date.now()).start;
+            const dayStart = date ? ecDayBounds(date.day).start : today;
+            const dayNoon = dayStart + 12 * 3600000;
+            const dayText = dayStart === today ? '' : dayStart === ecDayBounds(Date.now() - 24 * 3600000).start ? ' yesterday'
+                : ' on ' + ecFormat(dayNoon, { weekday: 'long', month: 'long', day: 'numeric' }) +
+                    (ecWall(dayNoon).y !== ecWall(Date.now()).y ? ', ' + ecWall(dayNoon).y : '');
+            const setWindow = (start, end) => {
+                document.getElementById('historyStart').value = ecToLocalInput(start);
+                document.getElementById('historyEnd').value = ecToLocalInput(end);
+                ecShift.pickDay = ecDayBounds(start).start;
+                ecShift.touched = true;
+                ecWindowChanged();
+            };
+            let from;
             if (range) {
                 // The times that were said go in From/To (the punch in lookup has finished, so it won't change them)
-                document.getElementById('historyStart').value = ecToLocalInput(range.start);
-                document.getElementById('historyEnd').value = ecToLocalInput(range.end);
-                ecShift.touched = true;
+                setWindow(range.start, range.end);
                 ecShiftMsg('');
-                ecWindowChanged();
                 loadHistoricalTrack();
-                const day = yesterday ? ' yesterday' : '';
-                return { text: 'Showing ' + label + '\'s track from ' + formatTimestampTo12h(range.start) + ' to ' + formatTimestampTo12h(range.end) + day + '.' };
+                return { text: 'Showing ' + label + '\'s track from ' + formatTimestampTo12h(range.start) + ' to ' + formatTimestampTo12h(range.end) + dayText + '.' };
             }
-            if (yesterday) {
-                const dayMs = Date.now() - 24 * 3600000;
+            if (dayStart !== today) {
                 let best = null;
                 if (ecShift.people && ecShift.people.length) {
-                    const day = ecDayBounds(dayMs);
+                    const day = ecDayBounds(dayNoon);
                     const lists = await Promise.all(ecShift.people.map(p => ecShiftsBetween(p.ek, day.start, day.end).then(l => ({ ek: p.ek, list: l || [] }))));
                     lists.forEach(r => r.list.forEach(s => { if (ecShiftUsedGps(s, id) && (!best || s.in < best.in)) best = { ek: r.ek, in: s.in }; }));
                 }
@@ -11929,14 +12384,13 @@
                     ecShift.touched = true;
                     ecShiftRender();
                     ecSetWindowFromPunch(best.in);
-                    ecShiftMsg(ecShiftName(best.ek) + ' punched in at ' + formatTimestampTo12h(best.in) + ' yesterday');
-                    from = ecShiftName(best.ek).split(/\s+/)[0] + '\'s ' + formatTimestampTo12h(best.in) + ' punch in yesterday';
+                    ecShiftMsg(ecShiftName(best.ek) + ' punched in at ' + formatTimestampTo12h(best.in) + dayText);
+                    from = ecShiftName(best.ek).split(/\s+/)[0] + '\'s ' + formatTimestampTo12h(best.in) + ' punch in' + dayText;
                 } else {
-                    document.getElementById('historyStart').value = ecToLocalInput(ecTodayAt(workdayStart).getTime() - 24 * 3600000);
-                    document.getElementById('historyEnd').value = ecToLocalInput(ecTodayAt(workdayEnd).getTime() - 24 * 3600000);
-                    ecShift.touched = true;
-                    ecWindowChanged();
-                    from = 'yesterday\'s Workday hours (no punch in found)';
+                    const [sh, sm] = workdayStart.split(':').map(Number), [eh, em] = workdayEnd.split(':').map(Number);
+                    const start = ecDtAt(dayNoon, sh, sm, 0);
+                    setWindow(start, ecDtEndAt(start, eh, em));
+                    from = 'Workday hours' + dayText + ' (no punch in found)';
                 }
             } else if (ecShift.ek && !ecShift.touched) {
                 const startMs = ecParseLocalInput(document.getElementById('historyStart').value);
@@ -11945,7 +12399,7 @@
                 from = 'today\'s Workday hours (no punch in found)';
             }
             loadHistoricalTrack();
-            return { text: 'Showing ' + label + '\'s track from ' + from + '.' };
+            return { text: 'Showing ' + label + '\'s track ' + (/Workday/.test(from) ? 'for ' : 'from ') + from + '.' };
         }
 
         // ----- Caption, listening and speaking -----
@@ -12143,7 +12597,7 @@
             const v = vId ? String(ecVoiceDriver(vId).name).trim() : '21';
             return 'You can ask: Where is ' + p + '? Where\'s ' + v + '? How far is ' + p + ' from the shop? How long until ' + p +
                 ' gets to the shop? Who\'s closest to me? Who\'s online? Who\'s driving ' + v + '? Show track for ' + p +
-                '. Show yesterday\'s track for ' + p + '. Open ' + p + '.';
+                ' from 5 PM to 10 PM on November 1st. ' + v + ' nickname ' + p + '. Open ' + p + '.';
         }
         document.addEventListener('click', function(e) {
             const c = ecVoiceEl('ecVoiceCaption');
