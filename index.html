@@ -11216,6 +11216,7 @@
             getDriversRef().on('value', snap => {
                 ecRawDrivers = snap.val() || {};
                 ecApplyDriverSnapshot();
+                ecVoiceFromShortcut(); // opened from the app icon's "Ask" shortcut: listen once the drivers are here
             });
 
             getMasterRef().once('value').then(snap => {
@@ -11996,6 +11997,16 @@
             return false;
         }
         function ecVoiceTry(q) { ecVoiceAsk([q]); }
+        // Long-press the app icon -> "Ask" (manifest.json shortcuts) opens index.html?voice=1: open the panel and listen.
+        // The ?voice=1 is removed right away so a reload doesn't start listening again.
+        function ecVoiceFromShortcut() {
+            let want = false;
+            try { want = new URLSearchParams(location.search).get('voice') === '1'; } catch (e) {}
+            if (!want) return;
+            try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) {}
+            ecVoiceOpen();
+            ecVoiceListen(); // if the browser won't listen without a tap, the panel says "Tap the mic to ask"
+        }
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && ecVoice.open) ecVoiceClose();
         });

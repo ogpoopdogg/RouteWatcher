@@ -31,7 +31,8 @@ self.addEventListener('fetch', function(event) {
             }
             return response;
         } catch (err) {
-            const cached = await caches.match(request);
+            // The app icon's "Ask" shortcut opens index.html?voice=1: offline, use the saved index.html
+            const cached = await caches.match(request) || (request.mode === 'navigate' ? await caches.match(request, { ignoreSearch: true }) : undefined);
             if (cached) return cached;
             throw err;
         }
