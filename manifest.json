@@ -19,5 +19,20 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ask where a driver is",
+      "short_name": "Ask",
+      "description": "Open E&C Dispatch and start listening",
+      "url": "./index.html?voice=1",
+      "icons": [
+        {
+          "src": "icon3.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

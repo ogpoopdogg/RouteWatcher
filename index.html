@@ -4798,6 +4798,108 @@
             }
             .driver-modal .modal-stops-container { max-height: 50vh !important; }
         }
+        /* ===== Voice questions: mic button + answer panel (bottom left) ===== */
+        .ec-voice-btn {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            z-index: 9500;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: #0b0b14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .ec-voice-btn svg { width: 26px; height: 26px; }
+        .ec-voice-btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+        .ec-voice-btn.is-listening { background: #e74c3c; color: #fff; animation: ecVoicePulse 1.2s ease-in-out infinite; }
+        @keyframes ecVoicePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.55); }
+            50% { box-shadow: 0 0 0 12px rgba(231, 76, 60, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) { .ec-voice-btn.is-listening { animation: none; } }
+        body.modal-open .ec-voice-btn, body.modal-open .ec-voice-panel { display: none; }
+        .ec-voice-panel {
+            position: fixed;
+            left: 16px;
+            bottom: 88px;
+            z-index: 9600;
+            width: min(380px, calc(100vw - 32px));
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            box-sizing: border-box;
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4);
+            font-size: 14px;
+        }
+        .ec-voice-panel[hidden] { display: none; }
+        .ec-voice-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .ec-voice-head .ec-voice-state { font-weight: 700; color: var(--accent); }
+        body.light-mode .ec-voice-head .ec-voice-state { color: var(--text); }
+        .ec-voice-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 8px; min-width: 36px; min-height: 36px; }
+        .ec-voice-heard { color: var(--muted); font-style: italic; min-height: 1em; margin-bottom: 6px; overflow-wrap: anywhere; }
+        .ec-voice-answer { font-size: 16px; line-height: 1.45; min-height: 1.4em; overflow-wrap: anywhere; }
+        .ec-voice-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .ec-voice-choices:empty { display: none; }
+        .ec-voice-chip {
+            background: var(--card2, transparent);
+            color: var(--text);
+            border: 1px solid var(--accent);
+            border-radius: 16px;
+            padding: 7px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            min-height: 36px;
+        }
+        .ec-voice-type { display: flex; gap: 6px; margin-top: 12px; }
+        .ec-voice-type input {
+            flex: 1;
+            min-width: 0;
+            background: var(--card2, transparent);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: 16px; /* 16px stops phones zooming in on the box */
+        }
+        .ec-voice-type button, .ec-voice-foot button {
+            background: var(--accent);
+            color: #0b0b14;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 38px;
+        }
+        .ec-voice-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+        .ec-voice-foot .ec-voice-link { background: none; color: var(--accent); padding: 8px 4px; text-decoration: underline; }
+        body.light-mode .ec-voice-foot .ec-voice-link { color: var(--text); }
+        .ec-voice-foot label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; margin-left: auto; cursor: pointer; }
+        .ec-voice-help { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+        .ec-voice-help[hidden] { display: none; }
+        .ec-voice-help h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+        .ec-voice-help h4:first-child { margin-top: 0; }
+        .ec-voice-help .ec-voice-chip { margin: 0 4px 6px 0; }
+        .ec-voice-help p { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+        /* Phones: mic bottom right (above the Install App button while that shows) */
+        @media (max-width: 600px) {
+            .ec-voice-btn { left: auto; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+            .ec-voice-panel { left: auto; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+            .install-app-btn[style*="flex"] ~ .ec-voice-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+            .install-app-btn[style*="flex"] ~ .ec-voice-panel { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); }
+        }
     </style>
 </head>
 <body>
@@ -4916,6 +5018,58 @@
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
             Install App
         </button>
+
+        <!-- Voice questions: tap the mic and ask "Where is Sheldon?" (script: VOICE QUESTIONS) -->
+        <button type="button" id="ecVoiceBtn" class="ec-voice-btn" onclick="ecVoiceToggle()" title="Ask where a driver is" aria-label="Ask a question by voice">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+        </button>
+        <div id="ecVoicePanel" class="ec-voice-panel" role="dialog" aria-label="Voice questions" hidden>
+            <div class="ec-voice-head">
+                <span class="ec-voice-state" id="ecVoiceState" role="status">Tap the mic to ask</span>
+                <button type="button" class="ec-voice-close" onclick="ecVoiceClose()" title="Close" aria-label="Close">✕</button>
+            </div>
+            <div class="ec-voice-heard" id="ecVoiceHeard"></div>
+            <div class="ec-voice-answer" id="ecVoiceAnswer" aria-live="polite">Ask something like "Where is Sheldon?" or "How far is 21 from the shop?"</div>
+            <div class="ec-voice-choices" id="ecVoiceChoices"></div>
+            <form class="ec-voice-type" onsubmit="return ecVoiceTyped(event)">
+                <input type="text" id="ecVoiceInput" placeholder="Or type a question" autocomplete="off" enterkeyhint="send" aria-label="Type a question">
+                <button type="submit">Ask</button>
+            </form>
+            <div class="ec-voice-foot">
+                <button type="button" id="ecVoiceAgain" onclick="ecVoiceListen()">Ask again</button>
+                <button type="button" class="ec-voice-link" onclick="ecVoiceShowHelp(document.getElementById('ecVoiceHelp').hidden)">What can I say?</button>
+                <label><input type="checkbox" id="ecVoiceSpeak" checked onchange="ecVoiceSetSpeak(this.checked)"> Read answers aloud</label>
+            </div>
+            <div class="ec-voice-help" id="ecVoiceHelp" hidden>
+                <h4>Where</h4>
+                <button type="button" class="ec-voice-chip" data-tpl="Where is {p}?" onclick="ecVoiceTry(this.textContent)">Where is Sheldon?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Where's {v}?" onclick="ecVoiceTry(this.textContent)">Where's 21?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Show {p} on the map" onclick="ecVoiceTry(this.textContent)">Show Sheldon on the map</button>
+                <h4>How far / how long</h4>
+                <button type="button" class="ec-voice-chip" data-tpl="How far is {p} from the shop?" onclick="ecVoiceTry(this.textContent)">How far is Sheldon from the shop?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="How far is {v} from me?" onclick="ecVoiceTry(this.textContent)">How far is 21 from me?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="How far is {p} from {v2}?" onclick="ecVoiceTry(this.textContent)">How far is Sheldon from 14?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="How long until {p} gets to the shop?" onclick="ecVoiceTry(this.textContent)">How long until Sheldon gets to the shop?</button>
+                <h4>Who</h4>
+                <button type="button" class="ec-voice-chip" data-tpl="Who's closest to the shop?" onclick="ecVoiceTry(this.textContent)">Who's closest to the shop?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Who's closest to me?" onclick="ecVoiceTry(this.textContent)">Who's closest to me?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Who's online?" onclick="ecVoiceTry(this.textContent)">Who's online?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Who's at the shop?" onclick="ecVoiceTry(this.textContent)">Who's at the shop?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Who's offline?" onclick="ecVoiceTry(this.textContent)">Who's offline?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Who's driving {v}?" onclick="ecVoiceTry(this.textContent)">Who's driving 21?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="What vehicle is {p} in?" onclick="ecVoiceTry(this.textContent)">What vehicle is Sheldon in?</button>
+                <h4>Status</h4>
+                <button type="button" class="ec-voice-chip" data-tpl="When did {p} last update?" onclick="ecVoiceTry(this.textContent)">When did Sheldon last update?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Is {p} moving?" onclick="ecVoiceTry(this.textContent)">Is Sheldon moving?</button>
+                <button type="button" class="ec-voice-chip" data-tpl="What's {v}'s battery?" onclick="ecVoiceTry(this.textContent)">What's 21's battery?</button>
+                <h4>Open things</h4>
+                <button type="button" class="ec-voice-chip" data-tpl="Open {p}" onclick="ecVoiceTry(this.textContent)">Open Sheldon</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Show {p}'s route" onclick="ecVoiceTry(this.textContent)">Show Sheldon's route</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Show the map" onclick="ecVoiceTry(this.textContent)">Show the map</button>
+                <button type="button" class="ec-voice-chip" data-tpl="Dark mode" onclick="ecVoiceTry(this.textContent)">Dark mode</button>
+                <p>Say a nickname, the vehicle name from Settings, or the name of whoever has the vehicle in the Time Clock. "He" or "she" means the last driver you asked about. A saved point's name works too, like "How far is Sheldon from Walmart?" "Where is" looks up one street address and "How long" asks Google for one drive time; the rest uses no paid calls.</p>
+            </div>
+        </div>
 
         <div class="app-grid">
             <div class="map-wrapper hidden" id="mainMapWrapper">
@@ -11062,6 +11216,7 @@
             getDriversRef().on('value', snap => {
                 ecRawDrivers = snap.val() || {};
                 ecApplyDriverSnapshot();
+                ecVoiceFromShortcut(); // opened from the app icon's "Ask" shortcut: listen once the drivers are here
             });
 
             getMasterRef().once('value').then(snap => {
@@ -11143,6 +11298,717 @@
                     e.preventDefault();
                 }
             }
+        });
+
+        // ===== VOICE QUESTIONS (mic button: bottom left, bottom right on phones) =====
+        // Tap the mic, ask "Where is Sheldon?" or "How far is 21 from the shop?", and the answer shows and is read out loud.
+        // A driver can be named by their nickname, the GPS / vehicle name from Settings ("21", "Van 14"), or the name of
+        // whoever has that vehicle in the Time Clock (timeclock/vehicle_claims). "He", "she" and "they" mean the last one asked about.
+        // Listening uses the browser's speech recognition (Chrome sends the audio to Google to turn it into text).
+        // Paid Google calls: "where is" looks up one street address (Geocoder, cached per driver until they move),
+        // and "how long" asks for one drive time (the same Routes call as the long-press ETA). Everything else is free.
+        const EC_VOICE_ADDRESS_LOOKUP = true;    // false = "where is" answers without a street address (no paid call)
+        const EC_VOICE_LANG = 'en-CA';
+        const EC_VOICE_ADDR_REUSE_M = 75;        // reuse a looked-up address until the driver moves this far
+        const EC_VOICE_ETA_REUSE_MS = 3 * 60 * 1000;
+        const EC_VOICE_CLAIMS_REUSE_MS = 60 * 1000;
+        const EC_VOICE_STOPPED_MIN = 5;          // say "stopped for N minutes" from this many minutes
+        const EC_VOICE_SPEAK_KEY = 'ec_voice_speak';
+        const ecVoice = { rec: null, listening: false, open: false, lastId: null, addr: {}, eta: {}, claims: {}, claimsAt: 0, seq: 0 };
+
+        const EC_VOICE_ONES = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
+        const EC_VOICE_TEENS = { ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+        const EC_VOICE_TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+        // Words in a question that are never part of a name
+        const EC_VOICE_STOP = new Set(('where wheres is s are the a an of from to me my i you how far away long until till get gets getting ' +
+            'back distance find locate location show open on map it at in what which who whos whose vehicle van truck car unit number ' +
+            'driving drive driver drivers shop office depot please hey tell can could will would does did do right now currently ' +
+            'route track last update updated status moving stopped battery he she they him her them his their closest nearest ' +
+            'online offline working and or with for there time take takes eta minutes km by road').split(' '));
+
+        function ecVoiceSupported() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+
+        // Lower case, no accents or punctuation, number words as digits ("twenty one" -> "21")
+        function ecVoiceNorm(text) {
+            const words = String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/['\u2019]s\b/g, '').replace(/#/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+            const out = [];
+            for (let i = 0; i < words.length; i++) {
+                const w = words[i];
+                if (EC_VOICE_TENS[w] !== undefined) {
+                    const next = words[i + 1];
+                    if (next && EC_VOICE_ONES[next] && EC_VOICE_ONES[next] > 0) { out.push(String(EC_VOICE_TENS[w] + EC_VOICE_ONES[next])); i++; }
+                    else out.push(String(EC_VOICE_TENS[w]));
+                } else if (EC_VOICE_TEENS[w] !== undefined) out.push(String(EC_VOICE_TEENS[w]));
+                else if (EC_VOICE_ONES[w] !== undefined && w !== 'oh') out.push(String(EC_VOICE_ONES[w]));
+                else out.push(w);
+            }
+            return out;
+        }
+
+        function ecVoiceLev(a, b) {
+            if (a === b) return 0;
+            const m = a.length, n = b.length;
+            if (!m) return n;
+            if (!n) return m;
+            let prev = Array.from({ length: n + 1 }, (_, j) => j);
+            for (let i = 1; i <= m; i++) {
+                const cur = [i];
+                for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+                prev = cur;
+            }
+            return prev[n];
+        }
+        // 1 = same word. Numbers must match exactly ("21" is not "12"); short words need to be close.
+        function ecVoiceWordScore(heard, name) {
+            if (heard === name) return 1;
+            if (/\d/.test(heard) || /\d/.test(name)) return 0;
+            if (name.length < 3 || heard.length < 3) return 0;
+            if (heard.length >= 4 && (name.startsWith(heard) || heard.startsWith(name)) && Math.min(heard.length, name.length) / Math.max(heard.length, name.length) >= 0.6) return 0.85;
+            const s = 1 - ecVoiceLev(heard, name) / Math.max(heard.length, name.length);
+            return s >= 0.72 ? s * 0.95 : 0;
+        }
+        // How well a name (word list) appears anywhere in the question (word list)
+        function ecVoicePhraseMatch(words, nameWords) {
+            const best = { s: 0, at: -1 };
+            if (!nameWords.length || nameWords.length > words.length) return best;
+            for (let i = 0; i + nameWords.length <= words.length; i++) {
+                let sum = 0;
+                for (let j = 0; j < nameWords.length; j++) {
+                    const w = words[i + j];
+                    const s = (EC_VOICE_STOP.has(w) && w !== nameWords[j]) ? 0 : ecVoiceWordScore(w, nameWords[j]);
+                    if (!s) { sum = 0; break; }
+                    sum += s;
+                }
+                if (sum / nameWords.length > best.s) { best.s = sum / nameWords.length; best.at = i; }
+            }
+            return best;
+        }
+        function ecVoicePhraseScore(words, nameWords) { return ecVoicePhraseMatch(words, nameWords).s; }
+
+        function ecVoiceDriver(id) { return ecRawDrivers[id] || drivers[id] || null; }
+        function ecVoiceAllIds() {
+            const ids = new Set(Object.keys(ecRawDrivers || {}));
+            Object.keys(drivers || {}).forEach(id => ids.add(id));
+            return Array.from(ids).filter(id => ecVoiceDriver(id));
+        }
+        // Who has this vehicle in the Time Clock now (null if nobody, or this account can't read it)
+        function ecVoiceClaim(id) {
+            const c = ecVoice.claims && ecVoice.claims[id];
+            return (c && typeof c === 'object' && (c.name || c.nickname)) ? c : null;
+        }
+        async function ecVoiceLoadClaims() {
+            if (Date.now() - ecVoice.claimsAt < EC_VOICE_CLAIMS_REUSE_MS) return;
+            try {
+                const snap = await db.ref(EC_TC + 'vehicle_claims').once('value');
+                ecVoice.claims = snap.val() || {};
+            } catch (e) {
+                ecVoice.claims = {}; // not a Time Clock admin or Gil: names come from nicknames and vehicle names only
+            }
+            ecVoice.claimsAt = Date.now();
+        }
+        // Every name this vehicle answers to
+        function ecVoiceNamesFor(id) {
+            const drv = ecVoiceDriver(id);
+            const list = [];
+            const add = (text, kind) => { const w = ecVoiceNorm(text); if (w.length) list.push({ w: w, kind: kind }); };
+            const vehicle = String((drv && drv.name) || '').trim();
+            if (vehicle) {
+                add(vehicle, 'vehicle');
+                ecVoiceNorm(vehicle).filter(x => /\d/.test(x)).forEach(x => add(x, 'vehicle')); // "21" finds "Van 21"
+            }
+            const nick = getDriverNickname(id);
+            if (nick) add(nick, 'person');
+            const c = ecVoiceClaim(id);
+            if (c) {
+                if (c.name) { add(c.name, 'person'); add(String(c.name).trim().split(/\s+/)[0], 'person'); }
+                if (c.nickname) add(c.nickname, 'person');
+            }
+            return list;
+        }
+        // Drivers named in the question, best first: [{ id, score, at }] (at = where in the question the name starts)
+        function ecVoiceFindDrivers(words) {
+            const found = [];
+            ecVoiceAllIds().forEach(id => {
+                let best = 0, at = -1, weak = false;
+                ecVoiceNamesFor(id).forEach(n => {
+                    const m = ecVoicePhraseMatch(words, n.w);
+                    // a name made only of everyday words ("Will") counts for less than a real name in the same question
+                    const common = n.w.every(x => EC_VOICE_STOP.has(x));
+                    const s = m.s * (common ? 0.9 : 1) * (n.w.length > 1 ? 1.02 : 1);
+                    if (s > best) { best = s; at = m.at; weak = common; }
+                });
+                if (best >= 0.68) found.push({ id: id, score: Math.min(1, best), at: at, weak: weak });
+            });
+            found.sort((a, b) => b.score - a.score);
+            return found;
+        }
+        // Saved points of any driver, named in the question
+        function ecVoiceFindPoint(words) {
+            let best = null;
+            ecVoiceAllIds().forEach(id => {
+                const sps = ecVoiceDriver(id).startPoints;
+                if (!sps || typeof sps !== 'object') return;
+                Object.values(sps).forEach(sp => {
+                    if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng)) || !sp.name) return;
+                    const s = ecVoicePhraseScore(words, ecVoiceNorm(sp.name).filter(x => !EC_VOICE_STOP.has(x)));
+                    if (s >= 0.8 && (!best || s > best.score)) best = { score: s, name: String(sp.name), lat: Number(sp.lat), lng: Number(sp.lng) };
+                });
+            });
+            return best;
+        }
+
+        // "Sheldon in 21", or just "21" when nobody is named for it
+        function ecVoiceLabel(id) {
+            const drv = ecVoiceDriver(id);
+            const vehicle = String((drv && drv.name) || '').trim();
+            const c = ecVoiceClaim(id);
+            const person = getDriverNickname(id) || (c ? (c.nickname || String(c.name || '').split(/\s+/)[0]) : '');
+            if (person && vehicle && ecVoiceNorm(person).join(' ') !== ecVoiceNorm(vehicle).join(' ')) return person + ' in ' + vehicle;
+            return person || vehicle || 'That vehicle';
+        }
+        function ecVoiceLoc(id) {
+            const drv = ecVoiceDriver(id);
+            const loc = drv && drv.lastLocation;
+            const lat = loc ? Number(loc.lat) : NaN, lng = loc ? Number(loc.lng) : NaN;
+            return (isFinite(lat) && isFinite(lng) && !(lat === 0 && lng === 0)) ? { lat: lat, lng: lng, at: Number(loc.updatedAt) || 0 } : null;
+        }
+        function ecVoiceStatus(id) {
+            const drv = ecVoiceDriver(id);
+            const devId = drv && drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
+            return getGPSStatus(drv && drv.lastLocation ? drv.lastLocation.updatedAt : null, devId).status;
+        }
+        function ecVoiceShop() {
+            const s = ecRoute && ecRoute.shop;
+            return (s && isFinite(s.lat) && isFinite(s.lng)) ? { lat: s.lat, lng: s.lng } : { lat: EC_DEPOT.lat, lng: EC_DEPOT.lng };
+        }
+        // Loads the Route Planner shop once (Show route does the same); the built-in shop until then
+        async function ecVoiceLoadShop() {
+            if (ecRoute.shop) return;
+            try {
+                const sh = (await db.ref('developer/route_planner/settings/shop').once('value')).val();
+                if (!ecRoute.shop && sh && isFinite(Number(sh.lat)) && isFinite(Number(sh.lng))) {
+                    ecRoute.shop = { lat: Number(sh.lat), lng: Number(sh.lng), address: String(sh.address || '') };
+                }
+            } catch (e) { /* keep the built-in shop */ }
+        }
+        function ecVoiceDist(m) {
+            if (m < 1000) return (Math.round(m / 10) * 10) + ' m';
+            const km = m / 1000;
+            return (km < 10 ? Math.round(km * 10) / 10 : Math.round(km)) + ' km';
+        }
+        function ecVoiceDir(from, to) {
+            const y = Math.sin((to.lng - from.lng) * Math.PI / 180) * Math.cos(to.lat * Math.PI / 180);
+            const x = Math.cos(from.lat * Math.PI / 180) * Math.sin(to.lat * Math.PI / 180) -
+                Math.sin(from.lat * Math.PI / 180) * Math.cos(to.lat * Math.PI / 180) * Math.cos((to.lng - from.lng) * Math.PI / 180);
+            const deg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+            return ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'][Math.round(deg / 45) % 8];
+        }
+        function ecVoiceAgo(ms) {
+            if (!ms) return 'no GPS update yet';
+            const min = Math.max(0, Math.round((ecServerNow() - ms) / 60000));
+            if (min < 1) return 'updated just now';
+            if (min < 60) return 'updated ' + min + (min === 1 ? ' minute' : ' minutes') + ' ago';
+            const h = Math.floor(min / 60), m = min % 60;
+            return 'updated ' + h + (h === 1 ? ' hour' : ' hours') + (m ? ' ' + m + ' min' : '') + ' ago';
+        }
+        function ecVoiceStatusText(id, loc) {
+            const st = ecVoiceStatus(id);
+            const word = st === 'online' ? 'Online' : st === 'standby' ? 'On standby' : 'GPS offline';
+            return word + ', ' + ecVoiceAgo(loc && loc.at);
+        }
+        function ecVoiceStoppedText(id) {
+            const s = driverStopState[id];
+            if (!s || !s.startTime) return '';
+            const min = Math.round((ecServerNow() - s.startTime) / 60000);
+            return min >= EC_VOICE_STOPPED_MIN ? 'Stopped for about ' + min + ' minutes.' : '';
+        }
+        // From the positions seen since this page opened: "Moving.", "Stopped for about N minutes." or nothing
+        function ecVoiceMovingText(id) {
+            const s = driverStopState[id];
+            if (s && s.startTime) {
+                const min = Math.round((ecServerNow() - s.startTime) / 60000);
+                if (min >= 1) return 'Stopped for about ' + min + (min === 1 ? ' minute.' : ' minutes.');
+            }
+            const recent = (driverTracks[id] || []).filter(p => ecServerNow() - p.timestamp < 3 * 60000);
+            if (recent.length >= 2 && haversineDistance(recent[0].lat, recent[0].lng, recent[recent.length - 1].lat, recent[recent.length - 1].lng) > 50) return 'Moving.';
+            return '';
+        }
+        // Shop, a saved point, or nothing
+        function ecVoiceKnownPlace(loc) {
+            const shop = ecVoiceShop();
+            if (haversineDistance(loc.lat, loc.lng, shop.lat, shop.lng) <= START_POINT_RADIUS_M) return 'at the shop';
+            let best = null;
+            ecVoiceAllIds().forEach(id => {
+                const sps = ecVoiceDriver(id).startPoints;
+                if (!sps || typeof sps !== 'object') return;
+                Object.values(sps).forEach(sp => {
+                    if (!sp || !sp.name || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
+                    const d = haversineDistance(loc.lat, loc.lng, Number(sp.lat), Number(sp.lng));
+                    if (d <= START_POINT_RADIUS_M && (!best || d < best.d)) best = { d: d, name: String(sp.name) };
+                });
+            });
+            return best ? 'at ' + best.name : '';
+        }
+        function ecVoiceShortAddress(addr) {
+            const parts = String(addr || '').split(',').map(s => s.trim()).filter(Boolean);
+            if (parts.length && /^canada$/i.test(parts[parts.length - 1])) parts.pop();
+            if (parts.length > 1 && /^[A-Z]{2}(\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d)?$/.test(parts[parts.length - 1])) parts.pop(); // "MB R7A 1A1"
+            return parts.slice(0, 2).join(', ');
+        }
+        // One Google address lookup, reused until the driver moves EC_VOICE_ADDR_REUSE_M
+        async function ecVoiceAddress(id, loc) {
+            if (!EC_VOICE_ADDRESS_LOOKUP || !window.google || !google.maps) return '';
+            const c = ecVoice.addr[id];
+            if (c && haversineDistance(c.lat, c.lng, loc.lat, loc.lng) <= EC_VOICE_ADDR_REUSE_M) return c.text;
+            try {
+                let Geo = google.maps.Geocoder;
+                if (typeof google.maps.importLibrary === 'function') {
+                    const lib = await google.maps.importLibrary('geocoding').catch(() => null);
+                    if (lib && lib.Geocoder) Geo = lib.Geocoder;
+                }
+                if (typeof Geo !== 'function') return '';
+                const res = await Promise.race([
+                    new Geo().geocode({ location: { lat: loc.lat, lng: loc.lng } }),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 7000))
+                ]);
+                const results = (res && res.results) || [];
+                const pick = results.find(r => (r.types || []).some(t => t === 'street_address' || t === 'premise')) ||
+                    results.find(r => (r.types || []).includes('route')) || results[0];
+                ecTrackApi('geocoding__voice', true);
+                const text = pick ? ecVoiceShortAddress(pick.formatted_address) : '';
+                ecVoice.addr[id] = { lat: loc.lat, lng: loc.lng, text: text };
+                return text;
+            } catch (e) {
+                if (!(e && e.message === 'timeout')) ecTrackApi('geocoding__voice', false);
+                console.warn('Voice: address lookup failed:', e);
+                return '';
+            }
+        }
+        async function ecVoiceDrive(id, loc, dest, key) {
+            const k = id + '|' + key;
+            const c = ecVoice.eta[k];
+            if (c && Date.now() - c.at < EC_VOICE_ETA_REUSE_MS && haversineDistance(c.lat, c.lng, loc.lat, loc.lng) < 100) return c.res;
+            const res = await ecEtaComputeRoute({ lat: loc.lat, lng: loc.lng }, dest);
+            ecVoice.eta[k] = { at: Date.now(), lat: loc.lat, lng: loc.lng, res: res };
+            return res;
+        }
+
+        // ----- Understanding the question -----
+        function ecVoiceIntent(text, words) {
+            const t = ' ' + words.join(' ') + ' ';
+            const has = re => re.test(t);
+            if (has(/ (help|what can i (say|ask)|commands?|what do i say) /)) return 'help';
+            if (has(/ (dark mode|night mode) /)) return 'dark';
+            if (has(/ (light mode|day mode) /)) return 'light';
+            if (has(/ (hide|close) (the )?map /)) return 'hideMap';
+            if (has(/ (show|open) (the )?map /) && !has(/ on (the )?map /)) return 'showMap';
+            if (has(/ (closest|nearest) /)) return 'closest';
+            if (has(/ (how long|eta|when will|when does|how much time|how many minutes|drive time|driving time) /)) return 'eta';
+            if (has(/ (how far|distance|how close|far away) /)) return 'far';
+            const who = '(?:who|whos|who s|who is|who are|how many|which vans|which vehicles|which trucks|which drivers|any ?one|anybody|is anyone|is anybody)';
+            if (has(new RegExp(' ' + who + ' (?:are |is )?(?:at|in) (?:the )?(?:shop|office|depot) '))) return 'atShop';
+            if (has(new RegExp(' ' + who + ' (?:are |is )?(?:offline|off line) '))) return 'whoOffline';
+            if (has(new RegExp(' ' + who + ' (?:are |is )?(?:online|working|out|on the road|driving today|driving right now|driving now) '))) return 'whoOnline';
+            if (has(/ (who|whos|who s|who is) (driving|in|has|got) /) || has(/ (what|which) (van|vehicle|truck|car|unit) /)) return 'vehicle';
+            if (has(/ (battery) /)) return 'battery';
+            if (has(/ (last update|last updated|when did|status|is \w+ (online|offline|moving|stopped)|moving|stopped) /)) return 'status';
+            if (has(/ route /) && has(/ (show|open|see) /)) return 'route';
+            if (has(/ open /)) return 'open';
+            if (has(/ (show|zoom|go to|take me to) /)) return 'show';
+            if (has(/ (where|wheres|find|locate|location|whereabouts) /)) return 'where';
+            return '';
+        }
+
+        // Answers one question: { text, choices?: [{ label, q }], action?: fn }
+        async function ecVoiceAnswer(raw) {
+            const words = ecVoiceNorm(raw);
+            if (!words.length) return { text: 'I didn\'t catch that. Tap the mic and try again.' };
+            await Promise.all([ecVoiceLoadClaims(), ecVoiceLoadShop()]);
+            const intent = ecVoiceIntent(raw, words);
+            const found = ecVoiceFindDrivers(words);
+            const pronoun = words.some(w => ['he', 'she', 'they', 'him', 'her', 'them', 'his', 'their'].includes(w));
+            const mentionsMe = words.includes('me') || words.includes('my') || /\bi am\b|\bim\b/.test(words.join(' '));
+            const mentionsShop = words.some(w => ['shop', 'office', 'depot', 'base'].includes(w));
+
+            if (intent === 'help') { ecVoiceShowHelp(true); return { text: 'Here are things you can ask.' }; }
+            if (intent === 'dark' || intent === 'light') {
+                const isLight = document.body.classList.contains('light-mode');
+                if ((intent === 'light') !== isLight) toggleTheme();
+                return { text: intent === 'light' ? 'Light mode.' : 'Dark mode.' };
+            }
+            if (intent === 'showMap' || intent === 'hideMap') {
+                const hidden = document.getElementById('mainMapWrapper').classList.contains('hidden');
+                if ((intent === 'showMap') === hidden) toggleMapVisibility();
+                return { text: intent === 'showMap' ? 'Showing the map.' : 'Map hidden.' };
+            }
+            if (intent === 'whoOnline' || intent === 'whoOffline' || intent === 'atShop') return ecVoiceWho(intent);
+            if (intent === 'vehicle' && !found.length && !pronoun) return ecVoiceWho('whoOnline'); // "Who's driving?"
+            if (intent === 'closest' && !found.length) return ecVoiceClosest(mentionsMe ? 'me' : 'shop', words);
+            if (intent === 'closest') return ecVoiceClosest('driver', words, found[0].id);
+
+            // Everything else is about one driver
+            let id = null;
+            if (found.length) {
+                const top = found[0];
+                const close = found.filter(f => f.id !== top.id && f.at === top.at && top.score - f.score < 0.05 && f.score < 1);
+                if (top.score < 1 && close.length) {
+                    const ids = [top.id].concat(close.map(f => f.id)).slice(0, 4);
+                    return { text: 'Did you mean ' + ids.map(ecVoiceLabel).join(' or ') + '?',
+                        choices: ids.map(x => ({ label: ecVoiceLabel(x), q: raw, id: x })) };
+                }
+                id = top.id;
+            } else if (pronoun && ecVoice.lastId && ecVoiceDriver(ecVoice.lastId)) {
+                id = ecVoice.lastId;
+            }
+            if (!id) {
+                const names = ecVoiceAllIds().map(ecVoiceLabel).sort().slice(0, 12);
+                if (!intent) return { text: 'I heard "' + raw + '" but didn\'t understand it. Tap "What can I say?" for ideas.' };
+                return { text: 'I couldn\'t find a driver or vehicle in "' + raw + '".' + (names.length ? ' I know: ' + names.join(', ') + '.' : '') };
+            }
+            return ecVoiceAboutDriver(id, intent || 'where', words, found, { me: mentionsMe, shop: mentionsShop });
+        }
+
+        async function ecVoiceAboutDriver(id, intent, words, found, mention) {
+            ecVoice.lastId = id;
+            const label = ecVoiceLabel(id);
+            const loc = ecVoiceLoc(id);
+            const drv = ecVoiceDriver(id);
+            const showIt = () => { if (loc && map) showDriverLocation(id); };
+
+            if (intent === 'vehicle') {
+                const c = ecVoiceClaim(id);
+                const vehicle = String((drv && drv.name) || '').trim() || 'this GPS';
+                if (c && c.name) return { text: c.name + ' has ' + vehicle + ' in the Time Clock.' };
+                const nick = getDriverNickname(id);
+                return { text: nick ? nick + ' is set as the nickname for ' + vehicle + '. Nobody has it in the Time Clock that I can see.'
+                    : 'Nobody has ' + vehicle + ' in the Time Clock that I can see.' };
+            }
+            if (intent === 'open') { openDriverModal(id); return { text: 'Opening ' + label + '.' }; }
+            if (intent === 'route') {
+                openDriverModal(id);
+                setTimeout(() => { if (activeModalDriverId === id) ecRouteLoad(id, true); }, 300);
+                return { text: 'Showing ' + label + '\'s planned route.' };
+            }
+            if (intent === 'battery') {
+                if (ecIsFleetHunt(drv)) return { text: label + ' has a FleetHunt unit, which doesn\'t report a battery level.' };
+                const b = ecBatteryValue(drv);
+                return { text: b === null ? 'No battery level for ' + label + '.' : label + '\'s GPS battery is at ' + b + ' percent.' };
+            }
+            if (!loc) return { text: 'There is no GPS location for ' + label + ' yet.' };
+            if (intent === 'status') {
+                const moving = ecVoiceMovingText(id);
+                return { text: label + ': ' + ecVoiceStatusText(id, loc) + '.' + (moving ? ' ' + moving : '') };
+            }
+            if (intent === 'show') { showIt(); return { text: 'Showing ' + label + ' on the map.' }; }
+
+            // Distance or drive time: to another driver, a saved point, me, or the shop (the default)
+            if (intent === 'far' || intent === 'eta') {
+                let dest = null, destName = 'the shop', key = 'shop';
+                const other = found.find(f => f.id !== id && !f.weak); // "when WILL Sheldon get there" is not about Will
+                const point = ecVoiceFindPoint(words);
+                if (other) {
+                    const ol = ecVoiceLoc(other.id);
+                    if (!ol) return { text: 'There is no GPS location for ' + ecVoiceLabel(other.id) + ' yet.' };
+                    dest = ol; destName = ecVoiceLabel(other.id); key = 'drv:' + other.id;
+                } else if (point && !mention.shop) {
+                    dest = point; destName = point.name; key = 'pt:' + point.name;
+                } else if (mention.me && !mention.shop) {
+                    try { dest = await ecEtaGetMyLocation(); } catch (err) { return { text: ecEtaErrorMessage(err) }; }
+                    destName = 'you'; key = 'me';
+                } else {
+                    dest = ecVoiceShop();
+                }
+                const straight = haversineDistance(loc.lat, loc.lng, dest.lat, dest.lng);
+                const age = ecVoiceStatus(id) === 'online' ? '' : ' (' + ecVoiceAgo(loc.at) + ')';
+                if (straight <= START_POINT_RADIUS_M) return { text: label + ' is at ' + (destName === 'you' ? 'your location' : destName) + age + '.' };
+                if (intent === 'far') {
+                    return { text: label + ' is ' + ecVoiceDist(straight) + ' ' + ecVoiceDir(dest, loc) + ' of ' + destName + ' in a straight line' + age + '.',
+                        choices: [{ label: 'Drive time', q: 'how long until ' + ecVoiceNorm(label).join(' ') + ' gets to ' + (key === 'me' ? 'me' : destName), id: id, intent: 'eta' }] };
+                }
+                try {
+                    const res = await ecVoiceDrive(id, loc, { lat: dest.lat, lng: dest.lng }, key);
+                    const to = destName === 'you' ? 'you' : destName;
+                    return { text: label + ' is about ' + ecEtaFormatDuration(res.ms).replace(' H ', ' h ').replace(' Min', ' min') + ' from ' + to +
+                        ' by road, ' + ecVoiceDist(res.m) + age + '.' };
+                } catch (err) {
+                    return { text: ecEtaErrorMessage(err) + ' In a straight line, ' + label + ' is ' + ecVoiceDist(straight) + ' away.' };
+                }
+            }
+
+            // Where is ...
+            showIt();
+            const shop = ecVoiceShop();
+            const fromShop = haversineDistance(loc.lat, loc.lng, shop.lat, shop.lng);
+            let place = ecVoiceKnownPlace(loc);
+            if (!place) {
+                const addr = await ecVoiceAddress(id, loc);
+                if (addr) place = 'near ' + addr;
+            }
+            const verb = ecVoiceStatus(id) === 'offline' ? ' was last seen ' : ' is ';
+            let text = label + verb + (place || ecVoiceDist(fromShop) + ' ' + ecVoiceDir(shop, loc) + ' of the shop') + '.';
+            if (place && place !== 'at the shop') text += ' That\'s ' + ecVoiceDist(fromShop) + ' ' + ecVoiceDir(shop, loc) + ' of the shop.';
+            const stopped = ecVoiceStoppedText(id);
+            if (stopped) text += ' ' + stopped;
+            text += ' ' + ecVoiceStatusText(id, loc) + '.';
+            return { text: text };
+        }
+
+        function ecVoiceWho(intent) {
+            const shop = ecVoiceShop();
+            const ids = ecVoiceAllIds();
+            let list, none, lead;
+            if (intent === 'atShop') {
+                list = ids.filter(id => { const l = ecVoiceLoc(id); return l && ecVoiceStatus(id) !== 'offline' && haversineDistance(l.lat, l.lng, shop.lat, shop.lng) <= START_POINT_RADIUS_M; });
+                lead = 'At the shop: '; none = 'No vehicles are at the shop right now.';
+            } else if (intent === 'whoOffline') {
+                list = ids.filter(id => ecVoiceStatus(id) === 'offline');
+                lead = 'Offline: '; none = 'Every GPS is online or on standby.';
+            } else {
+                list = ids.filter(id => ecVoiceStatus(id) === 'online');
+                const standby = ids.filter(id => ecVoiceStatus(id) === 'standby');
+                const names = list.map(ecVoiceLabel).sort();
+                let text = list.length ? list.length + ' online: ' + names.join(', ') + '.' : 'Nobody is online right now.';
+                if (standby.length) text += ' On standby: ' + standby.map(ecVoiceLabel).sort().join(', ') + '.';
+                return { text: text };
+            }
+            return { text: list.length ? lead + list.map(ecVoiceLabel).sort().join(', ') + '.' : none };
+        }
+
+        async function ecVoiceClosest(kind, words, driverId) {
+            let dest, destName;
+            if (kind === 'me') {
+                try { dest = await ecEtaGetMyLocation(); } catch (err) { return { text: ecEtaErrorMessage(err) }; }
+                destName = 'you';
+            } else if (kind === 'driver') {
+                dest = ecVoiceLoc(driverId);
+                if (!dest) return { text: 'There is no GPS location for ' + ecVoiceLabel(driverId) + ' yet.' };
+                destName = ecVoiceLabel(driverId);
+            } else {
+                const point = ecVoiceFindPoint(words);
+                if (point && !words.includes('shop')) { dest = point; destName = point.name; }
+                else { dest = ecVoiceShop(); destName = 'the shop'; }
+            }
+            const ranked = ecVoiceAllIds().filter(id => id !== driverId && ecVoiceStatus(id) !== 'offline').map(id => {
+                const l = ecVoiceLoc(id);
+                return l ? { id: id, d: haversineDistance(l.lat, l.lng, dest.lat, dest.lng) } : null;
+            }).filter(Boolean).sort((a, b) => a.d - b.d);
+            if (!ranked.length) return { text: 'No online vehicles to compare.' };
+            ecVoice.lastId = ranked[0].id;
+            const at = destName === 'you' ? 'at your location' : 'at ' + destName;
+            const howFar = r => r.d <= START_POINT_RADIUS_M ? at : ecVoiceDist(r.d) + ' away';
+            let text = 'Closest to ' + destName + ' is ' + ecVoiceLabel(ranked[0].id) + ', ' + howFar(ranked[0]) + '.';
+            if (ranked[1]) text += ' Next: ' + ranked.slice(1, 3).map(r => ecVoiceLabel(r.id) + ', ' + howFar(r)).join('; ') + '. Distances are in a straight line.';
+            return { text: text, choices: [{ label: 'Where is ' + ecVoiceLabel(ranked[0].id) + '?', q: 'where is', id: ranked[0].id, intent: 'where' }] };
+        }
+
+        // ----- Panel, listening and speaking -----
+        function ecVoiceEl(id) { return document.getElementById(id); }
+        function ecVoiceSpeakOn() {
+            try { return localStorage.getItem(EC_VOICE_SPEAK_KEY) !== 'off'; } catch (e) { return true; }
+        }
+        function ecVoiceSetSpeak(on) {
+            try { localStorage.setItem(EC_VOICE_SPEAK_KEY, on ? 'on' : 'off'); } catch (e) {}
+            if (!on && window.speechSynthesis) speechSynthesis.cancel();
+        }
+        function ecVoiceSay(text) {
+            if (!ecVoiceSpeakOn() || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+            try {
+                speechSynthesis.cancel();
+                const spoken = String(text).replace(/(\d)\s?km\b/g, '$1 kilometres').replace(/(\d)\s?m\b/g, '$1 metres')
+                    .replace(/(\d) h\b/g, '$1 hours').replace(/(\d) min\b/g, '$1 minutes');
+                const u = new SpeechSynthesisUtterance(spoken);
+                u.lang = EC_VOICE_LANG;
+                const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+                const v = voices.find(x => x.lang === EC_VOICE_LANG) || voices.find(x => /^en[-_]/i.test(x.lang) && x.localService) || null;
+                if (v) u.voice = v;
+                speechSynthesis.speak(u);
+            } catch (e) { console.warn('Voice: could not speak:', e); }
+        }
+        function ecVoiceSetState(text, listening) {
+            const st = ecVoiceEl('ecVoiceState');
+            if (st) st.textContent = text;
+            const btn = ecVoiceEl('ecVoiceBtn');
+            if (btn) btn.classList.toggle('is-listening', !!listening);
+            const again = ecVoiceEl('ecVoiceAgain');
+            if (again) again.textContent = listening ? 'Stop' : 'Ask again';
+        }
+        function ecVoiceShowHelp(show) {
+            const h = ecVoiceEl('ecVoiceHelp');
+            if (!h) return;
+            if (show) ecVoiceFillHelp(h);
+            h.hidden = !show;
+        }
+        // The examples use real names from this dashboard (a driver's name and two vehicle names)
+        function ecVoiceFillHelp(h) {
+            const ids = ecVoiceAllIds();
+            const vehicleOf = id => String((ecVoiceDriver(id).name) || '').trim();
+            const personOf = id => { const c = ecVoiceClaim(id); return getDriverNickname(id) || (c ? (c.nickname || String(c.name || '').split(/\s+/)[0]) : ''); };
+            const pId = ids.find(id => personOf(id));
+            const p = pId ? personOf(pId) : 'Sheldon';
+            const vIds = ids.filter(id => vehicleOf(id) && id !== pId);
+            const v = vIds[0] ? vehicleOf(vIds[0]) : (pId && vehicleOf(pId)) || '21';
+            const v2 = vIds[1] ? vehicleOf(vIds[1]) : '14';
+            h.querySelectorAll('[data-tpl]').forEach(b => {
+                b.textContent = b.getAttribute('data-tpl').replace('{p}', p).replace('{v2}', v2).replace('{v}', v);
+            });
+        }
+        function ecVoiceOpen() {
+            const p = ecVoiceEl('ecVoicePanel');
+            if (!p) return;
+            p.hidden = false;
+            ecVoice.open = true;
+            const sp = ecVoiceEl('ecVoiceSpeak');
+            if (sp) sp.checked = ecVoiceSpeakOn();
+            if (!ecVoiceSupported()) {
+                ecVoiceSetState('Type a question', false);
+                ecVoiceEl('ecVoiceAnswer').textContent = 'This browser can\'t listen. Chrome can. You can type a question below.';
+            }
+        }
+        function ecVoiceClose() {
+            ecVoiceStop();
+            if (window.speechSynthesis) speechSynthesis.cancel();
+            const p = ecVoiceEl('ecVoicePanel');
+            if (p) p.hidden = true;
+            ecVoice.open = false;
+            ecVoiceShowHelp(false);
+        }
+        function ecVoiceStop() {
+            if (ecVoice.rec) { try { ecVoice.rec.abort(); } catch (e) {} }
+            ecVoice.rec = null;
+            ecVoice.listening = false;
+            ecVoiceSetState('Tap the mic to ask', false);
+        }
+        // Mic button: open and listen; while listening, stop
+        function ecVoiceToggle() {
+            if (ecVoice.listening) { ecVoiceStop(); return; }
+            ecVoiceOpen();
+            ecVoiceListen();
+        }
+        function ecVoiceListen() {
+            if (ecVoice.listening) { ecVoiceStop(); return; }
+            const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Rec) { ecVoiceOpen(); const i = ecVoiceEl('ecVoiceInput'); if (i) i.focus(); return; }
+            if (window.speechSynthesis) speechSynthesis.cancel();
+            const rec = new Rec();
+            rec.lang = EC_VOICE_LANG;
+            rec.interimResults = true;
+            rec.maxAlternatives = 5;
+            rec.continuous = false;
+            let done = false;
+            rec.onresult = function(e) {
+                if (ecVoice.rec !== rec) return;
+                const r = e.results[e.results.length - 1];
+                ecVoiceEl('ecVoiceHeard').textContent = '"' + r[0].transcript + '"';
+                if (!r.isFinal || done) return;
+                done = true;
+                const alts = Array.from(r).map(a => a.transcript).filter(Boolean);
+                ecVoice.rec = null;
+                ecVoice.listening = false;
+                ecVoiceSetState('Tap the mic to ask', false);
+                ecVoiceAsk(alts);
+            };
+            rec.onerror = function(e) {
+                if (ecVoice.rec !== rec) return;
+                done = true;
+                ecVoice.rec = null;
+                ecVoice.listening = false;
+                ecVoiceSetState('Tap the mic to ask', false);
+                const code = e && e.error;
+                if (code === 'aborted') return;
+                const msg = code === 'not-allowed' || code === 'service-not-allowed'
+                    ? 'The microphone is blocked. Allow the microphone for this site in the browser settings, then try again.'
+                    : code === 'no-speech' ? 'I didn\'t hear anything. Tap the mic and try again.'
+                    : code === 'network' ? 'Listening needs an internet connection. You can type a question below.'
+                    : code === 'audio-capture' ? 'No microphone was found.'
+                    : 'Listening stopped (' + code + '). Tap the mic to try again.';
+                ecVoiceEl('ecVoiceAnswer').textContent = msg;
+            };
+            rec.onend = function() {
+                if (ecVoice.rec !== rec) return;
+                ecVoice.rec = null;
+                ecVoice.listening = false;
+                ecVoiceSetState('Tap the mic to ask', false);
+            };
+            ecVoice.rec = rec;
+            ecVoice.listening = true;
+            ecVoiceEl('ecVoiceHeard').textContent = '';
+            ecVoiceEl('ecVoiceChoices').innerHTML = '';
+            ecVoiceSetState('Listening…', true);
+            try { rec.start(); } catch (e) {
+                ecVoice.rec = null;
+                ecVoice.listening = false;
+                ecVoiceSetState('Tap the mic to ask', false);
+                ecVoiceEl('ecVoiceAnswer').textContent = 'Couldn\'t start listening. Tap the mic to try again.';
+            }
+        }
+        // alternatives: what the browser heard, best guess first. Uses the first one that names a driver or a known question.
+        async function ecVoiceAsk(alternatives, forcedId, forcedIntent) {
+            const seq = ++ecVoice.seq;
+            const alts = (Array.isArray(alternatives) ? alternatives : [alternatives]).map(a => String(a || '').trim()).filter(Boolean);
+            const answerEl = ecVoiceEl('ecVoiceAnswer');
+            const choicesEl = ecVoiceEl('ecVoiceChoices');
+            if (!alts.length) return;
+            await Promise.all([ecVoiceLoadClaims(), ecVoiceLoadShop()]);
+            let pick = alts[0];
+            if (!forcedId) {
+                pick = alts.find(a => { const w = ecVoiceNorm(a); return ecVoiceFindDrivers(w).length && ecVoiceIntent(a, w); }) ||
+                    alts.find(a => ecVoiceFindDrivers(ecVoiceNorm(a)).length) ||
+                    alts.find(a => ecVoiceIntent(a, ecVoiceNorm(a))) || alts[0];
+            }
+            ecVoiceEl('ecVoiceHeard').textContent = '"' + pick + '"';
+            answerEl.textContent = 'Checking…';
+            choicesEl.innerHTML = '';
+            ecVoiceShowHelp(false);
+            let ans;
+            try {
+                if (forcedId) {
+                    const words = ecVoiceNorm(pick);
+                    ans = await ecVoiceAboutDriver(forcedId, forcedIntent || ecVoiceIntent(pick, words) || 'where', words,
+                        ecVoiceFindDrivers(words).filter(f => f.id !== forcedId), {
+                            me: words.includes('me'), shop: words.includes('shop') });
+                } else {
+                    ans = await ecVoiceAnswer(pick);
+                }
+            } catch (e) {
+                console.warn('Voice answer failed:', e);
+                ans = { text: 'Something went wrong answering that. Please try again.' };
+            }
+            if (seq !== ecVoice.seq) return;
+            answerEl.textContent = ans.text;
+            (ans.choices || []).forEach(c => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'ec-voice-chip';
+                b.textContent = c.label;
+                b.addEventListener('click', () => ecVoiceAsk([c.q], c.id, c.intent));
+                choicesEl.appendChild(b);
+            });
+            ecVoiceSay(ans.text);
+        }
+        function ecVoiceTyped(e) {
+            if (e) e.preventDefault();
+            const input = ecVoiceEl('ecVoiceInput');
+            const q = input ? input.value.trim() : '';
+            if (!q) return false;
+            input.value = '';
+            ecVoiceStop();
+            ecVoiceAsk([q]);
+            return false;
+        }
+        function ecVoiceTry(q) { ecVoiceAsk([q]); }
+        // Long-press the app icon -> "Ask" (manifest.json shortcuts) opens index.html?voice=1: open the panel and listen.
+        // The ?voice=1 is removed right away so a reload doesn't start listening again.
+        function ecVoiceFromShortcut() {
+            let want = false;
+            try { want = new URLSearchParams(location.search).get('voice') === '1'; } catch (e) {}
+            if (!want) return;
+            try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) {}
+            ecVoiceOpen();
+            ecVoiceListen(); // if the browser won't listen without a tap, the panel says "Tap the mic to ask"
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && ecVoice.open) ecVoiceClose();
         });
 
         console.log('✅ E&C Dispatch Tracker loaded.');
