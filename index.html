@@ -2750,6 +2750,23 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.18);
         }
+        .nickname-modal .nick-tc {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 12px 0 0 0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(53, 208, 127, 0.12);
+            border: 1px solid rgba(53, 208, 127, 0.35);
+            font-size: 13px;
+            line-height: 1.35;
+            cursor: pointer;
+            text-align: left;
+        }
+        .nickname-modal .nick-tc[hidden], .nickname-modal .nick-tc-note[hidden] { display: none; }
+        .nickname-modal .nick-tc input { width: 18px; height: 18px; margin: 1px 0 0 0; flex: none; accent-color: #35d07f; }
+        .nickname-modal .nick-tc-note { margin: 10px 0 0 0; font-size: 12px; opacity: 0.75; text-align: left; }
         .nickname-modal .nickname-actions {
             display: flex;
             gap: 8px;
@@ -4798,7 +4815,7 @@
             }
             .driver-modal .modal-stops-container { max-height: 50vh !important; }
         }
-        /* ===== Voice questions: mic button + answer panel (bottom left) ===== */
+        /* ===== Voice questions: mic button + caption of the spoken answer (bottom left; bottom right on phones) ===== */
         .ec-voice-btn {
             position: fixed;
             left: 20px;
@@ -4817,89 +4834,237 @@
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
             -webkit-tap-highlight-color: transparent;
         }
-        .ec-voice-btn svg { width: 26px; height: 26px; }
+        /* States: tap = splash; listening = red glow + sonar rings; thinking = spinning gold arc; speaking = gold glow + voice bars */
+        .ec-voice-btn { isolation: isolate; transition: transform 0.15s ease, box-shadow 0.3s ease, background 0.3s ease, color 0.3s ease; }
+        .ec-voice-btn:active { transform: scale(0.92); }
+        .ec-voice-btn svg { width: 26px; height: 26px; transition: opacity 0.2s ease, transform 0.25s ease; }
         .ec-voice-btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
-        .ec-voice-btn.is-listening { background: #e74c3c; color: #fff; animation: ecVoicePulse 1.2s ease-in-out infinite; }
-        @keyframes ecVoicePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.55); }
-            50% { box-shadow: 0 0 0 12px rgba(231, 76, 60, 0); }
+        .ec-voice-btn::before, .ec-voice-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(231, 76, 60, 0.75);
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
         }
-        @media (prefers-reduced-motion: reduce) { .ec-voice-btn.is-listening { animation: none; } }
-        body.modal-open .ec-voice-btn, body.modal-open .ec-voice-panel { display: none; }
-        .ec-voice-panel {
+        .ec-voice-btn.is-listening {
+            background: radial-gradient(circle at 35% 30%, #ff7a6b 0%, #e74c3c 55%, #b83227 100%);
+            color: #fff;
+            box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.22), 0 0 26px 8px rgba(231, 76, 60, 0.55);
+            animation: ecVoiceBreath 1.6s ease-in-out infinite;
+        }
+        .ec-voice-btn.is-listening::before { animation: ecVoiceSonar 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite; }
+        .ec-voice-btn.is-listening::after { animation: ecVoiceSonar 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) 0.9s infinite; }
+        .ec-voice-btn.is-thinking { box-shadow: 0 0 22px 4px rgba(247, 201, 72, 0.45); }
+        .ec-voice-btn.is-thinking::before {
+            inset: -6px;
+            opacity: 1;
+            border: 3px solid transparent;
+            border-top-color: var(--accent);
+            border-right-color: rgba(247, 201, 72, 0.35);
+            animation: ecVoiceSpin 0.8s linear infinite;
+        }
+        .ec-voice-btn.is-speaking {
+            box-shadow: 0 0 0 4px rgba(247, 201, 72, 0.22), 0 0 26px 8px rgba(247, 201, 72, 0.55);
+            animation: ecVoiceBreath 2.2s ease-in-out infinite;
+        }
+        .ec-voice-btn.is-speaking svg { opacity: 0; transform: scale(0.5); }
+        .ec-voice-bars {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.2s ease, transform 0.25s ease;
+            pointer-events: none;
+        }
+        .ec-voice-bars i { display: block; width: 4px; height: 6px; border-radius: 2px; background: currentColor; }
+        .ec-voice-btn.is-speaking .ec-voice-bars { opacity: 1; transform: none; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i { animation: ecVoiceBar 0.9s ease-in-out infinite; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i:nth-child(2) { animation-delay: -0.3s; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i:nth-child(3) { animation-delay: -0.6s; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i:nth-child(4) { animation-delay: -0.15s; }
+        .ec-voice-splash {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 56px;
+            height: 56px;
+            margin: -28px 0 0 -28px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle, rgba(247, 201, 72, 0.6) 0%, rgba(247, 201, 72, 0.25) 45%, rgba(247, 201, 72, 0) 70%);
+            animation: ecVoiceSplash 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+        }
+        .ec-voice-splash.ring { background: none; border: 2px solid rgba(247, 201, 72, 0.85); animation-duration: 0.9s; }
+        @keyframes ecVoiceSplash { from { transform: scale(0.6); opacity: 1; } to { transform: scale(3.2); opacity: 0; } }
+        @keyframes ecVoiceSonar { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.3); opacity: 0; } }
+        @keyframes ecVoiceBreath { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+        @keyframes ecVoiceSpin { to { transform: rotate(360deg); } }
+        @keyframes ecVoiceBar { 0%, 100% { height: 6px; } 50% { height: 22px; } }
+        @media (prefers-reduced-motion: reduce) {
+            .ec-voice-btn, .ec-voice-btn::before, .ec-voice-btn::after, .ec-voice-bars i { animation: none !important; }
+            .ec-voice-bars i { height: 14px; }
+            .ec-voice-splash { display: none; }
+        }
+        body.modal-open .ec-voice-btn, body.modal-open .ec-voice-caption { display: none; }
+        .ec-voice-caption {
             position: fixed;
             left: 16px;
             bottom: 88px;
             z-index: 9600;
             width: min(380px, calc(100vw - 32px));
-            max-height: calc(100vh - 120px);
-            overflow-y: auto;
+            box-sizing: border-box;
+            background: rgba(11, 11, 20, 0.92);
+            color: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+            font-size: 17px;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+            cursor: pointer;
+        }
+        .ec-voice-caption[hidden] { display: none; }
+        .ec-voice-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .ec-voice-choices:empty { display: none; }
+        .ec-voice-chip {
+            background: transparent;
+            color: #fff;
+            border: 1px solid var(--accent);
+            border-radius: 16px;
+            padding: 7px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            min-height: 36px;
+        }
+        /* Phones: mic bottom right (above the Install App button while that shows) */
+        @media (max-width: 600px) {
+            .ec-voice-btn { left: auto; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+            .ec-voice-caption { left: auto; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+            .install-app-btn[style*="flex"] ~ .ec-voice-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+            .install-app-btn[style*="flex"] ~ .ec-voice-caption { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); }
+        }
+        /* ===== Easy 12-hour pickers: From/To day + times, and Settings > Workday ===== */
+        .ec-dt { display: flex; flex-direction: column; gap: 8px; flex: 1 1 320px; min-width: 0; }
+        .ec-dt-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .ec-dt-step, .ec-dt-day, .ec-dt-chip, .ec-dt-time, .ec-wd-time {
+            background: var(--card2);
+            color: var(--text);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+        }
+        .ec-dt-step:active, .ec-dt-day:active, .ec-dt-chip:active, .ec-dt-time:active, .ec-wd-time:active { transform: scale(0.96); }
+        .ec-dt-step:hover, .ec-dt-day:hover, .ec-dt-chip:hover, .ec-dt-time:hover, .ec-wd-time:hover { border-color: var(--accent); }
+        .ec-dt-step { width: 40px; height: 40px; font-size: 22px; line-height: 1; padding: 0; }
+        .ec-dt-daywrap { position: relative; display: inline-flex; flex: 0 1 auto; }
+        .ec-dt-day { height: 40px; padding: 0 14px; font-size: 15px; font-weight: 700; min-width: 128px; }
+        .ec-dt-dateinput { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+        .ec-dt-chip { height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; }
+        .ec-dt-chip.is-on { border-color: var(--accent); color: var(--accent); }
+        body.light-mode .ec-dt-chip.is-on { color: var(--text); background: rgba(247, 201, 72, 0.25); }
+        .ec-dt-times { flex-wrap: nowrap; }
+        .ec-dt-time {
+            flex: 1 1 0;
+            min-width: 0;
+            height: 52px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 0 12px;
+            text-align: left;
+        }
+        .ec-dt-cap { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .ec-dt-val { font-size: 18px; font-weight: 700; white-space: nowrap; }
+        .ec-dt-val small { font-size: 11px; font-weight: 600; color: var(--accent); margin-left: 4px; }
+        body.light-mode .ec-dt-val small { color: #9a6b00; }
+        .ec-dt-arrow { color: var(--muted); font-size: 18px; flex: none; }
+        .ec-wd-time { height: 40px; padding: 0 14px; font-size: 15px; font-weight: 700; min-width: 104px; }
+        body.light-mode .ec-dt-step, body.light-mode .ec-dt-day, body.light-mode .ec-dt-chip,
+        body.light-mode .ec-dt-time, body.light-mode .ec-wd-time { background: #f5f5f5; border-color: #ccc; color: #000; }
+
+        .ec-tp-backdrop { position: fixed; inset: 0; z-index: 100002; background: rgba(0, 0, 0, 0.35); }
+        .ec-tp-backdrop[hidden], .ec-tp[hidden] { display: none; }
+        .ec-tp {
+            position: fixed;
+            z-index: 100003;
+            width: 300px;
+            max-width: calc(100vw - 24px);
             box-sizing: border-box;
             background: var(--card);
             color: var(--text);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px;
-            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4);
-            font-size: 14px;
-        }
-        .ec-voice-panel[hidden] { display: none; }
-        .ec-voice-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-        .ec-voice-head .ec-voice-state { font-weight: 700; color: var(--accent); }
-        body.light-mode .ec-voice-head .ec-voice-state { color: var(--text); }
-        .ec-voice-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 8px; min-width: 36px; min-height: 36px; }
-        .ec-voice-heard { color: var(--muted); font-style: italic; min-height: 1em; margin-bottom: 6px; overflow-wrap: anywhere; }
-        .ec-voice-answer { font-size: 16px; line-height: 1.45; min-height: 1.4em; overflow-wrap: anywhere; }
-        .ec-voice-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .ec-voice-choices:empty { display: none; }
-        .ec-voice-chip {
-            background: var(--card2, transparent);
-            color: var(--text);
-            border: 1px solid var(--accent);
             border-radius: 16px;
-            padding: 7px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            min-height: 36px;
+            padding: 14px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+            animation: ecTpIn 0.16s ease-out;
         }
-        .ec-voice-type { display: flex; gap: 6px; margin-top: 12px; }
-        .ec-voice-type input {
-            flex: 1;
-            min-width: 0;
-            background: var(--card2, transparent);
-            color: var(--text);
+        @keyframes ecTpIn { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+        .ec-tp-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+        .ec-tp-head span { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ec-tp-head strong { font-size: 24px; }
+        .ec-tp-sec { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 0 4px; }
+        .ec-tp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+        .ec-tp-grid button, .ec-tp-ampm button {
+            height: 40px;
+            border-radius: 10px;
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: 16px; /* 16px stops phones zooming in on the box */
+            background: var(--card2);
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            padding: 0;
         }
-        .ec-voice-type button, .ec-voice-foot button {
+        .ec-tp-grid button.is-on, .ec-tp-ampm button.is-on { background: var(--accent); color: #0b0b14; border-color: var(--accent); }
+        .ec-tp-ampm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+        .ec-tp-ampm button { height: 44px; font-size: 16px; }
+        .ec-tp-done {
+            width: 100%;
+            height: 44px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 10px;
             background: var(--accent);
             color: #0b0b14;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 12px;
+            font-size: 15px;
             font-weight: 700;
             cursor: pointer;
-            min-height: 38px;
+            font-family: inherit;
         }
-        .ec-voice-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
-        .ec-voice-foot .ec-voice-link { background: none; color: var(--accent); padding: 8px 4px; text-decoration: underline; }
-        body.light-mode .ec-voice-foot .ec-voice-link { color: var(--text); }
-        .ec-voice-foot label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; margin-left: auto; cursor: pointer; }
-        .ec-voice-help { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
-        .ec-voice-help[hidden] { display: none; }
-        .ec-voice-help h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-        .ec-voice-help h4:first-child { margin-top: 0; }
-        .ec-voice-help .ec-voice-chip { margin: 0 4px 6px 0; }
-        .ec-voice-help p { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
-        /* Phones: mic bottom right (above the Install App button while that shows) */
+        body.light-mode .ec-tp-grid button:not(.is-on), body.light-mode .ec-tp-ampm button:not(.is-on) { background: #f5f5f5; border-color: #ccc; color: #000; }
+        /* Phones: the time picker is a sheet along the bottom */
         @media (max-width: 600px) {
-            .ec-voice-btn { left: auto; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
-            .ec-voice-panel { left: auto; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
-            .install-app-btn[style*="flex"] ~ .ec-voice-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
-            .install-app-btn[style*="flex"] ~ .ec-voice-panel { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); }
+            .ec-tp {
+                left: 0 !important;
+                right: 0;
+                top: auto !important;
+                bottom: 0;
+                width: 100%;
+                max-width: none;
+                border-radius: 18px 18px 0 0;
+                padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+                animation-name: ecTpUp;
+            }
+            @keyframes ecTpUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+            .ec-tp-grid button { height: 46px; font-size: 16px; }
+            #historyQuery #ecDtBox { grid-column: 1 / -1 !important; grid-row: 1 / span 2 !important; }
+            .ec-dt-day { flex: 1 1 auto; }
+            .ec-dt-daywrap { flex: 1 1 auto; }
         }
+        @media (prefers-reduced-motion: reduce) { .ec-tp { animation: none; } }
     </style>
 </head>
 <body>
@@ -5019,56 +5184,14 @@
             Install App
         </button>
 
-        <!-- Voice questions: tap the mic and ask "Where is Sheldon?" (script: VOICE QUESTIONS) -->
+        <!-- Voice questions: tap the mic and ask "Where is Sheldon?"; the spoken answer shows as a caption (script: VOICE QUESTIONS) -->
         <button type="button" id="ecVoiceBtn" class="ec-voice-btn" onclick="ecVoiceToggle()" title="Ask where a driver is" aria-label="Ask a question by voice">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+            <span class="ec-voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         </button>
-        <div id="ecVoicePanel" class="ec-voice-panel" role="dialog" aria-label="Voice questions" hidden>
-            <div class="ec-voice-head">
-                <span class="ec-voice-state" id="ecVoiceState" role="status">Tap the mic to ask</span>
-                <button type="button" class="ec-voice-close" onclick="ecVoiceClose()" title="Close" aria-label="Close">✕</button>
-            </div>
-            <div class="ec-voice-heard" id="ecVoiceHeard"></div>
-            <div class="ec-voice-answer" id="ecVoiceAnswer" aria-live="polite">Ask something like "Where is Sheldon?" or "How far is 21 from the shop?"</div>
+        <div id="ecVoiceCaption" class="ec-voice-caption" role="status" aria-live="polite" title="Tap to hide" hidden>
+            <div id="ecVoiceText"></div>
             <div class="ec-voice-choices" id="ecVoiceChoices"></div>
-            <form class="ec-voice-type" onsubmit="return ecVoiceTyped(event)">
-                <input type="text" id="ecVoiceInput" placeholder="Or type a question" autocomplete="off" enterkeyhint="send" aria-label="Type a question">
-                <button type="submit">Ask</button>
-            </form>
-            <div class="ec-voice-foot">
-                <button type="button" id="ecVoiceAgain" onclick="ecVoiceListen()">Ask again</button>
-                <button type="button" class="ec-voice-link" onclick="ecVoiceShowHelp(document.getElementById('ecVoiceHelp').hidden)">What can I say?</button>
-                <label><input type="checkbox" id="ecVoiceSpeak" checked onchange="ecVoiceSetSpeak(this.checked)"> Read answers aloud</label>
-            </div>
-            <div class="ec-voice-help" id="ecVoiceHelp" hidden>
-                <h4>Where</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="Where is {p}?" onclick="ecVoiceTry(this.textContent)">Where is Sheldon?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Where's {v}?" onclick="ecVoiceTry(this.textContent)">Where's 21?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Show {p} on the map" onclick="ecVoiceTry(this.textContent)">Show Sheldon on the map</button>
-                <h4>How far / how long</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="How far is {p} from the shop?" onclick="ecVoiceTry(this.textContent)">How far is Sheldon from the shop?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="How far is {v} from me?" onclick="ecVoiceTry(this.textContent)">How far is 21 from me?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="How far is {p} from {v2}?" onclick="ecVoiceTry(this.textContent)">How far is Sheldon from 14?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="How long until {p} gets to the shop?" onclick="ecVoiceTry(this.textContent)">How long until Sheldon gets to the shop?</button>
-                <h4>Who</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's closest to the shop?" onclick="ecVoiceTry(this.textContent)">Who's closest to the shop?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's closest to me?" onclick="ecVoiceTry(this.textContent)">Who's closest to me?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's online?" onclick="ecVoiceTry(this.textContent)">Who's online?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's at the shop?" onclick="ecVoiceTry(this.textContent)">Who's at the shop?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's offline?" onclick="ecVoiceTry(this.textContent)">Who's offline?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's driving {v}?" onclick="ecVoiceTry(this.textContent)">Who's driving 21?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="What vehicle is {p} in?" onclick="ecVoiceTry(this.textContent)">What vehicle is Sheldon in?</button>
-                <h4>Status</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="When did {p} last update?" onclick="ecVoiceTry(this.textContent)">When did Sheldon last update?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Is {p} moving?" onclick="ecVoiceTry(this.textContent)">Is Sheldon moving?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="What's {v}'s battery?" onclick="ecVoiceTry(this.textContent)">What's 21's battery?</button>
-                <h4>Open things</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="Open {p}" onclick="ecVoiceTry(this.textContent)">Open Sheldon</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Show {p}'s route" onclick="ecVoiceTry(this.textContent)">Show Sheldon's route</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Show the map" onclick="ecVoiceTry(this.textContent)">Show the map</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Dark mode" onclick="ecVoiceTry(this.textContent)">Dark mode</button>
-                <p>Say a nickname, the vehicle name from Settings, or the name of whoever has the vehicle in the Time Clock. "He" or "she" means the last driver you asked about. A saved point's name works too, like "How far is Sheldon from Walmart?" "Where is" looks up one street address and "How long" asks Google for one drive time; the rest uses no paid calls.</p>
-            </div>
         </div>
 
         <div class="app-grid">
@@ -5118,10 +5241,31 @@
             <div id="historyQuery" style="border-top:1px solid var(--border); margin-top:0; padding-top:8px; display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
                 <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                     <div style="display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; flex:1 1 auto;">
-                        <label style="font-size:12px; color:var(--muted); white-space:nowrap;">From:</label>
-                        <input type="datetime-local" id="historyStart" class="date-picker" style="flex:0 1 auto; min-width:140px;">
-                        <label style="font-size:12px; color:var(--muted); white-space:nowrap;">To:</label>
-                        <input type="datetime-local" id="historyEnd" class="date-picker" style="flex:0 1 auto; min-width:140px;">
+                        <!-- From / To: a day with arrows and two 12-hour time buttons (script: EASY 12-HOUR PICKERS).
+                             The hidden inputs keep the values the rest of the page reads ("YYYY-MM-DDTHH:MM", Brandon time). -->
+                        <div class="ec-dt" id="ecDtBox">
+                            <input type="hidden" id="historyStart">
+                            <input type="hidden" id="historyEnd">
+                            <div class="ec-dt-row">
+                                <button type="button" class="ec-dt-step" id="ecDtPrev" aria-label="Previous day">‹</button>
+                                <span class="ec-dt-daywrap">
+                                    <button type="button" class="ec-dt-day" id="ecDtDay" aria-label="Pick a day">Today</button>
+                                    <input type="date" class="ec-dt-dateinput" id="ecDtDate" tabindex="-1" aria-hidden="true">
+                                </span>
+                                <button type="button" class="ec-dt-step" id="ecDtNext" aria-label="Next day">›</button>
+                                <button type="button" class="ec-dt-chip" id="ecDtToday">Today</button>
+                            </div>
+                            <div class="ec-dt-row ec-dt-times">
+                                <button type="button" class="ec-dt-time" id="ecDtFrom"><span class="ec-dt-cap">From</span><span class="ec-dt-val" id="ecDtFromVal">--</span></button>
+                                <span class="ec-dt-arrow" aria-hidden="true">→</span>
+                                <button type="button" class="ec-dt-time" id="ecDtTo"><span class="ec-dt-cap">To</span><span class="ec-dt-val" id="ecDtToVal">--</span></button>
+                            </div>
+                            <div class="ec-dt-row ec-dt-quick">
+                                <button type="button" class="ec-dt-chip" data-quick="workday">Workday</button>
+                                <button type="button" class="ec-dt-chip" data-quick="1">Last hour</button>
+                                <button type="button" class="ec-dt-chip" data-quick="3">Last 3 hours</button>
+                            </div>
+                        </div>
                         <!-- Driver list from the E&C Time Clock: sets From/To to their punch in that day, plus 12 hours -->
                         <span class="tc-shift-row" id="tcShiftRow" hidden>
                             <label for="tcShiftSelect">Driver:</label>
@@ -5224,8 +5368,10 @@
         <div class="nickname-card">
             <h3>Driver Nickname</h3>
             <div class="nickname-sub" id="nicknameDriverLabel"></div>
-            <input type="text" id="nicknameInput" maxlength="24" placeholder="Enter a nickname" autocomplete="off">
+            <input type="text" id="nicknameInput" maxlength="24" placeholder="Enter a nickname" autocomplete="off" oninput="ecNickTcHint()">
             <div class="nickname-sub" style="margin:10px 0 0 0;">Everyone on the dashboard will see this nickname.</div>
+            <label class="nick-tc" id="nicknameTcRow" hidden><input type="checkbox" id="nicknameTcLink" checked><span id="nicknameTcText"></span></label>
+            <div class="nick-tc-note" id="nicknameTcNote" hidden></div>
             <div class="nickname-actions">
                 <button type="button" class="nick-save" onclick="saveDriverNickname()">Save</button>
                 <button type="button" class="nick-remove" onclick="removeDriverNickname()">Remove</button>
@@ -5287,6 +5433,20 @@
     </div>
 
     <!-- Firebase + Google Maps (loaded directly) -->
+    <!-- 12-hour time picker (EASY 12-HOUR PICKERS): hour, minute, AM/PM; each tap applies right away -->
+    <div class="ec-tp-backdrop" id="ecTpBackdrop" hidden></div>
+    <div class="ec-tp" id="ecTp" role="dialog" aria-labelledby="ecTpTitle" hidden>
+        <div class="ec-tp-head"><span id="ecTpTitle">From</span><strong id="ecTpValue">--</strong></div>
+        <div class="ec-tp-sec">Hour</div>
+        <div class="ec-tp-grid" id="ecTpHours"></div>
+        <div class="ec-tp-sec">Minute</div>
+        <div class="ec-tp-grid" id="ecTpMins"></div>
+        <div class="ec-tp-ampm" id="ecTpAmPm">
+            <button type="button" data-ap="am">AM</button>
+            <button type="button" data-ap="pm">PM</button>
+        </div>
+        <button type="button" class="ec-tp-done" id="ecTpDone">Done</button>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -6838,6 +6998,9 @@
             if (label) label.textContent = 'Driver: ' + ((drv && drv.name) ? drv.name : 'Driver');
             const input = document.getElementById('nicknameInput');
             if (input) input.value = getDriverNickname(nicknameTargetDriverId);
+            const link = document.getElementById('nicknameTcLink');
+            if (link) link.checked = true;
+            ecNickTcHint();
             const modal = document.getElementById('nicknameModal');
             if (modal) modal.style.display = 'flex';
             setTimeout(() => { if (input) { input.focus(); input.select(); } }, 60);
@@ -6862,11 +7025,37 @@
             }
         }
 
+        // Under the nickname box: when the name typed is someone on the clock, offer to give them this GPS in the
+        // Time Clock as well, so the nickname comes off when they punch out (ecTcMatchNickname).
+        function ecNickTcMatch() {
+            const id = nicknameTargetDriverId;
+            const input = document.getElementById('nicknameInput');
+            const value = input ? input.value.trim().slice(0, EC_TC_NICK_MAX) : '';
+            if (!id || id !== ecTc.driverId || !value) return null;
+            return ecTcMatchNickname(id, value, ecTc.people, ecTc.claims);
+        }
+        function ecNickTcHint() {
+            const row = document.getElementById('nicknameTcRow');
+            const note = document.getElementById('nicknameTcNote');
+            if (!row || !note) return;
+            const m = ecNickTcMatch();
+            row.hidden = !(m && m.person && !m.already);
+            note.hidden = !(m && (m.note || m.already));
+            if (m && m.person && !m.already) {
+                document.getElementById('nicknameTcText').textContent = 'Take it off when ' + m.person.name + ' punches out (gives '
+                    + m.person.name + ' this vehicle in Time Clock)';
+            }
+            note.textContent = m ? (m.already ? 'It comes off when ' + m.person.name + ' punches out.' : (m.note || '')) : '';
+        }
+
         function saveDriverNickname() {
             if (!nicknameTargetDriverId) { closeNicknameModal(); return; }
             const driverId = nicknameTargetDriverId;
             const input = document.getElementById('nicknameInput');
             const value = input ? input.value.trim().slice(0, 24) : '';
+            const m = value ? ecNickTcMatch() : null;
+            const link = document.getElementById('nicknameTcLink');
+            const doLink = !!(m && m.person && (m.already || (link && link.checked)));
             const ref = getNicknamesRef();
             if (ref) {
                 if (value) ref.child(driverId).set(value).catch(ecSaveError('the nickname'));
@@ -6874,6 +7063,16 @@
             }
             applyNicknameChange(driverId, value);
             closeNicknameModal();
+            if (doLink && !ecTc.busy) {
+                const claims = ecTc.claims;
+                ecTc.busy = true;
+                ecTcAssign(driverId, m.person, value, claims).then(() => {
+                    if (!m.already) ecShowNotice(value + ' comes off ' + ecTcGpsName(drivers[driverId]) + ' when ' + m.person.name + ' punches out.');
+                }, ecSaveError('the vehicle in Time Clock')).finally(() => {
+                    ecTc.busy = false;
+                    if (ecTc.driverId === driverId) ecTcShow(driverId);
+                });
+            }
         }
 
         function removeDriverNickname() {
@@ -7011,8 +7210,8 @@
         }
 
         // Frees a vehicle the driver had, and the nickname they gave it (admin.html releaseClaim in the timeclock repo)
-        async function ecTcRelease(gpsId, shiftId) {
-            const c = ecTc.claims[gpsId];
+        async function ecTcRelease(gpsId, shiftId, claims) {
+            const c = (claims || ecTc.claims)[gpsId];
             await db.ref(EC_TC + 'vehicle_claims/' + gpsId).transaction(cur => (cur === null || cur.shiftId === shiftId) ? null : undefined);
             if (c && c.nickname && !ecTcIsManual(gpsId) && c.shiftId === shiftId) {
                 await getNicknamesRef().child(gpsId).transaction(cur => (cur === null || cur === c.nickname) ? null : undefined)
@@ -7045,32 +7244,9 @@
             ecTc.busy = true;
             ecTcRender();
             ecTcMsg('Saving…');
-            const by = String((auth.currentUser && auth.currentUser.email) || '').toLowerCase();
-            const TS = firebase.database.ServerValue.TIMESTAMP;
-            const base = EC_TC + 'shifts/' + ek + '/' + shift.id;
-            const entry = { at: TS, how: 'admin', by: by.slice(0, 60), vehicleId: gpsId, vehicleName: gpsName };
-            const u = {};
-            u[base + '/vehicleId'] = gpsId;
-            u[base + '/vehicleName'] = gpsName;
-            u[base + '/nickname'] = nick;
-            u[base + '/shop'] = null;
-            u[base + '/vans/' + db.ref(base + '/vans').push().key] = entry;
-            u[base + '/swapHint'] = null; // no vehicle swap needed any more (nothing happens if there was none)
-            u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle set in RouteWatcher' };
-            let done = false, nickOk = true;
+            let nickOk;
             try {
-                await db.ref().update(u);
-                if (shift.vehicleId && shift.vehicleId !== gpsId) {
-                    await ecTcRelease(shift.vehicleId, shift.id).catch(err => console.warn('Old vehicle not freed:', err));
-                }
-                await db.ref(EC_TC + 'vehicle_claims/' + gpsId).set({ ek: ek, email: String(p.emp.email || '').toLowerCase(), name: p.name,
-                    nickname: nick, shiftId: shift.id, vehicleName: gpsName, at: TS });
-                await getNicknamesRef().child(gpsId).set(nick).catch(err => { nickOk = false; console.warn('Nickname not set:', err); });
-                const after = Object.assign({}, shift, { vehicleId: gpsId, vehicleName: gpsName, shop: null });
-                db.ref(EC_TC + 'audit').push({ at: TS, by: by, ek: ek, shiftId: shift.id, action: 'edit',
-                    before: ecTcStrip(shift), after: ecTcStrip(after), note: 'Vehicle set in RouteWatcher' })
-                    .catch(err => console.warn('Change log not saved:', err));
-                done = true;
+                nickOk = await ecTcAssign(gpsId, p, nick, ecTc.claims);
             } catch (err) {
                 console.warn('Vehicle not assigned:', err);
                 ecTc.busy = false;
@@ -7081,7 +7257,88 @@
             ecTc.busy = false;
             if (gpsId !== ecTc.driverId) return; // the window was closed or moved to another driver
             await ecTcShow(gpsId);
-            if (done) ecTcMsg(nickOk ? p.name + ' is driving GPS ' + gpsName + '.' : p.name + ' has GPS ' + gpsName + ' in Time Clock, but the nickname couldn\'t be saved.', !nickOk);
+            ecTcMsg(nickOk ? p.name + ' is driving GPS ' + gpsName + '.' : p.name + ' has GPS ' + gpsName + ' in Time Clock, but the nickname couldn\'t be saved.', !nickOk);
+        }
+
+        // Gives GPS gpsId to person p (from ecTcLoad) in the Time Clock, with nickname nick on the shift, the claim and
+        // here. The Time Clock frees the GPS and takes that nickname off when they punch out or pick another vehicle.
+        // Throws if the shift couldn't be saved; returns false if only the nickname here couldn't be.
+        async function ecTcAssign(gpsId, p, nick, claims) {
+            const shift = p.shift, ek = p.ek;
+            const gpsName = ecTcGpsName(drivers[gpsId]);
+            const by = String((auth.currentUser && auth.currentUser.email) || '').toLowerCase();
+            const TS = firebase.database.ServerValue.TIMESTAMP;
+            const base = EC_TC + 'shifts/' + ek + '/' + shift.id;
+            const u = {};
+            u[base + '/nickname'] = nick;
+            if (shift.vehicleId !== gpsId) {
+                u[base + '/vehicleId'] = gpsId;
+                u[base + '/vehicleName'] = gpsName;
+                u[base + '/shop'] = null;
+                u[base + '/vans/' + db.ref(base + '/vans').push().key] = { at: TS, how: 'admin', by: by.slice(0, 60), vehicleId: gpsId, vehicleName: gpsName };
+                u[base + '/swapHint'] = null; // no vehicle swap needed any more (nothing happens if there was none)
+            }
+            u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle set in RouteWatcher' };
+            await db.ref().update(u);
+            if (shift.vehicleId && shift.vehicleId !== gpsId) {
+                await ecTcRelease(shift.vehicleId, shift.id, claims).catch(err => console.warn('Old vehicle not freed:', err));
+            }
+            await db.ref(EC_TC + 'vehicle_claims/' + gpsId).set({ ek: ek, email: String(p.emp.email || '').toLowerCase(), name: p.name,
+                nickname: nick, shiftId: shift.id, vehicleName: gpsName, at: TS });
+            let nickOk = true;
+            await getNicknamesRef().child(gpsId).set(nick).catch(err => { nickOk = false; console.warn('Nickname not set:', err); });
+            if (shift.vehicleId !== gpsId) {
+                const after = Object.assign({}, shift, { vehicleId: gpsId, vehicleName: gpsName, shop: null });
+                db.ref(EC_TC + 'audit').push({ at: TS, by: by, ek: ek, shiftId: shift.id, action: 'edit',
+                    before: ecTcStrip(shift), after: ecTcStrip(after), note: 'Vehicle set in RouteWatcher' })
+                    .catch(err => console.warn('Change log not saved:', err));
+            }
+            return nickOk;
+        }
+
+        // Undoes ecTcAssign for a person who had no vehicle before (the voice "Undo"): the shift goes back to how it
+        // was and the GPS is free again. The nickname here is put back by the caller.
+        async function ecTcUnassign(gpsId, p) {
+            const shift = p.shift, ek = p.ek;
+            const by = String((auth.currentUser && auth.currentUser.email) || '').toLowerCase();
+            const TS = firebase.database.ServerValue.TIMESTAMP;
+            const base = EC_TC + 'shifts/' + ek + '/' + shift.id;
+            const u = {};
+            u[base + '/vehicleId'] = null;
+            u[base + '/vehicleName'] = null;
+            u[base + '/nickname'] = null;
+            u[base + '/shop'] = shift.shop ? true : null;
+            u[base + '/vans/' + db.ref(base + '/vans').push().key] = shift.shop ? { at: TS, how: 'shop', by: by.slice(0, 60) } : { at: TS, how: 'admin', by: by.slice(0, 60) };
+            u[base + '/edited'] = { by: by, at: TS, note: 'Vehicle undone in RouteWatcher' };
+            await db.ref().update(u);
+            await db.ref(EC_TC + 'vehicle_claims/' + gpsId).transaction(cur => (cur === null || cur.shiftId === shift.id) ? null : undefined);
+            const before = Object.assign({}, shift, { vehicleId: gpsId });
+            db.ref(EC_TC + 'audit').push({ at: TS, by: by, ek: ek, shiftId: shift.id, action: 'edit',
+                before: ecTcStrip(before), after: ecTcStrip(shift), note: 'Vehicle undone in RouteWatcher' })
+                .catch(err => console.warn('Change log not saved:', err));
+        }
+
+        // A nickname typed by hand (Nickname button, or "21 nickname Matt"): when it's the name of exactly one person on
+        // the clock in the Time Clock, that person can get this GPS in the Time Clock too, so the nickname comes off
+        // when they punch out. Matches their first name or full name, or the start of their first name ("Matt" for
+        // Matthew) when nobody matches exactly. people/claims from ecTcLoad.
+        // { person, already } when it can link, { note } when it can't but should say why, or null.
+        function ecTcMatchNickname(gpsId, value, people, claims) {
+            const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            if (!v || !gpsId || ecTcIsManual(gpsId) || !ecTcHasDevice(drivers[gpsId]) || !people || !people.length) return null;
+            const first = p => ecTcNickname(p.emp, p.ek).toLowerCase();
+            let list = people.filter(p => first(p) === v || p.name.toLowerCase() === v
+                || String(p.shift.nickname || '').trim().toLowerCase() === v);
+            if (!list.length && v.length >= 3 && !/\s/.test(v)) list = people.filter(p => first(p).startsWith(v));
+            if (!list.length) return null;
+            if (list.length > 1) return { note: 'More than one person on the clock is called ' + value + ', so this nickname stays until you change it.' };
+            const p = list[0];
+            if (p.shift.vehicleId === gpsId) return { person: p, already: true };
+            if (p.shift.vehicleId) return { note: p.name + ' is on ' + (p.shift.vehicleName || p.shift.vehicleId) + ' in Time Clock, so this nickname stays until you change it.' };
+            const c = claims && claims[gpsId];
+            const holder = c ? people.find(q => q.ek === c.ek && q.shift.id === c.shiftId && q.shift.vehicleId === gpsId) : null;
+            if (holder) return { note: holder.name + ' has this vehicle in Time Clock, so this nickname stays until you change it.' };
+            return { person: p };
         }
 
         // ===== ZOOM INDICATOR =====
@@ -9835,7 +10092,7 @@
 
             document.getElementById('historyStart').value = ecToLocalInput(ecTodayAt(workdayStart).getTime()); // Settings > Workday
             document.getElementById('historyEnd').value = ecToLocalInput(ecTodayAt(workdayEnd).getTime());
-            ecShiftInit(driverId); // then From/To from the driver's punch in, when the Time Clock has one
+            ecShift.ready = ecShiftInit(driverId); // then From/To from the driver's punch in, when the Time Clock has one (voice "show track" waits for it)
 
             const statusHeader = document.getElementById('driverStatusHeader');
             const batteryHeader = document.getElementById('modalBatteryHeader');
@@ -10374,6 +10631,7 @@
         }
         function ecSetWindowFromPunch(inMs) {
             const start = Math.floor(inMs / 60000) * 60000;
+            ecShift.pickDay = ecDayBounds(start).start; // a later time change on this day is a plain edit, not a new day
             document.getElementById('historyStart').value = ecToLocalInput(start);
             document.getElementById('historyEnd').value = ecToLocalInput(start + EC_SHIFT_HOURS * 3600000);
             ecWindowChanged();
@@ -11300,8 +11558,249 @@
             }
         });
 
+        // ===== EASY 12-HOUR PICKERS (From/To in the driver window, Settings > Workday) =====
+        // From/To: a day button with ‹ › arrows (tap the day for a calendar), two big time buttons, and quick choices.
+        // A time button opens a picker: tap the hour, the minute and AM/PM; each tap applies right away.
+        // The hidden inputs #historyStart / #historyEnd still hold "YYYY-MM-DDTHH:MM" (Brandon time) for the rest of the page.
+        // Anything that sets their value (punch in, voice, Workday) updates the buttons, and a change made here fires a
+        // 'change' event on them like the old boxes did. To is on From's day, or the next day when its time is earlier.
+        const ecTp = { onPick: null, h: 12, m: 0, ap: 'am', anchor: null };
+        const EC_VALUE_PROP = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+        // Calls render() whenever code sets input.value
+        function ecPickWatch(input, render) {
+            if (!input || input._ecWatched) return;
+            input._ecWatched = true;
+            Object.defineProperty(input, 'value', {
+                configurable: true,
+                get() { return EC_VALUE_PROP.get.call(this); },
+                set(v) { EC_VALUE_PROP.set.call(this, v); try { render(); } catch (e) { console.warn('Picker refresh failed:', e); } }
+            });
+        }
+        function ecFmt12(hh, mm) {
+            return ((hh % 12) || 12) + ':' + String(mm).padStart(2, '0') + ' ' + (hh >= 12 ? 'PM' : 'AM');
+        }
+        function ecDtVals() {
+            return { start: ecParseLocalInput(document.getElementById('historyStart').value),
+                end: ecParseLocalInput(document.getElementById('historyEnd').value) };
+        }
+        function ecDtDayLabel(ms) {
+            const day = ecDayBounds(ms).start;
+            const today = ecDayBounds(Date.now()).start;
+            const diff = Math.round((day - today) / 86400000);
+            const date = ecFormat(ms, { weekday: 'short', month: 'short', day: 'numeric' });
+            return diff === 0 ? 'Today · ' + date.replace(/^\w+,\s*/, '') : diff === -1 ? 'Yesterday · ' + date.replace(/^\w+,\s*/, '') : date;
+        }
+        function ecDtRender() {
+            const v = ecDtVals();
+            const day = document.getElementById('ecDtDay');
+            if (!day) return;
+            if (!isFinite(v.start)) { day.textContent = 'Pick a day'; return; }
+            day.textContent = ecDtDayLabel(v.start);
+            const zs = ecWall(v.start);
+            document.getElementById('ecDtFromVal').textContent = ecFmt12(zs.hh, zs.mm);
+            const toEl = document.getElementById('ecDtToVal');
+            if (isFinite(v.end)) {
+                const ze = ecWall(v.end);
+                const days = Math.round((ecDayBounds(v.end).start - ecDayBounds(v.start).start) / 86400000);
+                toEl.innerHTML = ecEsc(ecFmt12(ze.hh, ze.mm)) + (days > 0 ? '<small>+' + days + ' day' + (days > 1 ? 's' : '') + '</small>' : '');
+            } else toEl.textContent = '--';
+            const todayStart = ecDayBounds(Date.now()).start;
+            document.getElementById('ecDtToday').classList.toggle('is-on', ecDayBounds(v.start).start === todayStart);
+            const dateIn = document.getElementById('ecDtDate');
+            if (dateIn) EC_VALUE_PROP.set.call(dateIn, ecToLocalInput(v.start).slice(0, 10));
+        }
+        // Sets From/To (ms) and tells the page, like a person editing the old boxes. which: 'start' | 'end' | 'both'
+        // newDay: true for the day arrows / calendar, which (with a driver picked) look up that driver's punch in that day
+        function ecDtSet(start, end, which, newDay) {
+            const a = document.getElementById('historyStart');
+            const b = document.getElementById('historyEnd');
+            if (!newDay) ecShift.pickDay = ecDayBounds(start).start;
+            a.value = ecToLocalInput(start);
+            b.value = ecToLocalInput(end);
+            if (which !== 'end') a.dispatchEvent(new Event('change', { bubbles: true }));
+            if (which !== 'start') b.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        // "HH:MM" on the day of dayMs (Brandon time)
+        function ecDtAt(dayMs, hh, mm, plusDays) {
+            const z = ecWall(dayMs);
+            return ecFromWall(z.y, z.m, z.d + (plusDays || 0), hh, mm, 0);
+        }
+        // To at hh:mm: From's day, or the next day when that isn't after From
+        function ecDtEndAt(start, hh, mm) {
+            const e = ecDtAt(start, hh, mm, 0);
+            return e > start ? e : ecDtAt(start, hh, mm, 1);
+        }
+        function ecDtMoveDays(n) {
+            const v = ecDtVals();
+            if (!isFinite(v.start)) return;
+            const zs = ecWall(v.start);
+            const start = ecDtAt(v.start, zs.hh, zs.mm, n);
+            const len = isFinite(v.end) && v.end > v.start ? v.end - v.start : 12 * 3600000;
+            ecDtSet(start, start + len, 'start', true);
+        }
+        function ecDtPickDay(value) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+            const v = ecDtVals();
+            if (!m || !isFinite(v.start)) return;
+            const zs = ecWall(v.start);
+            const start = ecFromWall(+m[1], +m[2], +m[3], zs.hh, zs.mm, 0);
+            const len = isFinite(v.end) && v.end > v.start ? v.end - v.start : 12 * 3600000;
+            ecDtSet(start, start + len, 'start', true);
+        }
+        function ecDtQuick(kind) {
+            const v = ecDtVals();
+            if (kind === 'workday') {
+                const base = isFinite(v.start) ? v.start : Date.now();
+                const [sh, sm] = workdayStart.split(':').map(Number), [eh, em] = workdayEnd.split(':').map(Number);
+                const start = ecDtAt(base, sh, sm, 0);
+                ecDtSet(start, ecDtEndAt(start, eh, em), 'both');
+                return;
+            }
+            const end = Math.ceil(Date.now() / 300000) * 300000; // now, up to the next 5 minutes
+            ecDtSet(end - Number(kind) * 3600000, end, 'both');
+        }
+
+        // ----- the time picker -----
+        function ecTpOpen(anchor, title, hh, mm, onPick) {
+            ecTp.onPick = onPick;
+            ecTp.anchor = anchor;
+            ecTp.h = (hh % 12) || 12;
+            ecTp.m = mm;
+            ecTp.ap = hh >= 12 ? 'pm' : 'am';
+            document.getElementById('ecTpTitle').textContent = title;
+            const hours = document.getElementById('ecTpHours');
+            if (!hours.children.length) {
+                [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(h => {
+                    const b = document.createElement('button');
+                    b.type = 'button'; b.textContent = h; b.dataset.h = h;
+                    b.addEventListener('click', () => { ecTp.h = h; ecTpApply(); });
+                    hours.appendChild(b);
+                });
+                const mins = document.getElementById('ecTpMins');
+                for (let m = 0; m < 60; m += 5) {
+                    const b = document.createElement('button');
+                    b.type = 'button'; b.textContent = ':' + String(m).padStart(2, '0'); b.dataset.m = m;
+                    b.addEventListener('click', () => { ecTp.m = m; ecTpApply(); });
+                    mins.appendChild(b);
+                }
+                document.querySelectorAll('#ecTpAmPm button').forEach(b => b.addEventListener('click', () => { ecTp.ap = b.dataset.ap; ecTpApply(); }));
+                document.getElementById('ecTpDone').addEventListener('click', ecTpClose);
+                document.getElementById('ecTpBackdrop').addEventListener('click', ecTpClose);
+            }
+            ecTpRender();
+            const tp = document.getElementById('ecTp');
+            document.getElementById('ecTpBackdrop').hidden = false;
+            tp.hidden = false;
+            if (window.innerWidth > 600) { // beside the button on computers; a bottom sheet on phones (CSS)
+                const r = anchor.getBoundingClientRect();
+                const w = tp.offsetWidth, h = tp.offsetHeight;
+                let left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+                let top = r.bottom + 6;
+                if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+                tp.style.left = left + 'px';
+                tp.style.top = top + 'px';
+            }
+            const on = tp.querySelector('.is-on');
+            (on || tp.querySelector('button')).focus({ preventScroll: true });
+        }
+        function ecTpRender() {
+            document.querySelectorAll('#ecTpHours button').forEach(b => b.classList.toggle('is-on', Number(b.dataset.h) === ecTp.h));
+            document.querySelectorAll('#ecTpMins button').forEach(b => b.classList.toggle('is-on', Number(b.dataset.m) === ecTp.m));
+            document.querySelectorAll('#ecTpAmPm button').forEach(b => b.classList.toggle('is-on', b.dataset.ap === ecTp.ap));
+            document.getElementById('ecTpValue').textContent = ecTp.h + ':' + String(ecTp.m).padStart(2, '0') + ' ' + ecTp.ap.toUpperCase();
+        }
+        function ecTpApply() {
+            ecTpRender();
+            const hh = (ecTp.h % 12) + (ecTp.ap === 'pm' ? 12 : 0);
+            if (ecTp.onPick) ecTp.onPick(hh, ecTp.m);
+        }
+        function ecTpClose() {
+            const tp = document.getElementById('ecTp');
+            if (!tp || tp.hidden) return;
+            tp.hidden = true;
+            document.getElementById('ecTpBackdrop').hidden = true;
+            ecTp.onPick = null;
+            if (ecTp.anchor) ecTp.anchor.focus({ preventScroll: true });
+        }
+        document.addEventListener('keydown', function(e) {
+            const tp = document.getElementById('ecTp');
+            if (e.key === 'Escape' && tp && !tp.hidden) { e.stopPropagation(); ecTpClose(); }
+        }, true);
+
+        function ecPickersInit() {
+            const a = document.getElementById('historyStart');
+            const b = document.getElementById('historyEnd');
+            if (!a || !b || a._ecWatched) return;
+            ecPickWatch(a, ecDtRender);
+            ecPickWatch(b, ecDtRender);
+            document.getElementById('ecDtPrev').addEventListener('click', () => ecDtMoveDays(-1));
+            document.getElementById('ecDtNext').addEventListener('click', () => ecDtMoveDays(1));
+            document.getElementById('ecDtToday').addEventListener('click', () => {
+                const v = ecDtVals();
+                if (!isFinite(v.start)) return;
+                ecDtMoveDays(Math.round((ecDayBounds(Date.now()).start - ecDayBounds(v.start).start) / 86400000));
+            });
+            const dateIn = document.getElementById('ecDtDate');
+            document.getElementById('ecDtDay').addEventListener('click', () => {
+                try { dateIn.showPicker(); } catch (e) { dateIn.style.pointerEvents = 'auto'; dateIn.focus(); dateIn.click(); }
+            });
+            dateIn.addEventListener('change', () => ecDtPickDay(dateIn.value));
+            document.getElementById('ecDtFrom').addEventListener('click', e => {
+                const v = ecDtVals();
+                if (!isFinite(v.start)) return;
+                const z = ecWall(v.start);
+                ecTpOpen(e.currentTarget, 'From', z.hh, z.mm, (hh, mm) => {
+                    const cur = ecDtVals();
+                    const start = ecDtAt(cur.start, hh, mm, 0);
+                    const len = isFinite(cur.end) && cur.end > cur.start ? cur.end - cur.start : 12 * 3600000;
+                    // To stays where it is if it's still after From; otherwise it moves with From (same length)
+                    const end = isFinite(cur.end) && cur.end > start && cur.end - start <= 24 * 3600000 ? cur.end : start + len;
+                    ecDtSet(start, end, 'start');
+                });
+            });
+            document.getElementById('ecDtTo').addEventListener('click', e => {
+                const v = ecDtVals();
+                if (!isFinite(v.start)) return;
+                const z = ecWall(isFinite(v.end) ? v.end : v.start);
+                ecTpOpen(e.currentTarget, 'To', z.hh, z.mm, (hh, mm) => {
+                    const cur = ecDtVals();
+                    ecDtSet(cur.start, ecDtEndAt(cur.start, hh, mm), 'end');
+                });
+            });
+            document.querySelectorAll('#ecDtBox [data-quick]').forEach(btn => btn.addEventListener('click', () => ecDtQuick(btn.dataset.quick)));
+            ecDtRender();
+
+            // Settings > Workday: the same time picker in place of the two time boxes
+            [['workdayStart', 'Workday starts'], ['workdayEnd', 'Workday ends']].forEach(([id, title]) => {
+                const input = document.getElementById(id);
+                if (!input || input._ecWatched) return;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'ec-wd-time';
+                btn.id = id + 'Btn';
+                const show = () => {
+                    const m = /^(\d{2}):(\d{2})/.exec(input.value || '');
+                    btn.textContent = m ? ecFmt12(+m[1], +m[2]) : '--';
+                };
+                ecPickWatch(input, show);
+                input.hidden = true;
+                input.insertAdjacentElement('afterend', btn);
+                btn.addEventListener('click', () => {
+                    const m = /^(\d{2}):(\d{2})/.exec(input.value || '') || [0, '06', '00'];
+                    ecTpOpen(btn, title, +m[1], +m[2], (hh, mm) => {
+                        input.value = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                });
+                show();
+            });
+        }
+        ecPickersInit();
+
         // ===== VOICE QUESTIONS (mic button: bottom left, bottom right on phones) =====
-        // Tap the mic, ask "Where is Sheldon?" or "How far is 21 from the shop?", and the answer shows and is read out loud.
+        // Tap the mic, ask "Where is Sheldon?" or "How far is 21 from the shop?", and the answer is read out loud with a caption.
+        // It can also act: "Show track for Sheldon" (driver window + Show Track from the punch in), "21 nickname Sheldon".
         // A driver can be named by their nickname, the GPS / vehicle name from Settings ("21", "Van 14"), or the name of
         // whoever has that vehicle in the Time Clock (timeclock/vehicle_claims). "He", "she" and "they" mean the last one asked about.
         // Listening uses the browser's speech recognition (Chrome sends the audio to Google to turn it into text).
@@ -11313,8 +11812,7 @@
         const EC_VOICE_ETA_REUSE_MS = 3 * 60 * 1000;
         const EC_VOICE_CLAIMS_REUSE_MS = 60 * 1000;
         const EC_VOICE_STOPPED_MIN = 5;          // say "stopped for N minutes" from this many minutes
-        const EC_VOICE_SPEAK_KEY = 'ec_voice_speak';
-        const ecVoice = { rec: null, listening: false, open: false, lastId: null, addr: {}, eta: {}, claims: {}, claimsAt: 0, seq: 0 };
+        const ecVoice = { rec: null, listening: false, speaking: null, lastId: null, addr: {}, eta: {}, claims: {}, claimsAt: 0, seq: 0, hideTimer: null };
 
         const EC_VOICE_ONES = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
         const EC_VOICE_TEENS = { ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
@@ -11341,6 +11839,7 @@
                     else out.push(String(EC_VOICE_TENS[w]));
                 } else if (EC_VOICE_TEENS[w] !== undefined) out.push(String(EC_VOICE_TEENS[w]));
                 else if (EC_VOICE_ONES[w] !== undefined && w !== 'oh') out.push(String(EC_VOICE_ONES[w]));
+                else if (/^\d+s$/.test(w)) out.push(w.slice(0, -1)); // "30s" (as in "30's nickname") -> 30
                 else out.push(w);
             }
             return out;
@@ -11603,6 +12102,7 @@
             if (has(/ (light mode|day mode) /)) return 'light';
             if (has(/ (hide|close) (the )?map /)) return 'hideMap';
             if (has(/ (show|open) (the )?map /) && !has(/ on (the )?map /)) return 'showMap';
+            if (has(/ (track|tracks|trail|history) /) && !has(/ route /)) return 'track';
             if (has(/ (closest|nearest) /)) return 'closest';
             if (has(/ (how long|eta|when will|when does|how much time|how many minutes|drive time|driving time) /)) return 'eta';
             if (has(/ (how far|distance|how close|far away) /)) return 'far';
@@ -11622,6 +12122,12 @@
 
         // Answers one question: { text, choices?: [{ label, q }], action?: fn }
         async function ecVoiceAnswer(raw) {
+            // A day ("on November 1st, 2026") and times ("from 5 p.m. to 10 p.m.") are taken out first,
+            // so their numbers aren't read as vehicle names
+            const date = ecVoiceDate(raw);
+            if (date) raw = date.rest;
+            const range = ecVoiceTimeRange(raw, date ? date.day : Date.now());
+            if (range) raw = range.rest;
             const words = ecVoiceNorm(raw);
             if (!words.length) return { text: 'I didn\'t catch that. Tap the mic and try again.' };
             await Promise.all([ecVoiceLoadClaims(), ecVoiceLoadShop()]);
@@ -11631,7 +12137,9 @@
             const mentionsMe = words.includes('me') || words.includes('my') || /\bi am\b|\bim\b/.test(words.join(' '));
             const mentionsShop = words.some(w => ['shop', 'office', 'depot', 'base'].includes(w));
 
-            if (intent === 'help') { ecVoiceShowHelp(true); return { text: 'Here are things you can ask.' }; }
+            if (intent === 'help') return { text: ecVoiceHelpText() };
+            const nickCmd = ecVoiceNicknameCommand(words);
+            if (nickCmd) return nickCmd;
             if (intent === 'dark' || intent === 'light') {
                 const isLight = document.body.classList.contains('light-mode');
                 if ((intent === 'light') !== isLight) toggleTheme();
@@ -11666,7 +12174,7 @@
                 if (!intent) return { text: 'I heard "' + raw + '" but didn\'t understand it. Tap "What can I say?" for ideas.' };
                 return { text: 'I couldn\'t find a driver or vehicle in "' + raw + '".' + (names.length ? ' I know: ' + names.join(', ') + '.' : '') };
             }
-            return ecVoiceAboutDriver(id, intent || 'where', words, found, { me: mentionsMe, shop: mentionsShop });
+            return ecVoiceAboutDriver(id, intent || (range || date ? 'track' : 'where'), words, found, { me: mentionsMe, shop: mentionsShop, range: range, date: date });
         }
 
         async function ecVoiceAboutDriver(id, intent, words, found, mention) {
@@ -11685,6 +12193,7 @@
                     : 'Nobody has ' + vehicle + ' in the Time Clock that I can see.' };
             }
             if (intent === 'open') { openDriverModal(id); return { text: 'Opening ' + label + '.' }; }
+            if (intent === 'track') return ecVoiceShowTrack(id, words, mention && mention.range, mention && mention.date);
             if (intent === 'route') {
                 openDriverModal(id);
                 setTimeout(() => { if (activeModalDriverId === id) ecRouteLoad(id, true); }, 300);
@@ -11802,17 +12311,298 @@
             return { text: text, choices: [{ label: 'Where is ' + ecVoiceLabel(ranked[0].id) + '?', q: 'where is', id: ranked[0].id, intent: 'where' }] };
         }
 
-        // ----- Panel, listening and speaking -----
+        // ----- "21 nickname Sheldon": set (or remove) a vehicle's nickname, the same as the Nickname button -----
+        // Also: "nickname 21 Sheldon", "call 21 Sheldon", "rename 21 to Sheldon", "set 21's nickname to Sheldon",
+        // "remove the nickname from 21". Returns null when the question isn't about nicknames.
+        function ecVoiceNicknameCommand(words) {
+            const t = ' ' + words.join(' ') + ' ';
+            const w = words.slice();
+            for (let i = 0; i + 1 < w.length; i++) if (w[i] === 'nick' && w[i + 1] === 'name') w.splice(i, 2, 'nickname');
+            const k = w.indexOf('nickname');
+            const verbFirst = ['call', 'rename'].includes(w[0]);
+            if (k < 0 && !verbFirst) return null;
+            const remove = /\b(remove|clear|delete|erase|take off|no) /.test(t) && k >= 0;
+            const filler = new Set(['set', 'change', 'make', 'the', 'please', 'give', 'its', 'for', 'from', 'on', 'of', 'a']);
+            const trim = list => { const out = list.filter(x => !filler.has(x)); while (out.length && ['to', 'as', 'is', 'be', 'it', 'name'].includes(out[0])) out.shift(); return out; };
+            let vehWords, newWords;
+            if (remove) {
+                vehWords = trim(w.filter((x, i) => i !== k && !['remove', 'clear', 'delete', 'erase', 'take', 'off', 'no'].includes(x)));
+                newWords = [];
+            } else if (k > 0) {                          // "21 nickname Sheldon", "set 21's nickname to Sheldon"
+                vehWords = trim(w.slice(0, k));
+                newWords = trim(w.slice(k + 1));
+            } else {                                      // "nickname 21 Sheldon", "call 21 Sheldon", "rename 21 to Sheldon"
+                const rest = trim(w.slice(1));
+                const cut = rest.findIndex(x => ['to', 'as', 'is'].includes(x));
+                if (cut > 0) { vehWords = rest.slice(0, cut); newWords = trim(rest.slice(cut + 1)); }
+                else {
+                    // the longest start that names a vehicle; the rest is the nickname
+                    vehWords = []; newWords = rest;
+                    for (let n = 1; n <= Math.min(3, rest.length - 1); n++) { // shortest first: "call truck 30 Big Dave" -> Big Dave
+                        const f = ecVoiceFindDrivers(rest.slice(0, n));
+                        if (f.length && f[0].score >= 0.9) { vehWords = rest.slice(0, n); newWords = rest.slice(n); break; }
+                    }
+                }
+            }
+            if (!vehWords.length) return { text: 'Which vehicle? Say it like "21 nickname Sheldon".' };
+            const found = ecVoiceFindDrivers(vehWords);
+            if (!found.length || found[0].score < 0.85) return { text: 'I couldn\'t find a vehicle called "' + vehWords.join(' ') + '".' };
+            if (found[1] && found[1].score >= found[0].score - 0.02) {
+                return { text: 'More than one vehicle matches "' + vehWords.join(' ') + '". Say the full vehicle name.' };
+            }
+            const id = found[0].id;
+            const vehicle = String((ecVoiceDriver(id) && ecVoiceDriver(id).name) || '').trim() || 'That vehicle';
+            const before = getDriverNickname(id);
+            if (remove) {
+                if (!before) return { text: vehicle + ' has no nickname.' };
+                ecVoiceSetNickname(id, '');
+                return { text: 'Removed the nickname ' + before + ' from ' + vehicle + '.', choices: [{ label: 'Undo', run: () => ecVoiceSetNickname(id, before) }] };
+            }
+            const nick = newWords.map(x => /\d/.test(x) ? x : x.charAt(0).toUpperCase() + x.slice(1)).join(' ').slice(0, EC_TC_NICK_MAX);
+            if (!nick) return { text: 'What nickname? Say it like "' + vehicle + ' nickname Sheldon".' };
+            if (nick === before) return { text: vehicle + '\'s nickname is already ' + nick + '.' };
+            ecVoiceSetNickname(id, nick);
+            ecVoice.lastId = id;
+            const text = vehicle + '\'s nickname is now ' + nick + '.';
+            // Someone on the clock by that name: give them this vehicle in the Time Clock too, so it comes off when they punch out
+            return ecVoiceNickTcLink(id, nick).then(link => ({
+                text: link && link.person ? text + ' It comes off when ' + link.person.name + ' punches out.' : text,
+                choices: [{ label: 'Undo', run: () => {
+                    ecVoiceSetNickname(id, before);
+                    if (link && link.person && !link.already) ecTcUnassign(id, link.person).catch(ecSaveError('the Time Clock undo'));
+                } }] }));
+        }
+        // { person, already } once linked in the Time Clock, or null (nobody by that name on the clock, no access, or failed)
+        async function ecVoiceNickTcLink(id, nick) {
+            if (!currentUserId) return null;
+            try {
+                const data = await ecTcLoad();
+                const m = ecTcMatchNickname(id, nick, data.people, data.claims);
+                if (!m || !m.person) return null;
+                await ecTcAssign(id, m.person, nick, data.claims);
+                if (ecTc.driverId === id) ecTcShow(id);
+                return m;
+            } catch (err) {
+                // permission_denied: not a Time Clock admin or Gil, so the nickname is just a nickname
+                if (!(err && /permission/i.test(String(err.code || err.message)))) ecSaveError('the vehicle in Time Clock')(err);
+                return null;
+            }
+        }
+        // Saves a nickname for everyone (shared list), or removes it when value is empty
+        function ecVoiceSetNickname(id, value) {
+            const ref = getNicknamesRef();
+            if (ref) {
+                if (value) ref.child(id).set(value).catch(ecSaveError('the nickname'));
+                else ref.child(id).remove().catch(ecSaveError('the nickname removal'));
+            }
+            applyNicknameChange(id, value);
+        }
+
+        // ----- "Show track for Sheldon": open the driver window and press Show Track -----
+        // Today: From/To are the punch in the driver window already finds in the Time Clock (or Workday hours).
+        // "Yesterday": the first punch in yesterday on this GPS, plus 12 hours (or yesterday's Workday hours).
+        // "from 5 p.m. to 10 p.m.", "from 9 to 5:30", "between 7 and 11 a.m." (today, or yesterday when said):
+        // { start, end (ms), rest: the question without the times } or null. With no a.m./p.m. at all, 1 to 6 is p.m. and
+        // 7 to 11 is a.m.; an end before the start is the next day ("10 p.m. to 2 a.m.").
+        // A day in the question: "on November 1st, 2026", "Nov 1", "the 3rd of November", "11/1", "today", "yesterday",
+        // "day before yesterday", "3 days ago", "on Monday" / "last Monday" (the latest one, today included for "on").
+        // { day (ms, noon that day in Brandon), rest: the question without it } or null
+        const EC_VOICE_MONTH_RE = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec';
+        const EC_VOICE_ORD = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10,
+            eleventh: 11, twelfth: 12, thirteenth: 13, fourteenth: 14, fifteenth: 15, sixteenth: 16, seventeenth: 17, eighteenth: 18,
+            nineteenth: 19, twentieth: 20, thirtieth: 30 };
+        function ecVoiceDate(raw) {
+            let t = String(raw || '');
+            const ORD = Object.keys(EC_VOICE_ORD).join('|');
+            const ordNum = (tens, w) => (tens ? (/^twenty/i.test(tens) ? 20 : 30) : 0) + EC_VOICE_ORD[w.toLowerCase()];
+            // ordinal words only right after a month ("November first") or before "of <month>" ("the first of November")
+            t = t.replace(new RegExp('\\b(' + EC_VOICE_MONTH_RE + ')\\.?\\s+(?:the\\s+)?(twenty[\\s-]+|thirty[\\s-]+)?(' + ORD + ')\\b', 'gi'),
+                (m, mon, tens, w) => mon + ' ' + ordNum(tens, w));
+            t = t.replace(new RegExp('\\bthe\\s+(twenty[\\s-]+|thirty[\\s-]+)?(' + ORD + ')\\s+of\\s+(' + EC_VOICE_MONTH_RE + ')\\b', 'gi'),
+                (m, tens, w, mon) => mon + ' ' + ordNum(tens, w));
+            const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            const nowZ = ecWall(Date.now());
+            const todayNoon = ecFromWall(nowZ.y, nowZ.m, nowZ.d, 12, 0);
+            const at = (y, mo, d) => ecFromWall(y, mo, d, 12, 0);
+            const done = (day, m) => ({ day: day, rest: t.replace(m[0], ' ').replace(/\s+/g, ' ').trim() });
+            const pastYear = (mo, d, yTxt) => {
+                if (yTxt) return at(Number(yTxt.length === 2 ? '20' + yTxt : yTxt), mo, d);
+                const thisYear = at(nowZ.y, mo, d);
+                return thisYear > todayNoon ? at(nowZ.y - 1, mo, d) : thisYear; // "December 20" in January is last year
+            };
+            let m = t.match(new RegExp('(?:\\bon\\s+)?(?:\\bthe\\s+)?\\b(' + EC_VOICE_MONTH_RE + ')\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4})\\b)?', 'i'));
+            if (m && Number(m[2]) >= 1 && Number(m[2]) <= 31) return done(pastYear(months.indexOf(m[1].slice(0, 3).toLowerCase()) + 1, Number(m[2]), m[3]), m);
+            m = t.match(new RegExp('(?:\\bon\\s+)?\\bthe\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s+of\\s+(' + EC_VOICE_MONTH_RE + ')\\b(?:,?\\s+(\\d{4})\\b)?', 'i'));
+            if (m && Number(m[1]) >= 1 && Number(m[1]) <= 31) return done(pastYear(months.indexOf(m[2].slice(0, 3).toLowerCase()) + 1, Number(m[1]), m[3]), m);
+            m = t.match(/(?:\bon\s+)?\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?\b/);
+            if (m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31) return done(pastYear(+m[1], +m[2], m[3]), m);
+            m = t.match(/(?:\bon\s+)?\b(?:the\s+)?day before yesterday\b/i);
+            if (m) return done(at(nowZ.y, nowZ.m, nowZ.d - 2), m);
+            m = t.match(/(?:\bon\s+)?\byesterday\b/i);
+            if (m) return done(at(nowZ.y, nowZ.m, nowZ.d - 1), m);
+            m = t.match(/\b(\d{1,2}|one|two|three|four|five|six|seven)\s+days?\s+ago\b/i);
+            if (m) {
+                const n = /\d/.test(m[1]) ? Number(m[1]) : ['one', 'two', 'three', 'four', 'five', 'six', 'seven'].indexOf(m[1].toLowerCase()) + 1;
+                return done(at(nowZ.y, nowZ.m, nowZ.d - n), m);
+            }
+            m = t.match(/\b(on|last)?\s*\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)s?\b/i);
+            if (m) {
+                const want = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(m[2].toLowerCase());
+                const todayDow = new Date(Date.UTC(nowZ.y, nowZ.m - 1, nowZ.d)).getUTCDay();
+                let back = (todayDow - want + 7) % 7;
+                if (back === 0 && /last/i.test(m[1] || '')) back = 7;
+                return done(at(nowZ.y, nowZ.m, nowZ.d - back), m);
+            }
+            m = t.match(/(?:\bfor\s+|\bon\s+)?\btoday\b/i);
+            if (m) return done(todayNoon, m);
+            return null;
+        }
+
+        function ecVoiceTimeRange(raw, dayMs) {
+            const T = '(\\d{1,2})(?:[:.](\\d{2}))?\\s*(a\\.?\\s?m\\.?|p\\.?\\s?m\\.?|noon|midnight)?';
+            const re = new RegExp('\\b(?:from|between)\\s+' + T + '\\s*(?:to|until|till|and|-)\\s*' + T + '(?=\\W|$)', 'i');
+            const m = String(raw || '').match(re);
+            if (!m) return null;
+            const side = (h, mm, ap) => ({ h: Number(h), m: Number(mm || 0), ap: ap ? (/^p|noon/i.test(ap) ? 'pm' : 'am') : '' });
+            const a = side(m[1], m[2], m[3]), b = side(m[4], m[5], m[6]);
+            if (a.h > 23 || b.h > 23 || a.m > 59 || b.m > 59) return null;
+            const to24 = (x, ap) => x.h > 12 ? x.h : (ap === 'pm' ? (x.h % 12) + 12 : (ap === 'am' ? x.h % 12 : x.h));
+            let ha, hb;
+            if (a.h > 12 || b.h > 12) { ha = to24(a, a.ap); hb = to24(b, b.ap); } // 24-hour times
+            else if (a.ap && b.ap) { ha = to24(a, a.ap); hb = to24(b, b.ap); }
+            else if (b.ap) { hb = to24(b, b.ap); ha = to24(a, b.ap); if (ha > hb) ha = to24(a, b.ap === 'pm' ? 'am' : 'pm'); } // "9 to 5 p.m."
+            else if (a.ap) { ha = to24(a, a.ap); hb = to24(b, a.ap); if (hb <= ha) hb = to24(b, a.ap === 'pm' ? 'am' : 'pm'); }
+            else { const guess = x => (x.h >= 1 && x.h <= 6) || x.h === 12 ? 'pm' : 'am'; ha = to24(a, guess(a)); hb = to24(b, guess(b)); if (hb <= ha && hb + 12 < 24 && b.h < 12) hb += 12; }
+            const z = ecWall(isFinite(dayMs) ? dayMs : Date.now());
+            const start = ecFromWall(z.y, z.m, z.d, ha, a.m);
+            let end = ecFromWall(z.y, z.m, z.d, hb, b.m);
+            if (end <= start) end = ecFromWall(z.y, z.m, z.d + 1, hb, b.m);
+            return { start: start, end: end, rest: raw.replace(m[0], ' ').replace(/\s+/g, ' ').trim() };
+        }
+
+        // range: { start, end } said times; date: { day } said day. Neither: today's punch in (the driver window finds it).
+        // A day without times: the first punch in that day on this GPS, plus 12 hours, or that day's Workday hours.
+        async function ecVoiceShowTrack(id, words, range, date) {
+            const drv = ecVoiceDriver(id);
+            const label = String((drv && drv.name) || '').trim() || ecVoiceLabel(id); // the vehicle; the punch in names the person
+            if (!drv || !String(drv.deviceId || '').trim()) return { text: label + ' has no GPS device ID, so there is no track to show.' };
+            openDriverModal(id);
+            try { await ecShift.ready; } catch (e) {}
+            if (activeModalDriverId !== id) return { text: '' };
+            const today = ecDayBounds(Date.now()).start;
+            const dayStart = date ? ecDayBounds(date.day).start : today;
+            const dayNoon = dayStart + 12 * 3600000;
+            const dayText = dayStart === today ? '' : dayStart === ecDayBounds(Date.now() - 24 * 3600000).start ? ' yesterday'
+                : ' on ' + ecFormat(dayNoon, { weekday: 'long', month: 'long', day: 'numeric' }) +
+                    (ecWall(dayNoon).y !== ecWall(Date.now()).y ? ', ' + ecWall(dayNoon).y : '');
+            const setWindow = (start, end) => {
+                document.getElementById('historyStart').value = ecToLocalInput(start);
+                document.getElementById('historyEnd').value = ecToLocalInput(end);
+                ecShift.pickDay = ecDayBounds(start).start;
+                ecShift.touched = true;
+                ecWindowChanged();
+            };
+            let from;
+            if (range) {
+                // The times that were said go in From/To (the punch in lookup has finished, so it won't change them)
+                setWindow(range.start, range.end);
+                ecShiftMsg('');
+                loadHistoricalTrack();
+                return { text: 'Showing ' + label + '\'s track from ' + formatTimestampTo12h(range.start) + ' to ' + formatTimestampTo12h(range.end) + dayText + '.' };
+            }
+            if (dayStart !== today) {
+                let best = null;
+                if (ecShift.people && ecShift.people.length) {
+                    const day = ecDayBounds(dayNoon);
+                    const lists = await Promise.all(ecShift.people.map(p => ecShiftsBetween(p.ek, day.start, day.end).then(l => ({ ek: p.ek, list: l || [] }))));
+                    lists.forEach(r => r.list.forEach(s => { if (ecShiftUsedGps(s, id) && (!best || s.in < best.in)) best = { ek: r.ek, in: s.in }; }));
+                }
+                if (activeModalDriverId !== id) return { text: '' };
+                if (best) {
+                    ecShift.ek = best.ek;
+                    ecShift.touched = true;
+                    ecShiftRender();
+                    ecSetWindowFromPunch(best.in);
+                    ecShiftMsg(ecShiftName(best.ek) + ' punched in at ' + formatTimestampTo12h(best.in) + dayText);
+                    from = ecShiftName(best.ek).split(/\s+/)[0] + '\'s ' + formatTimestampTo12h(best.in) + ' punch in' + dayText;
+                } else {
+                    const [sh, sm] = workdayStart.split(':').map(Number), [eh, em] = workdayEnd.split(':').map(Number);
+                    const start = ecDtAt(dayNoon, sh, sm, 0);
+                    setWindow(start, ecDtEndAt(start, eh, em));
+                    from = 'Workday hours' + dayText + ' (no punch in found)';
+                }
+            } else if (ecShift.ek && !ecShift.touched) {
+                const startMs = ecParseLocalInput(document.getElementById('historyStart').value);
+                from = ecShiftName(ecShift.ek).split(/\s+/)[0] + '\'s ' + formatTimestampTo12h(Number(startMs)) + ' punch in';
+            } else {
+                from = 'today\'s Workday hours (no punch in found)';
+            }
+            loadHistoricalTrack();
+            return { text: 'Showing ' + label + '\'s track ' + (/Workday/.test(from) ? 'for ' : 'from ') + from + '.' };
+        }
+
+        // ----- Caption, listening and speaking -----
+        // Tap the mic: it turns red while listening, then the answer is read out loud and shown as a caption.
+        // The caption hides a few seconds after the voice finishes, or when tapped.
+        const EC_VOICE_CAPTION_AFTER_MS = 5000;
         function ecVoiceEl(id) { return document.getElementById(id); }
-        function ecVoiceSpeakOn() {
-            try { return localStorage.getItem(EC_VOICE_SPEAK_KEY) !== 'off'; } catch (e) { return true; }
+        // Mic button look: '' (resting), 'thinking' (working out the answer) or 'speaking' (reading it out)
+        function ecVoiceBtnState(state) {
+            const btn = ecVoiceEl('ecVoiceBtn');
+            if (!btn) return;
+            btn.classList.toggle('is-thinking', state === 'thinking');
+            btn.classList.toggle('is-speaking', state === 'speaking');
         }
-        function ecVoiceSetSpeak(on) {
-            try { localStorage.setItem(EC_VOICE_SPEAK_KEY, on ? 'on' : 'off'); } catch (e) {}
-            if (!on && window.speechSynthesis) speechSynthesis.cancel();
+        // Splash of light from the mic button when it's tapped
+        function ecVoiceSplash() {
+            const btn = ecVoiceEl('ecVoiceBtn');
+            if (!btn || ecReducedMotion()) return;
+            ['', ' ring'].forEach(extra => {
+                const s = document.createElement('span');
+                s.className = 'ec-voice-splash' + extra;
+                s.addEventListener('animationend', () => s.remove());
+                btn.appendChild(s);
+                setTimeout(() => s.remove(), 1200);
+            });
         }
-        function ecVoiceSay(text) {
-            if (!ecVoiceSpeakOn() || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+        function ecVoiceHideCaption() {
+            if (ecVoiceEl('ecVoiceBtn') && ecVoiceEl('ecVoiceBtn').classList.contains('is-speaking')) ecVoiceBtnState('');
+            clearTimeout(ecVoice.hideTimer);
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (c) c.hidden = true;
+        }
+        // Hide the caption ms from now (a later call replaces an earlier one)
+        function ecVoiceHideCaptionIn(ms) {
+            clearTimeout(ecVoice.hideTimer);
+            ecVoice.hideTimer = setTimeout(ecVoiceHideCaption, ms);
+        }
+        // Shows the caption, reads it out loud, then hides it. choices: buttons under it ("Did you mean ...?")
+        function ecVoiceShow(text, choices) {
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (!c) return;
+            ecVoiceEl('ecVoiceText').textContent = text;
+            const box = ecVoiceEl('ecVoiceChoices');
+            box.innerHTML = '';
+            (choices || []).forEach(ch => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'ec-voice-chip';
+                b.textContent = ch.label;
+                b.addEventListener('click', e => {
+                    e.stopPropagation();
+                    if (ch.run) { ch.run(); ecVoiceShow('Undone.'); return; }
+                    ecVoiceAsk([ch.q], ch.id, ch.intent);
+                });
+                box.appendChild(b);
+            });
+            c.hidden = false;
+            // Fallback in case the end of speech is never reported: about 2.5 words a second, plus a pause
+            const words = String(text).split(/\s+/).length;
+            ecVoiceHideCaptionIn(words * 400 + EC_VOICE_CAPTION_AFTER_MS + (choices && choices.length ? 10000 : 0));
+            ecVoiceSay(text, !!(choices && choices.length));
+        }
+        function ecVoiceSay(text, keep) {
+            if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) { ecVoiceBtnState(''); return; }
             try {
                 speechSynthesis.cancel();
                 const spoken = String(text).replace(/(\d)\s?km\b/g, '$1 kilometres').replace(/(\d)\s?m\b/g, '$1 metres')
@@ -11822,133 +12612,93 @@
                 const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
                 const v = voices.find(x => x.lang === EC_VOICE_LANG) || voices.find(x => /^en[-_]/i.test(x.lang) && x.localService) || null;
                 if (v) u.voice = v;
+                u.onend = function() {
+                    if (ecVoice.speaking !== u) return;
+                    ecVoice.speaking = null;
+                    ecVoiceBtnState('');
+                    if (!keep && !ecVoice.listening) ecVoiceHideCaptionIn(EC_VOICE_CAPTION_AFTER_MS);
+                };
+                u.onerror = function() { if (ecVoice.speaking === u) { ecVoice.speaking = null; ecVoiceBtnState(''); } };
+                ecVoice.speaking = u;
+                ecVoiceBtnState('speaking');
                 speechSynthesis.speak(u);
             } catch (e) { console.warn('Voice: could not speak:', e); }
         }
-        function ecVoiceSetState(text, listening) {
-            const st = ecVoiceEl('ecVoiceState');
-            if (st) st.textContent = text;
+        function ecVoiceSetListening(on) {
+            ecVoice.listening = !!on;
             const btn = ecVoiceEl('ecVoiceBtn');
-            if (btn) btn.classList.toggle('is-listening', !!listening);
-            const again = ecVoiceEl('ecVoiceAgain');
-            if (again) again.textContent = listening ? 'Stop' : 'Ask again';
-        }
-        function ecVoiceShowHelp(show) {
-            const h = ecVoiceEl('ecVoiceHelp');
-            if (!h) return;
-            if (show) ecVoiceFillHelp(h);
-            h.hidden = !show;
-        }
-        // The examples use real names from this dashboard (a driver's name and two vehicle names)
-        function ecVoiceFillHelp(h) {
-            const ids = ecVoiceAllIds();
-            const vehicleOf = id => String((ecVoiceDriver(id).name) || '').trim();
-            const personOf = id => { const c = ecVoiceClaim(id); return getDriverNickname(id) || (c ? (c.nickname || String(c.name || '').split(/\s+/)[0]) : ''); };
-            const pId = ids.find(id => personOf(id));
-            const p = pId ? personOf(pId) : 'Sheldon';
-            const vIds = ids.filter(id => vehicleOf(id) && id !== pId);
-            const v = vIds[0] ? vehicleOf(vIds[0]) : (pId && vehicleOf(pId)) || '21';
-            const v2 = vIds[1] ? vehicleOf(vIds[1]) : '14';
-            h.querySelectorAll('[data-tpl]').forEach(b => {
-                b.textContent = b.getAttribute('data-tpl').replace('{p}', p).replace('{v2}', v2).replace('{v}', v);
-            });
-        }
-        function ecVoiceOpen() {
-            const p = ecVoiceEl('ecVoicePanel');
-            if (!p) return;
-            p.hidden = false;
-            ecVoice.open = true;
-            const sp = ecVoiceEl('ecVoiceSpeak');
-            if (sp) sp.checked = ecVoiceSpeakOn();
-            if (!ecVoiceSupported()) {
-                ecVoiceSetState('Type a question', false);
-                ecVoiceEl('ecVoiceAnswer').textContent = 'This browser can\'t listen. Chrome can. You can type a question below.';
+            if (btn) {
+                btn.classList.toggle('is-listening', !!on);
+                btn.setAttribute('aria-label', on ? 'Listening. Tap to stop' : 'Ask a question by voice');
             }
-        }
-        function ecVoiceClose() {
-            ecVoiceStop();
-            if (window.speechSynthesis) speechSynthesis.cancel();
-            const p = ecVoiceEl('ecVoicePanel');
-            if (p) p.hidden = true;
-            ecVoice.open = false;
-            ecVoiceShowHelp(false);
         }
         function ecVoiceStop() {
             if (ecVoice.rec) { try { ecVoice.rec.abort(); } catch (e) {} }
             ecVoice.rec = null;
-            ecVoice.listening = false;
-            ecVoiceSetState('Tap the mic to ask', false);
+            ecVoiceSetListening(false);
         }
-        // Mic button: open and listen; while listening, stop
+        // Mic button: listen; while listening, stop
         function ecVoiceToggle() {
+            ecVoiceSplash();
             if (ecVoice.listening) { ecVoiceStop(); return; }
-            ecVoiceOpen();
             ecVoiceListen();
         }
         function ecVoiceListen() {
-            if (ecVoice.listening) { ecVoiceStop(); return; }
             const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!Rec) { ecVoiceOpen(); const i = ecVoiceEl('ecVoiceInput'); if (i) i.focus(); return; }
+            if (!Rec) { ecVoiceShow('This browser can\'t listen. Please use Chrome.'); return; }
             if (window.speechSynthesis) speechSynthesis.cancel();
+            ecVoice.speaking = null;
+            ecVoiceBtnState('');
+            ecVoiceHideCaption();
+            ecVoice.seq++; // an answer still being worked out is dropped
             const rec = new Rec();
             rec.lang = EC_VOICE_LANG;
-            rec.interimResults = true;
+            rec.interimResults = false;
             rec.maxAlternatives = 5;
             rec.continuous = false;
             let done = false;
             rec.onresult = function(e) {
-                if (ecVoice.rec !== rec) return;
+                if (ecVoice.rec !== rec || done) return;
                 const r = e.results[e.results.length - 1];
-                ecVoiceEl('ecVoiceHeard').textContent = '"' + r[0].transcript + '"';
-                if (!r.isFinal || done) return;
+                if (!r || !r.isFinal) return;
                 done = true;
-                const alts = Array.from(r).map(a => a.transcript).filter(Boolean);
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
-                ecVoiceAsk(alts);
+                ecVoiceSetListening(false);
+                ecVoiceAsk(Array.from(r).map(a => a.transcript).filter(Boolean));
             };
             rec.onerror = function(e) {
                 if (ecVoice.rec !== rec) return;
                 done = true;
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
+                ecVoiceSetListening(false);
                 const code = e && e.error;
                 if (code === 'aborted') return;
-                const msg = code === 'not-allowed' || code === 'service-not-allowed'
+                ecVoiceShow(code === 'not-allowed' || code === 'service-not-allowed'
                     ? 'The microphone is blocked. Allow the microphone for this site in the browser settings, then try again.'
                     : code === 'no-speech' ? 'I didn\'t hear anything. Tap the mic and try again.'
-                    : code === 'network' ? 'Listening needs an internet connection. You can type a question below.'
+                    : code === 'network' ? 'Listening needs an internet connection.'
                     : code === 'audio-capture' ? 'No microphone was found.'
-                    : 'Listening stopped (' + code + '). Tap the mic to try again.';
-                ecVoiceEl('ecVoiceAnswer').textContent = msg;
+                    : 'Listening stopped. Tap the mic to try again.');
             };
             rec.onend = function() {
                 if (ecVoice.rec !== rec) return;
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
+                ecVoiceSetListening(false);
             };
             ecVoice.rec = rec;
-            ecVoice.listening = true;
-            ecVoiceEl('ecVoiceHeard').textContent = '';
-            ecVoiceEl('ecVoiceChoices').innerHTML = '';
-            ecVoiceSetState('Listening…', true);
+            ecVoiceSetListening(true);
             try { rec.start(); } catch (e) {
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
-                ecVoiceEl('ecVoiceAnswer').textContent = 'Couldn\'t start listening. Tap the mic to try again.';
+                ecVoiceSetListening(false);
+                ecVoiceShow('Couldn\'t start listening. Tap the mic to try again.');
             }
         }
         // alternatives: what the browser heard, best guess first. Uses the first one that names a driver or a known question.
         async function ecVoiceAsk(alternatives, forcedId, forcedIntent) {
             const seq = ++ecVoice.seq;
             const alts = (Array.isArray(alternatives) ? alternatives : [alternatives]).map(a => String(a || '').trim()).filter(Boolean);
-            const answerEl = ecVoiceEl('ecVoiceAnswer');
-            const choicesEl = ecVoiceEl('ecVoiceChoices');
             if (!alts.length) return;
+            ecVoiceBtnState('thinking');
             await Promise.all([ecVoiceLoadClaims(), ecVoiceLoadShop()]);
             let pick = alts[0];
             if (!forcedId) {
@@ -11956,10 +12706,6 @@
                     alts.find(a => ecVoiceFindDrivers(ecVoiceNorm(a)).length) ||
                     alts.find(a => ecVoiceIntent(a, ecVoiceNorm(a))) || alts[0];
             }
-            ecVoiceEl('ecVoiceHeard').textContent = '"' + pick + '"';
-            answerEl.textContent = 'Checking…';
-            choicesEl.innerHTML = '';
-            ecVoiceShowHelp(false);
             let ans;
             try {
                 if (forcedId) {
@@ -11975,40 +12721,44 @@
                 ans = { text: 'Something went wrong answering that. Please try again.' };
             }
             if (seq !== ecVoice.seq) return;
-            answerEl.textContent = ans.text;
-            (ans.choices || []).forEach(c => {
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.className = 'ec-voice-chip';
-                b.textContent = c.label;
-                b.addEventListener('click', () => ecVoiceAsk([c.q], c.id, c.intent));
-                choicesEl.appendChild(b);
-            });
-            ecVoiceSay(ans.text);
+            ecVoiceBtnState('');
+            if (!ans.text) return; // e.g. Show Track opened its own window
+            ecVoiceShow(ans.text, ans.choices);
         }
-        function ecVoiceTyped(e) {
-            if (e) e.preventDefault();
-            const input = ecVoiceEl('ecVoiceInput');
-            const q = input ? input.value.trim() : '';
-            if (!q) return false;
-            input.value = '';
-            ecVoiceStop();
-            ecVoiceAsk([q]);
-            return false;
+        // A short spoken list of things to ask, with real names from this dashboard
+        function ecVoiceHelpText() {
+            const ids = ecVoiceAllIds();
+            const c = id => ecVoiceClaim(id);
+            const personOf = id => getDriverNickname(id) || (c(id) ? (c(id).nickname || String(c(id).name || '').split(/\s+/)[0]) : '');
+            const pId = ids.find(id => personOf(id));
+            const p = pId ? personOf(pId) : 'Sheldon';
+            const vId = ids.find(id => id !== pId && String(ecVoiceDriver(id).name || '').trim());
+            const v = vId ? String(ecVoiceDriver(vId).name).trim() : '21';
+            return 'You can ask: Where is ' + p + '? Where\'s ' + v + '? How far is ' + p + ' from the shop? How long until ' + p +
+                ' gets to the shop? Who\'s closest to me? Who\'s online? Who\'s driving ' + v + '? Show track for ' + p +
+                ' from 5 PM to 10 PM on November 1st. ' + v + ' nickname ' + p + '. Open ' + p + '.';
         }
-        function ecVoiceTry(q) { ecVoiceAsk([q]); }
-        // Long-press the app icon -> "Ask" (manifest.json shortcuts) opens index.html?voice=1: open the panel and listen.
+        document.addEventListener('click', function(e) {
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (c && !c.hidden && c.contains(e.target) && !e.target.closest('button')) {
+                if (window.speechSynthesis) speechSynthesis.cancel();
+                ecVoiceHideCaption();
+            }
+        });
+        // Long-press the app icon -> "Ask" (manifest.json shortcuts) opens index.html?voice=1: start listening.
         // The ?voice=1 is removed right away so a reload doesn't start listening again.
         function ecVoiceFromShortcut() {
             let want = false;
             try { want = new URLSearchParams(location.search).get('voice') === '1'; } catch (e) {}
             if (!want) return;
             try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) {}
-            ecVoiceOpen();
-            ecVoiceListen(); // if the browser won't listen without a tap, the panel says "Tap the mic to ask"
+            ecVoiceListen(); // if the browser won't listen without a tap, the caption says to tap the mic
         }
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && ecVoice.open) ecVoiceClose();
+            if (e.key !== 'Escape') return;
+            if (ecVoice.listening) ecVoiceStop();
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (c && !c.hidden) { if (window.speechSynthesis) speechSynthesis.cancel(); ecVoiceHideCaption(); }
         });
 
         console.log('✅ E&C Dispatch Tracker loaded.');
