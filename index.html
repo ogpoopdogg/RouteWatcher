@@ -11616,6 +11616,9 @@
 
         // Answers one question: { text, choices?: [{ label, q }], action?: fn }
         async function ecVoiceAnswer(raw) {
+            // "from 5 p.m. to 10 p.m." is taken out first so its numbers aren't read as vehicle names
+            const range = ecVoiceTimeRange(raw);
+            if (range) raw = range.rest;
             const words = ecVoiceNorm(raw);
             if (!words.length) return { text: 'I didn\'t catch that. Tap the mic and try again.' };
             await Promise.all([ecVoiceLoadClaims(), ecVoiceLoadShop()]);
@@ -11662,7 +11665,7 @@
                 if (!intent) return { text: 'I heard "' + raw + '" but didn\'t understand it. Tap "What can I say?" for ideas.' };
                 return { text: 'I couldn\'t find a driver or vehicle in "' + raw + '".' + (names.length ? ' I know: ' + names.join(', ') + '.' : '') };
             }
-            return ecVoiceAboutDriver(id, intent || 'where', words, found, { me: mentionsMe, shop: mentionsShop });
+            return ecVoiceAboutDriver(id, intent || (range ? 'track' : 'where'), words, found, { me: mentionsMe, shop: mentionsShop, range: range });
         }
 
         async function ecVoiceAboutDriver(id, intent, words, found, mention) {
@@ -11681,7 +11684,7 @@
                     : 'Nobody has ' + vehicle + ' in the Time Clock that I can see.' };
             }
             if (intent === 'open') { openDriverModal(id); return { text: 'Opening ' + label + '.' }; }
-            if (intent === 'track') return ecVoiceShowTrack(id, words);
+            if (intent === 'track') return ecVoiceShowTrack(id, words, mention && mention.range);
             if (intent === 'route') {
                 openDriverModal(id);
                 setTimeout(() => { if (activeModalDriverId === id) ecRouteLoad(id, true); }, 300);
@@ -11866,7 +11869,33 @@
         // ----- "Show track for Sheldon": open the driver window and press Show Track -----
         // Today: From/To are the punch in the driver window already finds in the Time Clock (or Workday hours).
         // "Yesterday": the first punch in yesterday on this GPS, plus 12 hours (or yesterday's Workday hours).
-        async function ecVoiceShowTrack(id, words) {
+        // "from 5 p.m. to 10 p.m.", "from 9 to 5:30", "between 7 and 11 a.m." (today, or yesterday when said):
+        // { start, end (ms), rest: the question without the times } or null. With no a.m./p.m. at all, 1 to 6 is p.m. and
+        // 7 to 11 is a.m.; an end before the start is the next day ("10 p.m. to 2 a.m.").
+        function ecVoiceTimeRange(raw) {
+            const T = '(\\d{1,2})(?:[:.](\\d{2}))?\\s*(a\\.?\\s?m\\.?|p\\.?\\s?m\\.?|noon|midnight)?';
+            const re = new RegExp('\\b(?:from|between)\\s+' + T + '\\s*(?:to|until|till|and|-)\\s*' + T + '(?=\\W|$)', 'i');
+            const m = String(raw || '').match(re);
+            if (!m) return null;
+            const side = (h, mm, ap) => ({ h: Number(h), m: Number(mm || 0), ap: ap ? (/^p|noon/i.test(ap) ? 'pm' : 'am') : '' });
+            const a = side(m[1], m[2], m[3]), b = side(m[4], m[5], m[6]);
+            if (a.h > 23 || b.h > 23 || a.m > 59 || b.m > 59) return null;
+            const to24 = (x, ap) => x.h > 12 ? x.h : (ap === 'pm' ? (x.h % 12) + 12 : (ap === 'am' ? x.h % 12 : x.h));
+            let ha, hb;
+            if (a.h > 12 || b.h > 12) { ha = to24(a, a.ap); hb = to24(b, b.ap); } // 24-hour times
+            else if (a.ap && b.ap) { ha = to24(a, a.ap); hb = to24(b, b.ap); }
+            else if (b.ap) { hb = to24(b, b.ap); ha = to24(a, b.ap); if (ha > hb) ha = to24(a, b.ap === 'pm' ? 'am' : 'pm'); } // "9 to 5 p.m."
+            else if (a.ap) { ha = to24(a, a.ap); hb = to24(b, a.ap); if (hb <= ha) hb = to24(b, a.ap === 'pm' ? 'am' : 'pm'); }
+            else { const guess = x => (x.h >= 1 && x.h <= 6) || x.h === 12 ? 'pm' : 'am'; ha = to24(a, guess(a)); hb = to24(b, guess(b)); if (hb <= ha && hb + 12 < 24 && b.h < 12) hb += 12; }
+            const yesterday = /\byesterday/i.test(raw);
+            const z = ecWall(Date.now() - (yesterday ? 24 * 3600000 : 0));
+            const start = ecFromWall(z.y, z.m, z.d, ha, a.m);
+            let end = ecFromWall(z.y, z.m, z.d, hb, b.m);
+            if (end <= start) end = ecFromWall(z.y, z.m, z.d + 1, hb, b.m);
+            return { start: start, end: end, rest: raw.replace(m[0], ' ').replace(/\s+/g, ' ').trim() };
+        }
+
+        async function ecVoiceShowTrack(id, words, range) {
             const drv = ecVoiceDriver(id);
             const label = String((drv && drv.name) || '').trim() || ecVoiceLabel(id); // the vehicle; the punch in names the person
             if (!drv || !String(drv.deviceId || '').trim()) return { text: label + ' has no GPS device ID, so there is no track to show.' };
@@ -11875,6 +11904,17 @@
             try { await ecShift.ready; } catch (e) {}
             if (activeModalDriverId !== id) return { text: '' };
             let from = 'Workday hours';
+            if (range) {
+                // The times that were said go in From/To (the punch in lookup has finished, so it won't change them)
+                document.getElementById('historyStart').value = ecToLocalInput(range.start);
+                document.getElementById('historyEnd').value = ecToLocalInput(range.end);
+                ecShift.touched = true;
+                ecShiftMsg('');
+                ecWindowChanged();
+                loadHistoricalTrack();
+                const day = yesterday ? ' yesterday' : '';
+                return { text: 'Showing ' + label + '\'s track from ' + formatTimestampTo12h(range.start) + ' to ' + formatTimestampTo12h(range.end) + day + '.' };
+            }
             if (yesterday) {
                 const dayMs = Date.now() - 24 * 3600000;
                 let best = null;
