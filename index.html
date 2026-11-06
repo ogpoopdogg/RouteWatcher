@@ -4817,14 +4817,85 @@
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
             -webkit-tap-highlight-color: transparent;
         }
-        .ec-voice-btn svg { width: 26px; height: 26px; }
+        /* States: tap = splash; listening = red glow + sonar rings; thinking = spinning gold arc; speaking = gold glow + voice bars */
+        .ec-voice-btn { isolation: isolate; transition: transform 0.15s ease, box-shadow 0.3s ease, background 0.3s ease, color 0.3s ease; }
+        .ec-voice-btn:active { transform: scale(0.92); }
+        .ec-voice-btn svg { width: 26px; height: 26px; transition: opacity 0.2s ease, transform 0.25s ease; }
         .ec-voice-btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
-        .ec-voice-btn.is-listening { background: #e74c3c; color: #fff; animation: ecVoicePulse 1.2s ease-in-out infinite; }
-        @keyframes ecVoicePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.55); }
-            50% { box-shadow: 0 0 0 12px rgba(231, 76, 60, 0); }
+        .ec-voice-btn::before, .ec-voice-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(231, 76, 60, 0.75);
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
         }
-        @media (prefers-reduced-motion: reduce) { .ec-voice-btn.is-listening { animation: none; } }
+        .ec-voice-btn.is-listening {
+            background: radial-gradient(circle at 35% 30%, #ff7a6b 0%, #e74c3c 55%, #b83227 100%);
+            color: #fff;
+            box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.22), 0 0 26px 8px rgba(231, 76, 60, 0.55);
+            animation: ecVoiceBreath 1.6s ease-in-out infinite;
+        }
+        .ec-voice-btn.is-listening::before { animation: ecVoiceSonar 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite; }
+        .ec-voice-btn.is-listening::after { animation: ecVoiceSonar 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) 0.9s infinite; }
+        .ec-voice-btn.is-thinking { box-shadow: 0 0 22px 4px rgba(247, 201, 72, 0.45); }
+        .ec-voice-btn.is-thinking::before {
+            inset: -6px;
+            opacity: 1;
+            border: 3px solid transparent;
+            border-top-color: var(--accent);
+            border-right-color: rgba(247, 201, 72, 0.35);
+            animation: ecVoiceSpin 0.8s linear infinite;
+        }
+        .ec-voice-btn.is-speaking {
+            box-shadow: 0 0 0 4px rgba(247, 201, 72, 0.22), 0 0 26px 8px rgba(247, 201, 72, 0.55);
+            animation: ecVoiceBreath 2.2s ease-in-out infinite;
+        }
+        .ec-voice-btn.is-speaking svg { opacity: 0; transform: scale(0.5); }
+        .ec-voice-bars {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.2s ease, transform 0.25s ease;
+            pointer-events: none;
+        }
+        .ec-voice-bars i { display: block; width: 4px; height: 6px; border-radius: 2px; background: currentColor; }
+        .ec-voice-btn.is-speaking .ec-voice-bars { opacity: 1; transform: none; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i { animation: ecVoiceBar 0.9s ease-in-out infinite; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i:nth-child(2) { animation-delay: -0.3s; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i:nth-child(3) { animation-delay: -0.6s; }
+        .ec-voice-btn.is-speaking .ec-voice-bars i:nth-child(4) { animation-delay: -0.15s; }
+        .ec-voice-splash {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 56px;
+            height: 56px;
+            margin: -28px 0 0 -28px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle, rgba(247, 201, 72, 0.6) 0%, rgba(247, 201, 72, 0.25) 45%, rgba(247, 201, 72, 0) 70%);
+            animation: ecVoiceSplash 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+        }
+        .ec-voice-splash.ring { background: none; border: 2px solid rgba(247, 201, 72, 0.85); animation-duration: 0.9s; }
+        @keyframes ecVoiceSplash { from { transform: scale(0.6); opacity: 1; } to { transform: scale(3.2); opacity: 0; } }
+        @keyframes ecVoiceSonar { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.3); opacity: 0; } }
+        @keyframes ecVoiceBreath { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+        @keyframes ecVoiceSpin { to { transform: rotate(360deg); } }
+        @keyframes ecVoiceBar { 0%, 100% { height: 6px; } 50% { height: 22px; } }
+        @media (prefers-reduced-motion: reduce) {
+            .ec-voice-btn, .ec-voice-btn::before, .ec-voice-btn::after, .ec-voice-bars i { animation: none !important; }
+            .ec-voice-bars i { height: 14px; }
+            .ec-voice-splash { display: none; }
+        }
         body.modal-open .ec-voice-btn, body.modal-open .ec-voice-caption { display: none; }
         .ec-voice-caption {
             position: fixed;
@@ -4985,6 +5056,7 @@
         <!-- Voice questions: tap the mic and ask "Where is Sheldon?"; the spoken answer shows as a caption (script: VOICE QUESTIONS) -->
         <button type="button" id="ecVoiceBtn" class="ec-voice-btn" onclick="ecVoiceToggle()" title="Ask where a driver is" aria-label="Ask a question by voice">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+            <span class="ec-voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         </button>
         <div id="ecVoiceCaption" class="ec-voice-caption" role="status" aria-live="polite" title="Tap to hide" hidden>
             <div id="ecVoiceText"></div>
@@ -11234,7 +11306,7 @@
         const EC_VOICE_ETA_REUSE_MS = 3 * 60 * 1000;
         const EC_VOICE_CLAIMS_REUSE_MS = 60 * 1000;
         const EC_VOICE_STOPPED_MIN = 5;          // say "stopped for N minutes" from this many minutes
-        const ecVoice = { rec: null, listening: false, lastId: null, addr: {}, eta: {}, claims: {}, claimsAt: 0, seq: 0, hideTimer: null };
+        const ecVoice = { rec: null, listening: false, speaking: null, lastId: null, addr: {}, eta: {}, claims: {}, claimsAt: 0, seq: 0, hideTimer: null };
 
         const EC_VOICE_ONES = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
         const EC_VOICE_TEENS = { ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
@@ -11841,7 +11913,27 @@
         // The caption hides a few seconds after the voice finishes, or when tapped.
         const EC_VOICE_CAPTION_AFTER_MS = 5000;
         function ecVoiceEl(id) { return document.getElementById(id); }
+        // Mic button look: '' (resting), 'thinking' (working out the answer) or 'speaking' (reading it out)
+        function ecVoiceBtnState(state) {
+            const btn = ecVoiceEl('ecVoiceBtn');
+            if (!btn) return;
+            btn.classList.toggle('is-thinking', state === 'thinking');
+            btn.classList.toggle('is-speaking', state === 'speaking');
+        }
+        // Splash of light from the mic button when it's tapped
+        function ecVoiceSplash() {
+            const btn = ecVoiceEl('ecVoiceBtn');
+            if (!btn || ecReducedMotion()) return;
+            ['', ' ring'].forEach(extra => {
+                const s = document.createElement('span');
+                s.className = 'ec-voice-splash' + extra;
+                s.addEventListener('animationend', () => s.remove());
+                btn.appendChild(s);
+                setTimeout(() => s.remove(), 1200);
+            });
+        }
         function ecVoiceHideCaption() {
+            if (ecVoiceEl('ecVoiceBtn') && ecVoiceEl('ecVoiceBtn').classList.contains('is-speaking')) ecVoiceBtnState('');
             clearTimeout(ecVoice.hideTimer);
             const c = ecVoiceEl('ecVoiceCaption');
             if (c) c.hidden = true;
@@ -11877,7 +11969,7 @@
             ecVoiceSay(text, !!(choices && choices.length));
         }
         function ecVoiceSay(text, keep) {
-            if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+            if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) { ecVoiceBtnState(''); return; }
             try {
                 speechSynthesis.cancel();
                 const spoken = String(text).replace(/(\d)\s?km\b/g, '$1 kilometres').replace(/(\d)\s?m\b/g, '$1 metres')
@@ -11887,7 +11979,15 @@
                 const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
                 const v = voices.find(x => x.lang === EC_VOICE_LANG) || voices.find(x => /^en[-_]/i.test(x.lang) && x.localService) || null;
                 if (v) u.voice = v;
-                if (!keep) u.onend = function() { if (!ecVoice.listening) ecVoiceHideCaptionIn(EC_VOICE_CAPTION_AFTER_MS); };
+                u.onend = function() {
+                    if (ecVoice.speaking !== u) return;
+                    ecVoice.speaking = null;
+                    ecVoiceBtnState('');
+                    if (!keep && !ecVoice.listening) ecVoiceHideCaptionIn(EC_VOICE_CAPTION_AFTER_MS);
+                };
+                u.onerror = function() { if (ecVoice.speaking === u) { ecVoice.speaking = null; ecVoiceBtnState(''); } };
+                ecVoice.speaking = u;
+                ecVoiceBtnState('speaking');
                 speechSynthesis.speak(u);
             } catch (e) { console.warn('Voice: could not speak:', e); }
         }
@@ -11906,6 +12006,7 @@
         }
         // Mic button: listen; while listening, stop
         function ecVoiceToggle() {
+            ecVoiceSplash();
             if (ecVoice.listening) { ecVoiceStop(); return; }
             ecVoiceListen();
         }
@@ -11913,6 +12014,8 @@
             const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!Rec) { ecVoiceShow('This browser can\'t listen. Please use Chrome.'); return; }
             if (window.speechSynthesis) speechSynthesis.cancel();
+            ecVoice.speaking = null;
+            ecVoiceBtnState('');
             ecVoiceHideCaption();
             ecVoice.seq++; // an answer still being worked out is dropped
             const rec = new Rec();
@@ -11962,6 +12065,7 @@
             const seq = ++ecVoice.seq;
             const alts = (Array.isArray(alternatives) ? alternatives : [alternatives]).map(a => String(a || '').trim()).filter(Boolean);
             if (!alts.length) return;
+            ecVoiceBtnState('thinking');
             await Promise.all([ecVoiceLoadClaims(), ecVoiceLoadShop()]);
             let pick = alts[0];
             if (!forcedId) {
@@ -11984,6 +12088,8 @@
                 ans = { text: 'Something went wrong answering that. Please try again.' };
             }
             if (seq !== ecVoice.seq) return;
+            ecVoiceBtnState('');
+            if (!ans.text) return; // e.g. Show Track opened its own window
             ecVoiceShow(ans.text, ans.choices);
         }
         // A short spoken list of things to ask, with real names from this dashboard
