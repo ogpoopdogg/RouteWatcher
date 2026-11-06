@@ -4798,7 +4798,7 @@
             }
             .driver-modal .modal-stops-container { max-height: 50vh !important; }
         }
-        /* ===== Voice questions: mic button + answer panel (bottom left) ===== */
+        /* ===== Voice questions: mic button + caption of the spoken answer (bottom left; bottom right on phones) ===== */
         .ec-voice-btn {
             position: fixed;
             left: 20px;
@@ -4825,80 +4825,43 @@
             50% { box-shadow: 0 0 0 12px rgba(231, 76, 60, 0); }
         }
         @media (prefers-reduced-motion: reduce) { .ec-voice-btn.is-listening { animation: none; } }
-        body.modal-open .ec-voice-btn, body.modal-open .ec-voice-panel { display: none; }
-        .ec-voice-panel {
+        body.modal-open .ec-voice-btn, body.modal-open .ec-voice-caption { display: none; }
+        .ec-voice-caption {
             position: fixed;
             left: 16px;
             bottom: 88px;
             z-index: 9600;
             width: min(380px, calc(100vw - 32px));
-            max-height: calc(100vh - 120px);
-            overflow-y: auto;
             box-sizing: border-box;
-            background: var(--card);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px;
-            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4);
-            font-size: 14px;
+            background: rgba(11, 11, 20, 0.92);
+            color: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+            font-size: 17px;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+            cursor: pointer;
         }
-        .ec-voice-panel[hidden] { display: none; }
-        .ec-voice-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-        .ec-voice-head .ec-voice-state { font-weight: 700; color: var(--accent); }
-        body.light-mode .ec-voice-head .ec-voice-state { color: var(--text); }
-        .ec-voice-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 8px; min-width: 36px; min-height: 36px; }
-        .ec-voice-heard { color: var(--muted); font-style: italic; min-height: 1em; margin-bottom: 6px; overflow-wrap: anywhere; }
-        .ec-voice-answer { font-size: 16px; line-height: 1.45; min-height: 1.4em; overflow-wrap: anywhere; }
-        .ec-voice-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .ec-voice-caption[hidden] { display: none; }
+        .ec-voice-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
         .ec-voice-choices:empty { display: none; }
         .ec-voice-chip {
-            background: var(--card2, transparent);
-            color: var(--text);
+            background: transparent;
+            color: #fff;
             border: 1px solid var(--accent);
             border-radius: 16px;
             padding: 7px 12px;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
             min-height: 36px;
         }
-        .ec-voice-type { display: flex; gap: 6px; margin-top: 12px; }
-        .ec-voice-type input {
-            flex: 1;
-            min-width: 0;
-            background: var(--card2, transparent);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: 16px; /* 16px stops phones zooming in on the box */
-        }
-        .ec-voice-type button, .ec-voice-foot button {
-            background: var(--accent);
-            color: #0b0b14;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-weight: 700;
-            cursor: pointer;
-            min-height: 38px;
-        }
-        .ec-voice-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
-        .ec-voice-foot .ec-voice-link { background: none; color: var(--accent); padding: 8px 4px; text-decoration: underline; }
-        body.light-mode .ec-voice-foot .ec-voice-link { color: var(--text); }
-        .ec-voice-foot label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; margin-left: auto; cursor: pointer; }
-        .ec-voice-help { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
-        .ec-voice-help[hidden] { display: none; }
-        .ec-voice-help h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-        .ec-voice-help h4:first-child { margin-top: 0; }
-        .ec-voice-help .ec-voice-chip { margin: 0 4px 6px 0; }
-        .ec-voice-help p { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
         /* Phones: mic bottom right (above the Install App button while that shows) */
         @media (max-width: 600px) {
             .ec-voice-btn { left: auto; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
-            .ec-voice-panel { left: auto; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+            .ec-voice-caption { left: auto; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
             .install-app-btn[style*="flex"] ~ .ec-voice-btn { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
-            .install-app-btn[style*="flex"] ~ .ec-voice-panel { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); }
+            .install-app-btn[style*="flex"] ~ .ec-voice-caption { bottom: calc(152px + env(safe-area-inset-bottom, 0px)); }
         }
     </style>
 </head>
@@ -5019,56 +4982,13 @@
             Install App
         </button>
 
-        <!-- Voice questions: tap the mic and ask "Where is Sheldon?" (script: VOICE QUESTIONS) -->
+        <!-- Voice questions: tap the mic and ask "Where is Sheldon?"; the spoken answer shows as a caption (script: VOICE QUESTIONS) -->
         <button type="button" id="ecVoiceBtn" class="ec-voice-btn" onclick="ecVoiceToggle()" title="Ask where a driver is" aria-label="Ask a question by voice">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
         </button>
-        <div id="ecVoicePanel" class="ec-voice-panel" role="dialog" aria-label="Voice questions" hidden>
-            <div class="ec-voice-head">
-                <span class="ec-voice-state" id="ecVoiceState" role="status">Tap the mic to ask</span>
-                <button type="button" class="ec-voice-close" onclick="ecVoiceClose()" title="Close" aria-label="Close">✕</button>
-            </div>
-            <div class="ec-voice-heard" id="ecVoiceHeard"></div>
-            <div class="ec-voice-answer" id="ecVoiceAnswer" aria-live="polite">Ask something like "Where is Sheldon?" or "How far is 21 from the shop?"</div>
+        <div id="ecVoiceCaption" class="ec-voice-caption" role="status" aria-live="polite" title="Tap to hide" hidden>
+            <div id="ecVoiceText"></div>
             <div class="ec-voice-choices" id="ecVoiceChoices"></div>
-            <form class="ec-voice-type" onsubmit="return ecVoiceTyped(event)">
-                <input type="text" id="ecVoiceInput" placeholder="Or type a question" autocomplete="off" enterkeyhint="send" aria-label="Type a question">
-                <button type="submit">Ask</button>
-            </form>
-            <div class="ec-voice-foot">
-                <button type="button" id="ecVoiceAgain" onclick="ecVoiceListen()">Ask again</button>
-                <button type="button" class="ec-voice-link" onclick="ecVoiceShowHelp(document.getElementById('ecVoiceHelp').hidden)">What can I say?</button>
-                <label><input type="checkbox" id="ecVoiceSpeak" checked onchange="ecVoiceSetSpeak(this.checked)"> Read answers aloud</label>
-            </div>
-            <div class="ec-voice-help" id="ecVoiceHelp" hidden>
-                <h4>Where</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="Where is {p}?" onclick="ecVoiceTry(this.textContent)">Where is Sheldon?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Where's {v}?" onclick="ecVoiceTry(this.textContent)">Where's 21?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Show {p} on the map" onclick="ecVoiceTry(this.textContent)">Show Sheldon on the map</button>
-                <h4>How far / how long</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="How far is {p} from the shop?" onclick="ecVoiceTry(this.textContent)">How far is Sheldon from the shop?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="How far is {v} from me?" onclick="ecVoiceTry(this.textContent)">How far is 21 from me?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="How far is {p} from {v2}?" onclick="ecVoiceTry(this.textContent)">How far is Sheldon from 14?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="How long until {p} gets to the shop?" onclick="ecVoiceTry(this.textContent)">How long until Sheldon gets to the shop?</button>
-                <h4>Who</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's closest to the shop?" onclick="ecVoiceTry(this.textContent)">Who's closest to the shop?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's closest to me?" onclick="ecVoiceTry(this.textContent)">Who's closest to me?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's online?" onclick="ecVoiceTry(this.textContent)">Who's online?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's at the shop?" onclick="ecVoiceTry(this.textContent)">Who's at the shop?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's offline?" onclick="ecVoiceTry(this.textContent)">Who's offline?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Who's driving {v}?" onclick="ecVoiceTry(this.textContent)">Who's driving 21?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="What vehicle is {p} in?" onclick="ecVoiceTry(this.textContent)">What vehicle is Sheldon in?</button>
-                <h4>Status</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="When did {p} last update?" onclick="ecVoiceTry(this.textContent)">When did Sheldon last update?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Is {p} moving?" onclick="ecVoiceTry(this.textContent)">Is Sheldon moving?</button>
-                <button type="button" class="ec-voice-chip" data-tpl="What's {v}'s battery?" onclick="ecVoiceTry(this.textContent)">What's 21's battery?</button>
-                <h4>Open things</h4>
-                <button type="button" class="ec-voice-chip" data-tpl="Open {p}" onclick="ecVoiceTry(this.textContent)">Open Sheldon</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Show {p}'s route" onclick="ecVoiceTry(this.textContent)">Show Sheldon's route</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Show the map" onclick="ecVoiceTry(this.textContent)">Show the map</button>
-                <button type="button" class="ec-voice-chip" data-tpl="Dark mode" onclick="ecVoiceTry(this.textContent)">Dark mode</button>
-                <p>Say a nickname, the vehicle name from Settings, or the name of whoever has the vehicle in the Time Clock. "He" or "she" means the last driver you asked about. A saved point's name works too, like "How far is Sheldon from Walmart?" "Where is" looks up one street address and "How long" asks Google for one drive time; the rest uses no paid calls.</p>
-            </div>
         </div>
 
         <div class="app-grid">
@@ -9835,7 +9755,7 @@
 
             document.getElementById('historyStart').value = ecToLocalInput(ecTodayAt(workdayStart).getTime()); // Settings > Workday
             document.getElementById('historyEnd').value = ecToLocalInput(ecTodayAt(workdayEnd).getTime());
-            ecShiftInit(driverId); // then From/To from the driver's punch in, when the Time Clock has one
+            ecShift.ready = ecShiftInit(driverId); // then From/To from the driver's punch in, when the Time Clock has one (voice "show track" waits for it)
 
             const statusHeader = document.getElementById('driverStatusHeader');
             const batteryHeader = document.getElementById('modalBatteryHeader');
@@ -11301,7 +11221,8 @@
         });
 
         // ===== VOICE QUESTIONS (mic button: bottom left, bottom right on phones) =====
-        // Tap the mic, ask "Where is Sheldon?" or "How far is 21 from the shop?", and the answer shows and is read out loud.
+        // Tap the mic, ask "Where is Sheldon?" or "How far is 21 from the shop?", and the answer is read out loud with a caption.
+        // It can also act: "Show track for Sheldon" (driver window + Show Track from the punch in), "21 nickname Sheldon".
         // A driver can be named by their nickname, the GPS / vehicle name from Settings ("21", "Van 14"), or the name of
         // whoever has that vehicle in the Time Clock (timeclock/vehicle_claims). "He", "she" and "they" mean the last one asked about.
         // Listening uses the browser's speech recognition (Chrome sends the audio to Google to turn it into text).
@@ -11313,8 +11234,7 @@
         const EC_VOICE_ETA_REUSE_MS = 3 * 60 * 1000;
         const EC_VOICE_CLAIMS_REUSE_MS = 60 * 1000;
         const EC_VOICE_STOPPED_MIN = 5;          // say "stopped for N minutes" from this many minutes
-        const EC_VOICE_SPEAK_KEY = 'ec_voice_speak';
-        const ecVoice = { rec: null, listening: false, open: false, lastId: null, addr: {}, eta: {}, claims: {}, claimsAt: 0, seq: 0 };
+        const ecVoice = { rec: null, listening: false, lastId: null, addr: {}, eta: {}, claims: {}, claimsAt: 0, seq: 0, hideTimer: null };
 
         const EC_VOICE_ONES = { zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
         const EC_VOICE_TEENS = { ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
@@ -11341,6 +11261,7 @@
                     else out.push(String(EC_VOICE_TENS[w]));
                 } else if (EC_VOICE_TEENS[w] !== undefined) out.push(String(EC_VOICE_TEENS[w]));
                 else if (EC_VOICE_ONES[w] !== undefined && w !== 'oh') out.push(String(EC_VOICE_ONES[w]));
+                else if (/^\d+s$/.test(w)) out.push(w.slice(0, -1)); // "30s" (as in "30's nickname") -> 30
                 else out.push(w);
             }
             return out;
@@ -11603,6 +11524,7 @@
             if (has(/ (light mode|day mode) /)) return 'light';
             if (has(/ (hide|close) (the )?map /)) return 'hideMap';
             if (has(/ (show|open) (the )?map /) && !has(/ on (the )?map /)) return 'showMap';
+            if (has(/ (track|tracks|trail|history) /) && !has(/ route /)) return 'track';
             if (has(/ (closest|nearest) /)) return 'closest';
             if (has(/ (how long|eta|when will|when does|how much time|how many minutes|drive time|driving time) /)) return 'eta';
             if (has(/ (how far|distance|how close|far away) /)) return 'far';
@@ -11631,7 +11553,9 @@
             const mentionsMe = words.includes('me') || words.includes('my') || /\bi am\b|\bim\b/.test(words.join(' '));
             const mentionsShop = words.some(w => ['shop', 'office', 'depot', 'base'].includes(w));
 
-            if (intent === 'help') { ecVoiceShowHelp(true); return { text: 'Here are things you can ask.' }; }
+            if (intent === 'help') return { text: ecVoiceHelpText() };
+            const nickCmd = ecVoiceNicknameCommand(words);
+            if (nickCmd) return nickCmd;
             if (intent === 'dark' || intent === 'light') {
                 const isLight = document.body.classList.contains('light-mode');
                 if ((intent === 'light') !== isLight) toggleTheme();
@@ -11685,6 +11609,7 @@
                     : 'Nobody has ' + vehicle + ' in the Time Clock that I can see.' };
             }
             if (intent === 'open') { openDriverModal(id); return { text: 'Opening ' + label + '.' }; }
+            if (intent === 'track') return ecVoiceShowTrack(id, words);
             if (intent === 'route') {
                 openDriverModal(id);
                 setTimeout(() => { if (activeModalDriverId === id) ecRouteLoad(id, true); }, 300);
@@ -11802,17 +11727,157 @@
             return { text: text, choices: [{ label: 'Where is ' + ecVoiceLabel(ranked[0].id) + '?', q: 'where is', id: ranked[0].id, intent: 'where' }] };
         }
 
-        // ----- Panel, listening and speaking -----
+        // ----- "21 nickname Sheldon": set (or remove) a vehicle's nickname, the same as the Nickname button -----
+        // Also: "nickname 21 Sheldon", "call 21 Sheldon", "rename 21 to Sheldon", "set 21's nickname to Sheldon",
+        // "remove the nickname from 21". Returns null when the question isn't about nicknames.
+        function ecVoiceNicknameCommand(words) {
+            const t = ' ' + words.join(' ') + ' ';
+            const w = words.slice();
+            for (let i = 0; i + 1 < w.length; i++) if (w[i] === 'nick' && w[i + 1] === 'name') w.splice(i, 2, 'nickname');
+            const k = w.indexOf('nickname');
+            const verbFirst = ['call', 'rename'].includes(w[0]);
+            if (k < 0 && !verbFirst) return null;
+            const remove = /\b(remove|clear|delete|erase|take off|no) /.test(t) && k >= 0;
+            const filler = new Set(['set', 'change', 'make', 'the', 'please', 'give', 'its', 'for', 'from', 'on', 'of', 'a']);
+            const trim = list => { const out = list.filter(x => !filler.has(x)); while (out.length && ['to', 'as', 'is', 'be', 'it', 'name'].includes(out[0])) out.shift(); return out; };
+            let vehWords, newWords;
+            if (remove) {
+                vehWords = trim(w.filter((x, i) => i !== k && !['remove', 'clear', 'delete', 'erase', 'take', 'off', 'no'].includes(x)));
+                newWords = [];
+            } else if (k > 0) {                          // "21 nickname Sheldon", "set 21's nickname to Sheldon"
+                vehWords = trim(w.slice(0, k));
+                newWords = trim(w.slice(k + 1));
+            } else {                                      // "nickname 21 Sheldon", "call 21 Sheldon", "rename 21 to Sheldon"
+                const rest = trim(w.slice(1));
+                const cut = rest.findIndex(x => ['to', 'as', 'is'].includes(x));
+                if (cut > 0) { vehWords = rest.slice(0, cut); newWords = trim(rest.slice(cut + 1)); }
+                else {
+                    // the longest start that names a vehicle; the rest is the nickname
+                    vehWords = []; newWords = rest;
+                    for (let n = 1; n <= Math.min(3, rest.length - 1); n++) { // shortest first: "call truck 30 Big Dave" -> Big Dave
+                        const f = ecVoiceFindDrivers(rest.slice(0, n));
+                        if (f.length && f[0].score >= 0.9) { vehWords = rest.slice(0, n); newWords = rest.slice(n); break; }
+                    }
+                }
+            }
+            if (!vehWords.length) return { text: 'Which vehicle? Say it like "21 nickname Sheldon".' };
+            const found = ecVoiceFindDrivers(vehWords);
+            if (!found.length || found[0].score < 0.85) return { text: 'I couldn\'t find a vehicle called "' + vehWords.join(' ') + '".' };
+            if (found[1] && found[1].score >= found[0].score - 0.02) {
+                return { text: 'More than one vehicle matches "' + vehWords.join(' ') + '". Say the full vehicle name.' };
+            }
+            const id = found[0].id;
+            const vehicle = String((ecVoiceDriver(id) && ecVoiceDriver(id).name) || '').trim() || 'That vehicle';
+            const before = getDriverNickname(id);
+            if (remove) {
+                if (!before) return { text: vehicle + ' has no nickname.' };
+                ecVoiceSetNickname(id, '');
+                return { text: 'Removed the nickname ' + before + ' from ' + vehicle + '.', choices: [{ label: 'Undo', run: () => ecVoiceSetNickname(id, before) }] };
+            }
+            const nick = newWords.map(x => /\d/.test(x) ? x : x.charAt(0).toUpperCase() + x.slice(1)).join(' ').slice(0, EC_TC_NICK_MAX);
+            if (!nick) return { text: 'What nickname? Say it like "' + vehicle + ' nickname Sheldon".' };
+            if (nick === before) return { text: vehicle + '\'s nickname is already ' + nick + '.' };
+            ecVoiceSetNickname(id, nick);
+            ecVoice.lastId = id;
+            return { text: vehicle + '\'s nickname is now ' + nick + '.', choices: [{ label: 'Undo', run: () => ecVoiceSetNickname(id, before) }] };
+        }
+        // Saves a nickname for everyone (shared list), or removes it when value is empty
+        function ecVoiceSetNickname(id, value) {
+            const ref = getNicknamesRef();
+            if (ref) {
+                if (value) ref.child(id).set(value).catch(ecSaveError('the nickname'));
+                else ref.child(id).remove().catch(ecSaveError('the nickname removal'));
+            }
+            applyNicknameChange(id, value);
+        }
+
+        // ----- "Show track for Sheldon": open the driver window and press Show Track -----
+        // Today: From/To are the punch in the driver window already finds in the Time Clock (or Workday hours).
+        // "Yesterday": the first punch in yesterday on this GPS, plus 12 hours (or yesterday's Workday hours).
+        async function ecVoiceShowTrack(id, words) {
+            const drv = ecVoiceDriver(id);
+            const label = String((drv && drv.name) || '').trim() || ecVoiceLabel(id); // the vehicle; the punch in names the person
+            if (!drv || !String(drv.deviceId || '').trim()) return { text: label + ' has no GPS device ID, so there is no track to show.' };
+            const yesterday = words.includes('yesterday') || words.includes('yesterdays');
+            openDriverModal(id);
+            try { await ecShift.ready; } catch (e) {}
+            if (activeModalDriverId !== id) return { text: '' };
+            let from = 'Workday hours';
+            if (yesterday) {
+                const dayMs = Date.now() - 24 * 3600000;
+                let best = null;
+                if (ecShift.people && ecShift.people.length) {
+                    const day = ecDayBounds(dayMs);
+                    const lists = await Promise.all(ecShift.people.map(p => ecShiftsBetween(p.ek, day.start, day.end).then(l => ({ ek: p.ek, list: l || [] }))));
+                    lists.forEach(r => r.list.forEach(s => { if (ecShiftUsedGps(s, id) && (!best || s.in < best.in)) best = { ek: r.ek, in: s.in }; }));
+                }
+                if (activeModalDriverId !== id) return { text: '' };
+                if (best) {
+                    ecShift.ek = best.ek;
+                    ecShift.touched = true;
+                    ecShiftRender();
+                    ecSetWindowFromPunch(best.in);
+                    ecShiftMsg(ecShiftName(best.ek) + ' punched in at ' + formatTimestampTo12h(best.in) + ' yesterday');
+                    from = ecShiftName(best.ek).split(/\s+/)[0] + '\'s ' + formatTimestampTo12h(best.in) + ' punch in yesterday';
+                } else {
+                    document.getElementById('historyStart').value = ecToLocalInput(ecTodayAt(workdayStart).getTime() - 24 * 3600000);
+                    document.getElementById('historyEnd').value = ecToLocalInput(ecTodayAt(workdayEnd).getTime() - 24 * 3600000);
+                    ecShift.touched = true;
+                    ecWindowChanged();
+                    from = 'yesterday\'s Workday hours (no punch in found)';
+                }
+            } else if (ecShift.ek && !ecShift.touched) {
+                const startMs = ecParseLocalInput(document.getElementById('historyStart').value);
+                from = ecShiftName(ecShift.ek).split(/\s+/)[0] + '\'s ' + formatTimestampTo12h(Number(startMs)) + ' punch in';
+            } else {
+                from = 'today\'s Workday hours (no punch in found)';
+            }
+            loadHistoricalTrack();
+            return { text: 'Showing ' + label + '\'s track from ' + from + '.' };
+        }
+
+        // ----- Caption, listening and speaking -----
+        // Tap the mic: it turns red while listening, then the answer is read out loud and shown as a caption.
+        // The caption hides a few seconds after the voice finishes, or when tapped.
+        const EC_VOICE_CAPTION_AFTER_MS = 5000;
         function ecVoiceEl(id) { return document.getElementById(id); }
-        function ecVoiceSpeakOn() {
-            try { return localStorage.getItem(EC_VOICE_SPEAK_KEY) !== 'off'; } catch (e) { return true; }
+        function ecVoiceHideCaption() {
+            clearTimeout(ecVoice.hideTimer);
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (c) c.hidden = true;
         }
-        function ecVoiceSetSpeak(on) {
-            try { localStorage.setItem(EC_VOICE_SPEAK_KEY, on ? 'on' : 'off'); } catch (e) {}
-            if (!on && window.speechSynthesis) speechSynthesis.cancel();
+        // Hide the caption ms from now (a later call replaces an earlier one)
+        function ecVoiceHideCaptionIn(ms) {
+            clearTimeout(ecVoice.hideTimer);
+            ecVoice.hideTimer = setTimeout(ecVoiceHideCaption, ms);
         }
-        function ecVoiceSay(text) {
-            if (!ecVoiceSpeakOn() || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+        // Shows the caption, reads it out loud, then hides it. choices: buttons under it ("Did you mean ...?")
+        function ecVoiceShow(text, choices) {
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (!c) return;
+            ecVoiceEl('ecVoiceText').textContent = text;
+            const box = ecVoiceEl('ecVoiceChoices');
+            box.innerHTML = '';
+            (choices || []).forEach(ch => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'ec-voice-chip';
+                b.textContent = ch.label;
+                b.addEventListener('click', e => {
+                    e.stopPropagation();
+                    if (ch.run) { ch.run(); ecVoiceShow('Undone.'); return; }
+                    ecVoiceAsk([ch.q], ch.id, ch.intent);
+                });
+                box.appendChild(b);
+            });
+            c.hidden = false;
+            // Fallback in case the end of speech is never reported: about 2.5 words a second, plus a pause
+            const words = String(text).split(/\s+/).length;
+            ecVoiceHideCaptionIn(words * 400 + EC_VOICE_CAPTION_AFTER_MS + (choices && choices.length ? 10000 : 0));
+            ecVoiceSay(text, !!(choices && choices.length));
+        }
+        function ecVoiceSay(text, keep) {
+            if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
             try {
                 speechSynthesis.cancel();
                 const spoken = String(text).replace(/(\d)\s?km\b/g, '$1 kilometres').replace(/(\d)\s?m\b/g, '$1 metres')
@@ -11822,132 +11887,80 @@
                 const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
                 const v = voices.find(x => x.lang === EC_VOICE_LANG) || voices.find(x => /^en[-_]/i.test(x.lang) && x.localService) || null;
                 if (v) u.voice = v;
+                if (!keep) u.onend = function() { if (!ecVoice.listening) ecVoiceHideCaptionIn(EC_VOICE_CAPTION_AFTER_MS); };
                 speechSynthesis.speak(u);
             } catch (e) { console.warn('Voice: could not speak:', e); }
         }
-        function ecVoiceSetState(text, listening) {
-            const st = ecVoiceEl('ecVoiceState');
-            if (st) st.textContent = text;
+        function ecVoiceSetListening(on) {
+            ecVoice.listening = !!on;
             const btn = ecVoiceEl('ecVoiceBtn');
-            if (btn) btn.classList.toggle('is-listening', !!listening);
-            const again = ecVoiceEl('ecVoiceAgain');
-            if (again) again.textContent = listening ? 'Stop' : 'Ask again';
-        }
-        function ecVoiceShowHelp(show) {
-            const h = ecVoiceEl('ecVoiceHelp');
-            if (!h) return;
-            if (show) ecVoiceFillHelp(h);
-            h.hidden = !show;
-        }
-        // The examples use real names from this dashboard (a driver's name and two vehicle names)
-        function ecVoiceFillHelp(h) {
-            const ids = ecVoiceAllIds();
-            const vehicleOf = id => String((ecVoiceDriver(id).name) || '').trim();
-            const personOf = id => { const c = ecVoiceClaim(id); return getDriverNickname(id) || (c ? (c.nickname || String(c.name || '').split(/\s+/)[0]) : ''); };
-            const pId = ids.find(id => personOf(id));
-            const p = pId ? personOf(pId) : 'Sheldon';
-            const vIds = ids.filter(id => vehicleOf(id) && id !== pId);
-            const v = vIds[0] ? vehicleOf(vIds[0]) : (pId && vehicleOf(pId)) || '21';
-            const v2 = vIds[1] ? vehicleOf(vIds[1]) : '14';
-            h.querySelectorAll('[data-tpl]').forEach(b => {
-                b.textContent = b.getAttribute('data-tpl').replace('{p}', p).replace('{v2}', v2).replace('{v}', v);
-            });
-        }
-        function ecVoiceOpen() {
-            const p = ecVoiceEl('ecVoicePanel');
-            if (!p) return;
-            p.hidden = false;
-            ecVoice.open = true;
-            const sp = ecVoiceEl('ecVoiceSpeak');
-            if (sp) sp.checked = ecVoiceSpeakOn();
-            if (!ecVoiceSupported()) {
-                ecVoiceSetState('Type a question', false);
-                ecVoiceEl('ecVoiceAnswer').textContent = 'This browser can\'t listen. Chrome can. You can type a question below.';
+            if (btn) {
+                btn.classList.toggle('is-listening', !!on);
+                btn.setAttribute('aria-label', on ? 'Listening. Tap to stop' : 'Ask a question by voice');
             }
-        }
-        function ecVoiceClose() {
-            ecVoiceStop();
-            if (window.speechSynthesis) speechSynthesis.cancel();
-            const p = ecVoiceEl('ecVoicePanel');
-            if (p) p.hidden = true;
-            ecVoice.open = false;
-            ecVoiceShowHelp(false);
         }
         function ecVoiceStop() {
             if (ecVoice.rec) { try { ecVoice.rec.abort(); } catch (e) {} }
             ecVoice.rec = null;
-            ecVoice.listening = false;
-            ecVoiceSetState('Tap the mic to ask', false);
+            ecVoiceSetListening(false);
         }
-        // Mic button: open and listen; while listening, stop
+        // Mic button: listen; while listening, stop
         function ecVoiceToggle() {
             if (ecVoice.listening) { ecVoiceStop(); return; }
-            ecVoiceOpen();
             ecVoiceListen();
         }
         function ecVoiceListen() {
-            if (ecVoice.listening) { ecVoiceStop(); return; }
             const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!Rec) { ecVoiceOpen(); const i = ecVoiceEl('ecVoiceInput'); if (i) i.focus(); return; }
+            if (!Rec) { ecVoiceShow('This browser can\'t listen. Please use Chrome.'); return; }
             if (window.speechSynthesis) speechSynthesis.cancel();
+            ecVoiceHideCaption();
+            ecVoice.seq++; // an answer still being worked out is dropped
             const rec = new Rec();
             rec.lang = EC_VOICE_LANG;
-            rec.interimResults = true;
+            rec.interimResults = false;
             rec.maxAlternatives = 5;
             rec.continuous = false;
             let done = false;
             rec.onresult = function(e) {
-                if (ecVoice.rec !== rec) return;
+                if (ecVoice.rec !== rec || done) return;
                 const r = e.results[e.results.length - 1];
-                ecVoiceEl('ecVoiceHeard').textContent = '"' + r[0].transcript + '"';
-                if (!r.isFinal || done) return;
+                if (!r || !r.isFinal) return;
                 done = true;
-                const alts = Array.from(r).map(a => a.transcript).filter(Boolean);
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
-                ecVoiceAsk(alts);
+                ecVoiceSetListening(false);
+                ecVoiceAsk(Array.from(r).map(a => a.transcript).filter(Boolean));
             };
             rec.onerror = function(e) {
                 if (ecVoice.rec !== rec) return;
                 done = true;
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
+                ecVoiceSetListening(false);
                 const code = e && e.error;
                 if (code === 'aborted') return;
-                const msg = code === 'not-allowed' || code === 'service-not-allowed'
+                ecVoiceShow(code === 'not-allowed' || code === 'service-not-allowed'
                     ? 'The microphone is blocked. Allow the microphone for this site in the browser settings, then try again.'
                     : code === 'no-speech' ? 'I didn\'t hear anything. Tap the mic and try again.'
-                    : code === 'network' ? 'Listening needs an internet connection. You can type a question below.'
+                    : code === 'network' ? 'Listening needs an internet connection.'
                     : code === 'audio-capture' ? 'No microphone was found.'
-                    : 'Listening stopped (' + code + '). Tap the mic to try again.';
-                ecVoiceEl('ecVoiceAnswer').textContent = msg;
+                    : 'Listening stopped. Tap the mic to try again.');
             };
             rec.onend = function() {
                 if (ecVoice.rec !== rec) return;
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
+                ecVoiceSetListening(false);
             };
             ecVoice.rec = rec;
-            ecVoice.listening = true;
-            ecVoiceEl('ecVoiceHeard').textContent = '';
-            ecVoiceEl('ecVoiceChoices').innerHTML = '';
-            ecVoiceSetState('Listening…', true);
+            ecVoiceSetListening(true);
             try { rec.start(); } catch (e) {
                 ecVoice.rec = null;
-                ecVoice.listening = false;
-                ecVoiceSetState('Tap the mic to ask', false);
-                ecVoiceEl('ecVoiceAnswer').textContent = 'Couldn\'t start listening. Tap the mic to try again.';
+                ecVoiceSetListening(false);
+                ecVoiceShow('Couldn\'t start listening. Tap the mic to try again.');
             }
         }
         // alternatives: what the browser heard, best guess first. Uses the first one that names a driver or a known question.
         async function ecVoiceAsk(alternatives, forcedId, forcedIntent) {
             const seq = ++ecVoice.seq;
             const alts = (Array.isArray(alternatives) ? alternatives : [alternatives]).map(a => String(a || '').trim()).filter(Boolean);
-            const answerEl = ecVoiceEl('ecVoiceAnswer');
-            const choicesEl = ecVoiceEl('ecVoiceChoices');
             if (!alts.length) return;
             await Promise.all([ecVoiceLoadClaims(), ecVoiceLoadShop()]);
             let pick = alts[0];
@@ -11956,10 +11969,6 @@
                     alts.find(a => ecVoiceFindDrivers(ecVoiceNorm(a)).length) ||
                     alts.find(a => ecVoiceIntent(a, ecVoiceNorm(a))) || alts[0];
             }
-            ecVoiceEl('ecVoiceHeard').textContent = '"' + pick + '"';
-            answerEl.textContent = 'Checking…';
-            choicesEl.innerHTML = '';
-            ecVoiceShowHelp(false);
             let ans;
             try {
                 if (forcedId) {
@@ -11975,40 +11984,42 @@
                 ans = { text: 'Something went wrong answering that. Please try again.' };
             }
             if (seq !== ecVoice.seq) return;
-            answerEl.textContent = ans.text;
-            (ans.choices || []).forEach(c => {
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.className = 'ec-voice-chip';
-                b.textContent = c.label;
-                b.addEventListener('click', () => ecVoiceAsk([c.q], c.id, c.intent));
-                choicesEl.appendChild(b);
-            });
-            ecVoiceSay(ans.text);
+            ecVoiceShow(ans.text, ans.choices);
         }
-        function ecVoiceTyped(e) {
-            if (e) e.preventDefault();
-            const input = ecVoiceEl('ecVoiceInput');
-            const q = input ? input.value.trim() : '';
-            if (!q) return false;
-            input.value = '';
-            ecVoiceStop();
-            ecVoiceAsk([q]);
-            return false;
+        // A short spoken list of things to ask, with real names from this dashboard
+        function ecVoiceHelpText() {
+            const ids = ecVoiceAllIds();
+            const c = id => ecVoiceClaim(id);
+            const personOf = id => getDriverNickname(id) || (c(id) ? (c(id).nickname || String(c(id).name || '').split(/\s+/)[0]) : '');
+            const pId = ids.find(id => personOf(id));
+            const p = pId ? personOf(pId) : 'Sheldon';
+            const vId = ids.find(id => id !== pId && String(ecVoiceDriver(id).name || '').trim());
+            const v = vId ? String(ecVoiceDriver(vId).name).trim() : '21';
+            return 'You can ask: Where is ' + p + '? Where\'s ' + v + '? How far is ' + p + ' from the shop? How long until ' + p +
+                ' gets to the shop? Who\'s closest to me? Who\'s online? Who\'s driving ' + v + '? Show track for ' + p +
+                '. Show yesterday\'s track for ' + p + '. Open ' + p + '.';
         }
-        function ecVoiceTry(q) { ecVoiceAsk([q]); }
-        // Long-press the app icon -> "Ask" (manifest.json shortcuts) opens index.html?voice=1: open the panel and listen.
+        document.addEventListener('click', function(e) {
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (c && !c.hidden && c.contains(e.target) && !e.target.closest('button')) {
+                if (window.speechSynthesis) speechSynthesis.cancel();
+                ecVoiceHideCaption();
+            }
+        });
+        // Long-press the app icon -> "Ask" (manifest.json shortcuts) opens index.html?voice=1: start listening.
         // The ?voice=1 is removed right away so a reload doesn't start listening again.
         function ecVoiceFromShortcut() {
             let want = false;
             try { want = new URLSearchParams(location.search).get('voice') === '1'; } catch (e) {}
             if (!want) return;
             try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) {}
-            ecVoiceOpen();
-            ecVoiceListen(); // if the browser won't listen without a tap, the panel says "Tap the mic to ask"
+            ecVoiceListen(); // if the browser won't listen without a tap, the caption says to tap the mic
         }
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && ecVoice.open) ecVoiceClose();
+            if (e.key !== 'Escape') return;
+            if (ecVoice.listening) ecVoiceStop();
+            const c = ecVoiceEl('ecVoiceCaption');
+            if (c && !c.hidden) { if (window.speechSynthesis) speechSynthesis.cancel(); ecVoiceHideCaption(); }
         });
 
         console.log('✅ E&C Dispatch Tracker loaded.');
