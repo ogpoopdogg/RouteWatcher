@@ -1118,12 +1118,6 @@
             stroke: #000;
         }
 
-        .map-open {
-            background: rgba(0, 255, 0, 0.2) !important;
-            border-color: #00ff00 !important;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-        }
-
         .gear-btn {
             background: var(--card2);
             border: 1px solid var(--border);
@@ -3838,39 +3832,6 @@
             box-shadow: 0 0 18px -4px rgba(247, 201, 72, 0.7);
         }
 
-        /* Map toggle (was inline styles) */
-        .ec-map-toggle {
-            background: var(--card2);
-            border: 1px solid #3b82f6;
-            color: var(--text);
-            padding: 8px 14px;
-            min-height: 32px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 10px;
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease;
-        }
-        body:not(.light-mode) .ec-map-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            letter-spacing: 0.02em;
-            min-height: 36px;
-            background: rgba(255, 255, 255, 0.04);
-            border-color: rgba(247, 201, 72, 0.4);
-            box-shadow: none;
-        }
-        body:not(.light-mode) .ec-map-toggle:hover { border-color: var(--accent); transform: translateY(-1px); }
-        body:not(.light-mode) #mapToggleBtn.map-open {
-            background: rgba(247, 201, 72, 0.14) !important;
-            border-color: var(--accent) !important;
-            color: var(--accent) !important;
-            box-shadow: 0 0 16px -4px rgba(247, 201, 72, 0.55) !important;
-        }
-
         /* Group toggles in the header (their base look is set inline by the script) */
         #headerGroupToggles button { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease; }
         body:not(.light-mode) #headerGroupToggles button {
@@ -5065,6 +5026,289 @@
             .ec-dt-daywrap { flex: 1 1 auto; }
         }
         @media (prefers-reduced-motion: reduce) { .ec-tp { animation: none; } }
+
+        /* =====================================================================
+           FULL-SCREEN HOME LAYOUT (phone + desktop)
+           One-line header, the map fills everything between the header and the driver buttons at the
+           bottom. --ec-bottom-bar (set by the script from the driver buttons' height) keeps the floating
+           mic / Install App button just above those buttons.
+           ===================================================================== */
+        html, body { height: 100%; overflow: hidden; }
+        body { min-height: 0; }
+        #app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+
+        /* Header: logo, title, LIVE, (driver groups), settings + sign out, all on one line */
+        #app > header,
+        body:not(.light-mode) #app > header {
+            position: relative;
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            padding-top: calc(4px + env(safe-area-inset-top, 0px));
+            padding-left: calc(8px + env(safe-area-inset-left, 0px));
+            padding-right: calc(8px + env(safe-area-inset-right, 0px));
+            min-height: 0;
+        }
+        #app > header > div:first-child { flex: 0 1 auto; min-width: 0; gap: 7px !important; justify-content: flex-start; }
+        #app > header .header-logo { height: 26px !important; }
+        #app > header .header-title { font-size: 14px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        #app > header .badge { flex-shrink: 0; padding-top: 2px; padding-bottom: 2px; font-size: 10px; }
+        #headerGroupToggles {
+            flex: 1 1 auto !important;
+            min-width: 0;
+            flex-wrap: nowrap !important;
+            justify-content: flex-start !important;
+            overflow-x: auto;
+            scrollbar-width: none;
+            gap: 4px !important;
+        }
+        #headerGroupToggles::-webkit-scrollbar { display: none; }
+        #headerGroupToggles button {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 3px 10px !important;
+            min-height: 28px !important;
+            font-size: 12px !important;
+        }
+        #app > header > .header-controls {
+            flex: 0 0 auto;
+            width: auto;
+            margin-left: auto;
+            justify-content: flex-end;
+            flex-wrap: nowrap;
+        }
+        #app > header .header-controls-left { gap: 6px; }
+        #app > header .gear-btn { min-width: 32px; min-height: 32px; width: 32px; height: 32px; padding: 0; }
+        #app > header .gear-btn svg { width: 16px; height: 16px; }
+
+        /* Attention chips (low battery, alarm...): one thin line that scrolls sideways */
+        #attentionStrip {
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+            gap: 4px;
+            padding: 3px 8px;
+        }
+        #attentionStrip::-webkit-scrollbar { display: none; }
+        #attentionStrip .attention-chip { flex: 0 0 auto; white-space: nowrap; padding: 2px 10px; font-size: 11px; }
+
+        /* Map: edge to edge, takes all the height the header and the driver buttons leave */
+        #app .app-grid,
+        body.light-mode #app .app-grid {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            gap: 0;
+            padding: 0;
+            max-width: none;
+            margin: 0;
+        }
+        #app .map-wrapper,
+        body:not(.light-mode) #app .map-wrapper,
+        body.light-mode #app .map-wrapper {
+            flex: 1 1 auto;
+            height: auto;
+            min-height: 160px;
+            border: none !important;
+            border-radius: 0;
+            box-shadow: none;
+            animation: none;
+        }
+        body:not(.light-mode) #app .map-wrapper::after { border-radius: 0; box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35); }
+
+        /* Driver names on the map: small chips side by side across the top, name in the driver's color */
+        #mapDriverControl,
+        body:not(.light-mode) #mapDriverControl,
+        body.light-mode #mapDriverControl {
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: 0;
+            padding: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 4px;
+            max-height: 45%;
+            overflow-y: auto;
+            min-width: 0;
+            background: none;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+            pointer-events: none; /* the map still drags between the chips */
+            scrollbar-width: none;
+        }
+        #mapDriverControl::-webkit-scrollbar { display: none; }
+        #mapDriverControl > * { pointer-events: auto; }
+        #mapDriverControl .driver-entry,
+        body:not(.light-mode) #mapDriverControl .driver-entry {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            background: rgba(12, 13, 20, 0.78);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            max-width: 100%;
+            min-width: 0;
+            font-size: 12px;
+            line-height: 1.25;
+        }
+        body:not(.light-mode) #mapDriverControl .driver-entry:hover { background: rgba(28, 30, 44, 0.9); }
+        #mapDriverControl .driver-name,
+        #mapDriverControl .driver-name.nick-name {
+            color: var(--drv, #f7c948);
+            font-weight: 700;
+            font-size: 12px;
+            max-width: 130px;
+        }
+        #mapDriverControl .driver-status-dot { width: 8px; height: 8px; flex: 0 0 auto; }
+        #mapDriverControl .driver-eta-label { max-width: 150px; }
+        body.light-mode #mapDriverControl .driver-entry {
+            background: rgba(255, 255, 255, 0.92);
+            border-color: #ccc;
+        }
+        body.light-mode #mapDriverControl .driver-name,
+        body.light-mode #mapDriverControl .driver-name.nick-name {
+            color: color-mix(in srgb, var(--drv, #f7c948) 72%, #000) !important;
+        }
+
+        /* Map buttons: Fit, full screen and Street View side by side in the bottom right corner */
+        #dispatch-map .ec-main-fit-ctl { margin: 0 0 10px 0; }
+        #dispatch-map .ec-main-fit-ctl .map-fit-btn {
+            width: 40px;
+            height: 40px;
+            margin: 0;
+            border: none;
+            border-radius: 8px;
+            box-shadow: rgba(0, 0, 0, 0.3) 0 1px 4px -1px;
+            background: #fff;
+        }
+        #dispatch-map .ec-main-fit-ctl .map-fit-btn svg { width: 22px; height: 22px; stroke: #444; }
+
+        /* Driver buttons at the bottom: compact chips in rows, name in the driver's color + time since
+           the last GPS fix. Online glows softly; Standby and Offline are dimmed like they're not in use. */
+        #driverBadges {
+            flex: 0 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 4px;
+            padding: 4px;
+            padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+            padding-left: calc(4px + env(safe-area-inset-left, 0px));
+            padding-right: calc(4px + env(safe-area-inset-right, 0px));
+            max-height: 38vh;
+            max-height: 38dvh;
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #driverBadges .driver-badge,
+        body:not(.light-mode) #driverBadges .driver-badge,
+        body.light-mode #driverBadges .driver-badge {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 100%;
+            min-height: 34px;
+            padding: 4px 12px;
+            border-radius: 10px;
+            border: 1px solid color-mix(in srgb, var(--drv, #f7c948) 45%, transparent) !important;
+            align-items: stretch;
+            text-align: left;
+            font-size: 13px;
+            transform: none;
+        }
+        body:not(.light-mode) #driverBadges .driver-badge {
+            background: color-mix(in srgb, var(--drv, #f7c948) 10%, rgba(17, 18, 27, 0.92));
+            box-shadow: none;
+        }
+        body.light-mode #driverBadges .driver-badge { background: #fff !important; box-shadow: none; }
+        #driverBadges .driver-badge:hover { transform: none; }
+        #driverBadges .driver-badge .badge-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            width: 100%;
+        }
+        #driverBadges .driver-badge .badge-row .name,
+        body:not(.light-mode) #driverBadges .driver-badge .badge-row .name {
+            color: var(--drv, #f7c948);
+            font-weight: 700;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        body.light-mode #driverBadges .driver-badge .badge-row .name {
+            color: color-mix(in srgb, var(--drv, #f7c948) 72%, #000) !important;
+        }
+        #driverBadges .driver-badge .last-update,
+        body:not(.light-mode) #driverBadges .driver-badge .last-update {
+            flex: 0 0 auto;
+            margin: 0;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+        }
+        #driverBadges .driver-badge .alarm-badge { flex: 0 0 auto; padding: 0 5px; font-size: 11px; border-radius: 8px; }
+
+        /* Online: soft glow in the driver's color */
+        #driverBadges .driver-badge.ec-st-online,
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-online,
+        body.light-mode #driverBadges .driver-badge.ec-st-online {
+            border-color: color-mix(in srgb, var(--drv, #f7c948) 75%, transparent) !important;
+            box-shadow: 0 0 10px -1px color-mix(in srgb, var(--drv, #f7c948) 55%, transparent),
+                inset 0 0 8px -2px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent);
+            opacity: 1;
+            filter: none;
+        }
+        /* Standby / Offline: dimmed (an alarm still shows at full strength) */
+        #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
+        #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)),
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
+            opacity: 0.45;
+            filter: saturate(0.5);
+            box-shadow: none;
+        }
+        #driverBadges .driver-badge.ec-st-standby:hover,
+        #driverBadges .driver-badge.ec-st-offline:hover { opacity: 0.75; }
+
+        /* Floating buttons sit over the map, above the driver buttons (and above the Google logo) */
+        .ec-voice-btn,
+        .install-app-btn[style*="flex"] ~ .ec-voice-btn {
+            left: calc(10px + env(safe-area-inset-left, 0px));
+            right: auto;
+            bottom: calc(var(--ec-bottom-bar, 50px) + 34px);
+            width: 48px;
+            height: 48px;
+        }
+        .ec-voice-btn svg { width: 22px; height: 22px; }
+        .ec-voice-caption,
+        .install-app-btn[style*="flex"] ~ .ec-voice-caption {
+            left: calc(10px + env(safe-area-inset-left, 0px));
+            right: auto;
+            bottom: calc(var(--ec-bottom-bar, 50px) + 90px);
+        }
+        .install-app-btn {
+            right: calc(10px + env(safe-area-inset-right, 0px));
+            bottom: calc(var(--ec-bottom-bar, 50px) + 66px);
+        }
+        .ec-notice { bottom: calc(var(--ec-bottom-bar, 50px) + 24px); }
     </style>
 </head>
 <body>
@@ -5168,12 +5412,6 @@
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 </button>
                 </div>
-                <div class="header-controls-right">
-                <button onclick="toggleMapVisibility()" id="mapToggleBtn" class="ec-map-toggle">
-                    <svg viewBox="0 0 24 24" style="width:13px; height:13px; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:2;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                    Map
-                </button>
-                </div>
             </div>
         </header>
 
@@ -5195,7 +5433,7 @@
         </div>
 
         <div class="app-grid">
-            <div class="map-wrapper hidden" id="mainMapWrapper">
+            <div class="map-wrapper" id="mainMapWrapper">
                 <div id="dispatch-map"></div>
                 <!-- Driver names + addresses: a plain page element (not a Google Maps control) so it shows as soon as driver data arrives -->
                 <div id="mapDriverControl" class="map-driver-control map-driver-overlay"></div>
@@ -9140,51 +9378,6 @@
             }
         }
 
-        // ===== MAP TOGGLE =====
-        function toggleMapVisibility() {
-            const wrapper = document.getElementById('mainMapWrapper');
-            if (wrapper._ecClosing) return; // closing animation still running
-            if (!wrapper.classList.contains('hidden') && wrapper.animate && !ecReducedMotion()) {
-                wrapper._ecClosing = true;
-                const anim = wrapper.animate(
-                    [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-10px) scale(0.985)' }],
-                    { duration: 220, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' }
-                );
-                const finish = function() {
-                    if (!wrapper._ecClosing) return;
-                    wrapper._ecClosing = false;
-                    ecToggleMapVisibilityNow();
-                    anim.cancel();
-                };
-                anim.onfinish = finish;
-                anim.oncancel = finish;
-                return;
-            }
-            ecToggleMapVisibilityNow();
-        }
-
-        function ecToggleMapVisibilityNow() {
-            const wrapper = document.getElementById('mainMapWrapper');
-            wrapper.classList.toggle('hidden');
-            const btn = document.getElementById('mapToggleBtn');
-            if (wrapper.classList.contains('hidden')) {
-                btn.classList.remove('map-open');
-                localStorage.setItem('ec_map_visible', 'false');
-            } else {
-                btn.classList.add('map-open');
-                localStorage.setItem('ec_map_visible', 'true');
-                if (map) {
-                    google.maps.event.trigger(map, 'resize');
-                    updateMapDriverControl();
-                    requestAnimationFrame(() => {
-                        google.maps.event.trigger(map, 'resize');
-                        updateMapDriverControl();
-                        updateMapMarkers();
-                    });
-                }
-            }
-        }
-
         // ===== MAP =====
         let mapInitialized = false;
 
@@ -9197,7 +9390,13 @@
                 styles: isLight ? [] : mapStyles,
                 gestureHandling: 'greedy',
                 mapTypeControl: false,
-                keyboardShortcuts: false
+                keyboardShortcuts: false,
+                // No zoom buttons or arrow pad (pinch / mouse wheel zoom); Fit, full screen and Street View
+                // sit side by side in the bottom right corner
+                zoomControl: false,
+                cameraControl: false,
+                fullscreenControlOptions: { position: google.maps.ControlPosition.BOTTOM_RIGHT },
+                streetViewControlOptions: { position: google.maps.ControlPosition.BOTTOM_RIGHT }
             });
             mapInitialized = true;
             ecTrackApi('maps__dispatch');
@@ -9220,6 +9419,8 @@
                 e.stopPropagation();
                 fitMainMapToStopsAndDrivers();
             });
+            fitControlDiv.className = 'ec-main-fit-ctl';
+            fitControlDiv.index = 0; // between Street View and full screen, in the same row
             map.controls[google.maps.ControlPosition.BOTTOM_RIGHT].push(fitControlDiv);
 
             // Save this user's map view (not shared), at most once per 1.5 s of panning
@@ -9237,14 +9438,6 @@
                         .catch(err => console.warn('Map view save failed:', err));
                 }, 1500);
             });
-
-            const mapVisible = localStorage.getItem('ec_map_visible');
-            if (mapVisible === 'false') {
-                document.getElementById('mainMapWrapper').classList.add('hidden');
-                document.getElementById('mapToggleBtn').classList.remove('map-open');
-            } else {
-                document.getElementById('mapToggleBtn').classList.add('map-open');
-            }
         }
 
         function fitMainMapToStopsAndDrivers() {
@@ -9416,10 +9609,23 @@
             pulseAnimationId = requestAnimationFrame(animate);
         }
 
+        // Driver buttons (map chips and bottom buttons) are grouped: Online first, then Standby, then Offline.
+        // Inside each group they keep their usual order.
+        const EC_STATUS_RANK = { online: 0, standby: 1, offline: 2 };
+        function ecDriverEntriesByStatus(driversObj) {
+            return Object.entries(driversObj).map(function(entry, i) {
+                const drv = entry[1];
+                const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
+                const st = getGPSStatus(drv.lastLocation?.updatedAt, devId).status;
+                const rank = EC_STATUS_RANK[st] !== undefined ? EC_STATUS_RANK[st] : 3;
+                return { entry: entry, rank: rank, i: i };
+            }).sort(function(a, b) { return (a.rank - b.rank) || (a.i - b.i); }).map(function(x) { return x.entry; });
+        }
+
         function updateMapDriverControl() {
             const container = document.getElementById('mapDriverControl');
             if (!container) return;
-            const entries = Object.entries(getFilteredDrivers());
+            const entries = ecDriverEntriesByStatus(getFilteredDrivers());
             if (entries.length === 0) {
                 container.innerHTML = '<div style="color:var(--muted);">No drivers</div>';
                 return;
@@ -9449,20 +9655,20 @@
                 if (!row) {
                     const temp = document.createElement('div');
                     temp.innerHTML = `<div class="driver-entry" onclick="showDriverLocation('${ecAttrJs(id)}')">
-              <span class="driver-dot" style="background:${ecEsc(color)};"></span>
               <span class="driver-name${getDriverNickname(id) ? ' nick-name' : ''}">${nameHtml}</span>
               <span class="driver-status-dot${onlineClass}" style="background:${statusColor};" title="${statusTitle}" aria-label="${statusTitle}"></span>
             </div>`;
                     row = temp.firstElementChild;
                     row.dataset.driverId = String(id);
+                    row.style.setProperty('--drv', color);
+                    row._color = color;
                     const newNameSpan = row.querySelector('.driver-name');
                     if (newNameSpan) newNameSpan._nameHtml = nameHtml;
                     existingRows[String(id)] = row;
                 } else {
-                    const dotSpan = row.querySelector('.driver-dot');
-                    if (dotSpan && dotSpan._color !== color) {
-                        dotSpan.style.background = color;
-                        dotSpan._color = color;
+                    if (row._color !== color) {
+                        row.style.setProperty('--drv', color);
+                        row._color = color;
                     }
                     const nameSpan = row.querySelector('.driver-name');
                     if (nameSpan && nameSpan._nameHtml !== nameHtml) {
@@ -9506,14 +9712,6 @@
                 return;
             }
             if (!map) return; // Google Maps still loading (the list can now appear before the map)
-            // Make map visible
-            const wrapper = document.getElementById('mainMapWrapper');
-            if (wrapper.classList.contains('hidden')) {
-                wrapper.classList.remove('hidden');
-                document.getElementById('mapToggleBtn').classList.add('map-open');
-                localStorage.setItem('ec_map_visible', 'true');
-                setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
-            }
             // Center and zoom to see surrounding streets (default 65%)
             map.panTo({ lat, lng });
             map.setZoom(DEFAULT_MAP_ZOOM);
@@ -9975,7 +10173,7 @@
         function renderDriverBadges() {
             renderAttentionStrip();
             const container = document.getElementById('driverBadges');
-            const entries = Object.entries(getFilteredDrivers());
+            const entries = ecDriverEntriesByStatus(getFilteredDrivers());
             if (container.classList.contains('ec-intro') && performance.now() - ecBadgeIntroStart > EC_BADGE_INTRO_MS) {
                 container.classList.remove('ec-intro');
             }
@@ -10008,27 +10206,18 @@
                     lastUpdateText = formatted;
                 }
 
-                let batteryHtml;
-                const batteryKnown = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
-                if (batteryKnown === null) {
-                    batteryHtml = `<span class="battery" title="Battery not reported"><span class="ec-batt ec-batt-unknown" aria-hidden="true"></span>—</span>`;
-                } else {
-                    let batteryVal = batteryKnown;
-                    let batteryColor = batteryVal > 50 ? 'battery-high' : (batteryVal > 20 ? 'battery-mid' : 'battery-low');
-                    const battLevel = Math.max(0, Math.min(100, batteryVal)) / 100;
-                    batteryHtml = `<span class="battery ${batteryColor}" title="Battery ${batteryVal}%"><span class="ec-batt" style="--lvl:${battLevel}" aria-hidden="true"></span>${batteryVal}%</span>`;
-                }
                 let alarmHtml = '';
                 if (drv.hasAlarm) {
-                    alarmHtml = `<span class="alarm-badge">⚠️ ALARM</span>`;
+                    alarmHtml = `<span class="alarm-badge" title="Tracker alarm">⚠️</span>`;
                 }
 
-                badgeRows.push({ id: id, color: drv.color || '#f7c948', html: `
-              <div class="badge-row">
-                <span class="dot" style="background:${ecEsc(drv.color || '#f7c948')}"></span>
-                <span class="name${getDriverNickname(id) ? ' nick-name' : ''}">${ecEsc(getDriverNickname(id) || getDriverDisplayName(id, drv))}</span>
-                               ${batteryHtml}
-                <span class="status-indicator ${status.class}${drv.hasAlarm ? ' ec-with-alarm' : ''}">${status.label}</span>
+                // Only the name (in the driver's color) and the time since the last GPS fix. The status shows in
+                // the button itself: Online glows, Standby and Offline are dimmed (see FULL-SCREEN HOME LAYOUT)
+                const color = drv.color || '#f7c948';
+                const nameText = getDriverNickname(id) || getDriverDisplayName(id, drv);
+                badgeRows.push({ id: id, color: color, status: status.status, html: `
+              <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(status.status.charAt(0).toUpperCase() + status.status.slice(1))}, last update ${ecEsc(lastUpdateText)}">
+                <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
                 <span class="last-update">${lastUpdateText}</span>
               </div>
@@ -10043,7 +10232,7 @@
                 badgeRows.forEach(function(row, ecBadgeIndex) {
                     const id = row.id;
                     const badge = document.createElement('div');
-                    badge.className = 'driver-badge';
+                    badge.className = 'driver-badge ec-st-' + row.status;
                     badge.dataset.driverId = id;
                     badge.style.borderLeftColor = row.color;
                     badge.style.setProperty('--drv', row.color);
@@ -10056,6 +10245,14 @@
                 });
             }
             updateMapDriverControl();
+        }
+
+        // The driver buttons' height, so the floating mic / Install App button can sit just above them
+        if (typeof ResizeObserver !== 'undefined') {
+            const ecBadgeBarEl = document.getElementById('driverBadges');
+            if (ecBadgeBarEl) new ResizeObserver(function() {
+                document.documentElement.style.setProperty('--ec-bottom-bar', Math.ceil(ecBadgeBarEl.getBoundingClientRect().height) + 'px');
+            }).observe(ecBadgeBarEl);
         }
 
         // ===== DRIVER MODAL =====
@@ -11491,17 +11688,8 @@
                         map.setZoom(Number(view.zoom));
                     }
                 });
-                const mapVisible = localStorage.getItem('ec_map_visible');
-                if (mapVisible !== 'false') { // same default as initMap: the map is shown until it is hidden on purpose
-                    document.getElementById('mainMapWrapper').classList.remove('hidden');
-                    document.getElementById('mapToggleBtn').classList.add('map-open');
-                    if (!mapVisible) {
-                        localStorage.setItem('ec_map_visible', 'true');
-                    }
-                } else {
-                    document.getElementById('mainMapWrapper').classList.add('hidden');
-                    document.getElementById('mapToggleBtn').classList.remove('map-open');
-                }
+                // The main map is always on screen now (there is no Map button); forget the old show/hide choice
+                try { localStorage.removeItem('ec_map_visible'); } catch (e) {}
             }).catch(err => console.warn('Failed to load master config (saved settings left untouched):', err));
 
             // Live GPS: this page calls pollNow (Cloud Function) while it is awake; the drivers listener picks up the positions.
@@ -12146,9 +12334,7 @@
                 return { text: intent === 'light' ? 'Light mode.' : 'Dark mode.' };
             }
             if (intent === 'showMap' || intent === 'hideMap') {
-                const hidden = document.getElementById('mainMapWrapper').classList.contains('hidden');
-                if ((intent === 'showMap') === hidden) toggleMapVisibility();
-                return { text: intent === 'showMap' ? 'Showing the map.' : 'Map hidden.' };
+                return { text: 'The map always stays on the screen.' };
             }
             if (intent === 'whoOnline' || intent === 'whoOffline' || intent === 'atShop') return ecVoiceWho(intent);
             if (intent === 'vehicle' && !found.length && !pronoun) return ecVoiceWho('whoOnline'); // "Who's driving?"
