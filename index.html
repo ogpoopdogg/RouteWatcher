@@ -7147,6 +7147,37 @@
         let startPointPinListener = null;
         let startPointPending = null;
 
+        // Saved points are shared: every vehicle sees the points saved on any vehicle. Each point is still stored
+        // under the vehicle it was saved on (drivers/<id>/startPoints/<key>), so no database change is needed.
+        // The same name saved on more than one vehicle within START_POINT_RADIUS_M shows once; `copies` lists
+        // every stored copy so deleting it removes it everywhere. Oldest first (push keys sort by time).
+        function ecAllStartPoints() {
+            const all = [];
+            Object.keys(drivers || {}).forEach(function(driverId) {
+                const drv = drivers[driverId];
+                const sps = (drv && drv.startPoints && typeof drv.startPoints === 'object') ? drv.startPoints : null;
+                if (!sps) return;
+                Object.keys(sps).forEach(function(key) {
+                    const sp = sps[key];
+                    if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
+                    all.push({ key: key, driverId: driverId, name: String(sp.name || 'Start'), lat: Number(sp.lat), lng: Number(sp.lng) });
+                });
+            });
+            all.sort(function(a, b) { return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
+            const out = [];
+            all.forEach(function(sp) {
+                const nameKey = sp.name.trim().toLowerCase();
+                const same = out.find(function(o) {
+                    return o.name.trim().toLowerCase() === nameKey &&
+                        haversineDistance(o.lat, o.lng, sp.lat, sp.lng) <= START_POINT_RADIUS_M;
+                });
+                const copy = { driverId: sp.driverId, key: sp.key };
+                if (same) same.copies.push(copy);
+                else out.push(Object.assign({}, sp, { copies: [copy] }));
+            });
+            return out;
+        }
+
         let deviceStatuses = {};
         const lastDeviceKeyForDriver = {}; // driverId -> device id last seen, so stale statuses can be dropped
 
@@ -9719,7 +9750,7 @@
         }
 
         // ===== DRIVER ETA (long-press a driver in the map driver list) =====
-        // Hold a driver row for 0.5 s -> pick one of that driver's saved points or your current location ->
+        // Hold a driver row for 0.5 s -> pick a saved point (any vehicle's) or your current location ->
         // the road ETA from the driver's last GPS position shows beside the status dot for 15 minutes.
         // Each driver can be checked once every 15 minutes (kept in this browser's localStorage).
         const EC_ETA_HOLD_MS = 500;
@@ -9892,14 +9923,11 @@
                 });
                 menu.appendChild(btn);
             }
-            const sps = (drv && drv.startPoints && typeof drv.startPoints === 'object') ? drv.startPoints : null;
-            const points = sps ? Object.keys(sps).map(function(key) { return sps[key]; }).filter(function(sp) {
-                return sp && isFinite(Number(sp.lat)) && isFinite(Number(sp.lng));
-            }) : [];
+            const points = ecAllStartPoints();
             if (points.length === 0) {
                 const note = document.createElement('div');
                 note.className = 'ec-eta-note';
-                note.textContent = 'No points saved for this driver.';
+                note.textContent = 'No points saved yet.';
                 menu.appendChild(note);
             } else {
                 points.forEach(function(sp) {
@@ -10635,7 +10663,7 @@
         }
 
         // ===== TIME ON ROUTE: press the button, then pick a start and an end =====
-        // A start or end is one of this GPS's saved points (tap its chip under the map) or any spot tapped on the driver
+        // A start or end is a saved point (shared by all vehicles; tap its chip under the map) or any spot tapped on the driver
         // map; a tap within START_POINT_RADIUS_M of a saved point counts as that point. While picking, the map gets a
         // crosshair cursor, an outline and a banner saying what to tap. GPS history is fetched only when the button is
         // used, once per From/To window (a Show Track for the same window is reused, so it costs nothing).
@@ -10704,13 +10732,11 @@
 
         // A tap on the map: a saved point when it's inside one's circle (closest wins), otherwise that spot
         function ecRtPickAt(lat, lng) {
-            const drv = drivers[ecRt.driverId];
-            const sps = drv && drv.startPoints ? Object.values(drv.startPoints) : [];
+            const sps = ecAllStartPoints();
             let best = null;
             let bestD = Infinity;
             sps.forEach(function(sp) {
-                if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
-                const d = haversineDistance(lat, lng, Number(sp.lat), Number(sp.lng));
+                const d = haversineDistance(lat, lng, sp.lat, sp.lng);
                 if (d <= START_POINT_RADIUS_M && d < bestD) { bestD = d; best = sp; }
             });
             if (best) ecRtPick({ name: String(best.name || 'Saved point'), lat: Number(best.lat), lng: Number(best.lng) });
@@ -10996,11 +11022,8 @@
             const container = document.getElementById('driver-map');
             if (!container || !driverModalMap || !driverId) return;
             const drv = drivers[driverId];
-            const sps = drv && drv.startPoints ? drv.startPoints : null;
-            if (!sps) return;
             const color = (drv && drv.color) || '#f7c948';
-            Object.values(sps).forEach(sp => {
-                if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
+            ecAllStartPoints().forEach(sp => {
                 const circle = new google.maps.Circle({
                     center: { lat: Number(sp.lat), lng: Number(sp.lng) },
                     radius: START_POINT_RADIUS_M,
@@ -11021,17 +11044,16 @@
             if (!list) return;
             list.innerHTML = '';
             const drv = drivers[driverId];
-            const sps = drv && drv.startPoints ? drv.startPoints : null;
-            const entries = sps ? Object.entries(sps).filter(([k, sp]) => sp) : [];
+            const entries = ecAllStartPoints();
             if (entries.length === 0) {
                 const empty = document.createElement('span');
                 empty.className = 'sp-empty';
-                empty.textContent = 'No points saved for this driver yet. Add one with Use Current Location or Drop Pin.';
+                empty.textContent = 'No points saved yet. Add one with Use Current Location or Drop Pin. Every vehicle sees the same points.';
                 list.appendChild(empty);
                 return;
             }
             const color = (drv && drv.color) || '#f7c948';
-            entries.forEach(([key, sp]) => {
+            entries.forEach(sp => {
                 const chip = document.createElement('span');
                 chip.className = 'sp-chip';
                 const dot = document.createElement('span');
@@ -11040,21 +11062,19 @@
                 const nameBtn = document.createElement('button');
                 nameBtn.type = 'button';
                 nameBtn.className = 'sp-name';
-                nameBtn.textContent = sp.name || 'Start';
+                nameBtn.textContent = sp.name;
                 nameBtn.title = 'Show on map (while picking for Time on route: use this point)';
                 nameBtn.addEventListener('click', function() {
                     if (ecRt.mode) { ecRtPickSaved(sp); return; }
-                    if (driverModalMap && isFinite(Number(sp.lat)) && isFinite(Number(sp.lng))) {
-                        driverModalMap.panTo({ lat: Number(sp.lat), lng: Number(sp.lng) });
-                    }
+                    if (driverModalMap) driverModalMap.panTo({ lat: sp.lat, lng: sp.lng });
                 });
                 const delBtn = document.createElement('button');
                 delBtn.type = 'button';
                 delBtn.className = 'sp-del';
                 delBtn.textContent = '✕';
-                delBtn.title = 'Delete start point';
+                delBtn.title = 'Delete start point (for every vehicle)';
                 delBtn.addEventListener('click', function() {
-                    deleteStartPoint(driverId, key);
+                    deleteStartPoint(driverId, sp);
                 });
                 chip.appendChild(dot);
                 chip.appendChild(nameBtn);
@@ -11070,9 +11090,8 @@
         }
 
         function getNextStartPointName(driverId) {
-            const drv = drivers[driverId];
-            const sps = drv && drv.startPoints ? Object.values(drv.startPoints) : [];
-            const names = new Set(sps.map(sp => (sp && sp.name ? String(sp.name) : '')));
+            const sps = ecAllStartPoints();
+            const names = new Set(sps.map(sp => sp.name));
             let n = sps.length + 1;
             while (names.has('Start ' + n)) n++;
             return 'Start ' + n;
@@ -11127,12 +11146,12 @@
                 });
         }
 
-        function deleteStartPoint(driverId, key) {
-            const drv = drivers[driverId];
-            const sp = drv && drv.startPoints ? drv.startPoints[key] : null;
-            const name = sp && sp.name ? sp.name : 'this start point';
-            if (!confirm('Delete start point "' + name + '"?')) return;
-            getDriversRef().child(driverId).child('startPoints').child(key).remove()
+        // sp: an entry from ecAllStartPoints(); every stored copy is removed, so it goes away for every vehicle
+        function deleteStartPoint(driverId, sp) {
+            if (!sp || !sp.copies || sp.copies.length === 0) return;
+            const name = sp.name || 'this start point';
+            if (!confirm('Delete start point "' + name + '" for every vehicle?')) return;
+            Promise.all(sp.copies.map(c => getDriversRef().child(c.driverId).child('startPoints').child(c.key).remove()))
                 .then(() => {
                     if (activeModalDriverId === driverId) setStartPointMessage('Deleted "' + name + '".');
                     afterStartPointsChanged(driverId);
