@@ -5380,6 +5380,33 @@
         }
         @media (prefers-reduced-motion: reduce) { #driverBadges .ec-low-batt { animation: none; } }
 
+        /* Online stands out clearly from Parked / not in use: tinted background, solid border in the driver's
+           color, a brighter name and a soft glow (kept small so it stays tidy) */
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-online {
+            background: color-mix(in srgb, var(--drv, #f7c948) 22%, rgba(17, 18, 27, 0.94));
+        }
+        body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online {
+            background: color-mix(in srgb, var(--drv, #f7c948) 22%, rgba(12, 13, 20, 0.92));
+        }
+        #driverBadges .driver-badge.ec-st-online,
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-online,
+        body.light-mode #driverBadges .driver-badge.ec-st-online,
+        #mapDriverControl .driver-entry.ec-st-online,
+        body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online,
+        body.light-mode #mapDriverControl .driver-entry.ec-st-online {
+            border-color: var(--drv, #f7c948) !important;
+            box-shadow: 0 0 12px 0 color-mix(in srgb, var(--drv, #f7c948) 45%, transparent),
+                inset 0 0 10px -3px color-mix(in srgb, var(--drv, #f7c948) 45%, transparent);
+        }
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-online .badge-row .name,
+        body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online .driver-name {
+            color: color-mix(in srgb, var(--drv, #f7c948) 68%, #fff);
+            text-shadow: 0 0 8px color-mix(in srgb, var(--drv, #f7c948) 55%, transparent);
+        }
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-online .last-update { color: #dfe3ec; }
+        body.light-mode #driverBadges .driver-badge.ec-st-online { background: color-mix(in srgb, var(--drv, #f7c948) 13%, #fff) !important; }
+        body.light-mode #mapDriverControl .driver-entry.ec-st-online { background: color-mix(in srgb, var(--drv, #f7c948) 13%, #fff); }
+
         /* Floating buttons sit over the map, just above the driver buttons */
         .ec-voice-btn,
         .install-app-btn[style*="flex"] ~ .ec-voice-btn {
