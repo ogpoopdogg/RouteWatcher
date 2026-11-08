@@ -5265,10 +5265,12 @@
         #driverBadges .driver-badge .badge-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 8px;
             width: 100%;
         }
+        /* name on the left; the time (and a low-battery warning after it) on the right */
+        #driverBadges .driver-badge .badge-row .last-update { margin-left: auto !important; }
         #driverBadges .driver-badge .badge-row .name,
         body:not(.light-mode) #driverBadges .driver-badge .badge-row .name {
             color: var(--drv, #f7c948);
@@ -5302,17 +5304,57 @@
             opacity: 1;
             filter: none;
         }
-        /* Standby / Offline: dimmed (an alarm still shows at full strength) */
+        /* Standby / Offline: dimmed (an alarm and a low battery still show at full strength). The name, time and
+           border fade rather than the whole button, so the low-battery warning stays bright. */
         #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
         #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)),
         body:not(.light-mode) #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
-            opacity: 0.45;
-            filter: saturate(0.5);
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)),
+        body.light-mode #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
+        body.light-mode #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
+            border-color: color-mix(in srgb, var(--drv, #f7c948) 18%, transparent) !important;
             box-shadow: none;
         }
-        #driverBadges .driver-badge.ec-st-standby:hover,
-        #driverBadges .driver-badge.ec-st-offline:hover { opacity: 0.75; }
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
+            background: color-mix(in srgb, var(--drv, #f7c948) 4%, rgba(17, 18, 27, 0.92));
+        }
+        #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)) :is(.name, .last-update),
+        #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) :is(.name, .last-update) {
+            opacity: 0.45;
+            filter: saturate(0.5);
+            transition: opacity 0.2s ease;
+        }
+        #driverBadges .driver-badge.ec-st-standby:hover :is(.name, .last-update),
+        #driverBadges .driver-badge.ec-st-offline:hover :is(.name, .last-update) { opacity: 0.75; }
+
+        /* Low battery (below 30%): small red battery + % at the right end, pulsing gently */
+        #driverBadges .ec-low-batt {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            margin-left: -2px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #ff6b5b;
+            background: rgba(239, 90, 76, 0.14);
+            border: 1px solid rgba(239, 90, 76, 0.45);
+            animation: ecLowBattPulse 1.6s ease-in-out infinite;
+        }
+        #driverBadges .ec-low-batt .ec-batt { width: 13px; height: 7px; margin-right: 4px; }
+        #driverBadges .ec-low-batt .ec-batt::after { top: 1px; }
+        body.light-mode #driverBadges .ec-low-batt,
+        body.light-mode #driverBadges .ec-low-batt * { color: #c0392b !important; }
+        body.light-mode #driverBadges .ec-low-batt { background: rgba(231, 76, 60, 0.1); }
+        @keyframes ecLowBattPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 90, 76, 0); }
+            50% { opacity: 0.55; box-shadow: 0 0 8px 0 rgba(239, 90, 76, 0.55); }
+        }
+        @media (prefers-reduced-motion: reduce) { #driverBadges .ec-low-batt { animation: none; } }
 
         /* Floating buttons sit over the map, above the driver buttons (and above the Google logo) */
         .ec-voice-btn,
@@ -10186,6 +10228,7 @@
         // First-load stagger: badges are rebuilt whenever one changes, so the intro only runs once and a rebuild
         // during the intro continues from the same point instead of starting over
         let ecBadgeIntroStart = 0;
+        const EC_LOW_BATTERY_PCT = 30; // below this, the driver's bottom button shows a pulsing battery + %
         const EC_BADGE_INTRO_MS = 1800;
         function renderDriverBadges() {
             renderAttentionStrip();
@@ -10228,6 +10271,15 @@
                     alarmHtml = `<span class="alarm-badge" title="Tracker alarm">⚠️</span>`;
                 }
 
+                // Low battery: a small pulsing battery + % at the right end, only below EC_LOW_BATTERY_PCT
+                // (FleetHunt trucks don't report a battery, so they never show it)
+                let lowBattHtml = '';
+                const battVal = ecIsFleetHunt(drv) ? null : ecBatteryValue(drv);
+                if (battVal !== null && battVal < EC_LOW_BATTERY_PCT) {
+                    const pct = Math.max(0, Math.round(battVal));
+                    lowBattHtml = `<span class="ec-low-batt" title="Battery ${pct}%" aria-label="Battery ${pct}%"><span class="ec-batt" style="--lvl:${Math.min(100, pct) / 100}" aria-hidden="true"></span>${pct}%</span>`;
+                }
+
                 // Only the name (in the driver's color) and the time since the last GPS fix. The status shows in
                 // the button itself: Online glows, Standby and Offline are dimmed (see FULL-SCREEN HOME LAYOUT)
                 const color = drv.color || '#f7c948';
@@ -10237,6 +10289,7 @@
                 <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
                 <span class="last-update">${lastUpdateText}</span>
+                ${lowBattHtml}
               </div>
             ` });
             }
