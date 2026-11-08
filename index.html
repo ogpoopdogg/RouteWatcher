@@ -5177,7 +5177,7 @@
             max-width: 150px;
         }
         #mapDriverControl .driver-status-dot { display: none; }
-        /* Same as the bottom buttons: Online glows softly in the driver's color, Standby / Offline are dimmed */
+        /* Same as the bottom buttons: Online glows softly in the driver's color, not in use is dimmed, Parked looks normal */
         #mapDriverControl .driver-entry.ec-st-online,
         body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online,
         body.light-mode #mapDriverControl .driver-entry.ec-st-online {
@@ -5186,20 +5186,20 @@
                 inset 0 0 8px -2px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent);
         }
         /* (the chip's background stays solid so map labels don't show through; the name and border dim) */
-        #mapDriverControl .driver-entry.ec-st-standby,
-        #mapDriverControl .driver-entry.ec-st-offline {
+        #mapDriverControl .driver-entry.ec-st-idle,
+        #mapDriverControl .driver-entry.ec-st-idle {
             box-shadow: none;
             border-color: rgba(255, 255, 255, 0.07);
         }
-        body.light-mode #mapDriverControl .driver-entry.ec-st-standby,
-        body.light-mode #mapDriverControl .driver-entry.ec-st-offline { border-color: #e2e2e2; }
-        #mapDriverControl .driver-entry.ec-st-standby .driver-name,
-        #mapDriverControl .driver-entry.ec-st-offline .driver-name {
+        body.light-mode #mapDriverControl .driver-entry.ec-st-idle,
+        body.light-mode #mapDriverControl .driver-entry.ec-st-idle { border-color: #e2e2e2; }
+        #mapDriverControl .driver-entry.ec-st-idle .driver-name,
+        #mapDriverControl .driver-entry.ec-st-idle .driver-name {
             opacity: 0.45;
             filter: saturate(0.5);
         }
-        #mapDriverControl .driver-entry.ec-st-standby:hover .driver-name,
-        #mapDriverControl .driver-entry.ec-st-offline:hover .driver-name { opacity: 0.8; }
+        #mapDriverControl .driver-entry.ec-st-idle:hover .driver-name,
+        #mapDriverControl .driver-entry.ec-st-idle:hover .driver-name { opacity: 0.8; }
         #mapDriverControl .driver-eta-label { max-width: 150px; }
         body.light-mode #mapDriverControl .driver-entry {
             background: rgba(255, 255, 255, 0.92);
@@ -5310,29 +5310,47 @@
             opacity: 1;
             filter: none;
         }
-        /* Standby / Offline: dimmed (an alarm and a low battery still show at full strength). The name, time and
+        /* Not in use (not Online and nobody punched in): dimmed (an alarm and a low battery still show at full strength). The name, time and
            border fade rather than the whole button, so the low-battery warning stays bright. */
-        #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
-        #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)),
-        body.light-mode #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
-        body.light-mode #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
+        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
+        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
+        body.light-mode #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
+        body.light-mode #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) {
             border-color: color-mix(in srgb, var(--drv, #f7c948) 18%, transparent) !important;
             box-shadow: none;
         }
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) {
             background: color-mix(in srgb, var(--drv, #f7c948) 4%, rgba(17, 18, 27, 0.92));
         }
-        #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)) :is(.name, .last-update),
-        #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) :is(.name, .last-update) {
+        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) :is(.name, .last-update),
+        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) :is(.name, .last-update) {
             opacity: 0.45;
             filter: saturate(0.5);
             transition: opacity 0.2s ease;
         }
-        #driverBadges .driver-badge.ec-st-standby:hover :is(.name, .last-update),
-        #driverBadges .driver-badge.ec-st-offline:hover :is(.name, .last-update) { opacity: 0.75; }
+        #driverBadges .driver-badge.ec-st-idle:hover :is(.name, .last-update),
+        #driverBadges .driver-badge.ec-st-idle:hover :is(.name, .last-update) { opacity: 0.75; }
+
+        /* Parked (someone punched in, GPS not Online): small "P" before the time; the button keeps its normal look */
+        #driverBadges .ec-parked {
+            flex: 0 0 auto;
+            margin-left: auto;
+            width: 17px;
+            height: 17px;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            color: #fff;
+            background: #3b82f6;
+        }
+        body.light-mode #driverBadges .ec-parked { color: #fff !important; }
+        #driverBadges .ec-parked + .last-update { margin-left: 0 !important; }
 
         /* Low battery (below 30%): small red battery + % at the right end, pulsing gently */
         #driverBadges .ec-low-batt {
@@ -9683,16 +9701,56 @@
             pulseAnimationId = requestAnimationFrame(animate);
         }
 
-        // Driver buttons (map chips and bottom buttons) are grouped: Online first, then Standby, then Offline.
+        // ===== IN USE: who is punched in on each vehicle (E&C Time Clock) =====
+        // Standby alone doesn't mean a van is free: a driver parked at a stop or on lunch is still working.
+        //   online: GPS Online -> glows (whether or not anyone is punched in)
+        //   parked: not Online, but someone is punched in on it (timeclock/vehicle_claims/{gps id}) -> normal look + "P"
+        //   idle:   not Online and nobody punched in on it -> dimmed
+        // Claims are read live (a punch in / punch out shows right away). Accounts that can't read the Time Clock
+        // (only its admins and Gil can) fall back to time: not Online for less than EC_PARKED_DIM_MS = parked.
+        const EC_PARKED_DIM_MS = 45 * 60 * 1000;
+        const ecInUse = { claims: null, readable: false, watching: false };
+        function ecWatchVehicleClaims() {
+            if (ecInUse.watching) return;
+            ecInUse.watching = true;
+            db.ref(EC_TC + 'vehicle_claims').on('value', snap => {
+                ecInUse.claims = snap.val() || {};
+                ecInUse.readable = true;
+                if (dashboardLoaded) queueRender({ badges: true, control: true });
+            }, err => {
+                ecInUse.claims = null;
+                ecInUse.readable = false; // not a Time Clock admin or Gil: the time fallback is used
+                if (dashboardLoaded) queueRender({ badges: true, control: true });
+            });
+        }
+        function ecUseState(id, drv, status) {
+            if (status.status === 'online') return 'online';
+            if (ecInUse.readable) {
+                const claim = ecInUse.claims && ecInUse.claims[id];
+                return (claim && typeof claim === 'object') ? 'parked' : 'idle';
+            }
+            const at = drv && drv.lastLocation && drv.lastLocation.updatedAt;
+            return (at && ecServerNow() - at < EC_PARKED_DIM_MS) ? 'parked' : 'idle';
+        }
+        function ecUseStateFor(id, drv) {
+            const devId = drv && drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
+            const status = getGPSStatus(drv && drv.lastLocation ? drv.lastLocation.updatedAt : undefined, devId);
+            return { status: status, use: ecUseState(id, drv, status) };
+        }
+        function ecUseTitle(u) {
+            if (u.use === 'online') return 'Online';
+            const gps = u.status.status.charAt(0).toUpperCase() + u.status.status.slice(1);
+            if (u.use === 'parked') return 'Parked (' + gps + (ecInUse.readable ? ', someone is punched in' : '') + ')';
+            return 'Not in use (' + gps + (ecInUse.readable ? ', nobody punched in' : '') + ')';
+        }
+
+        // Driver buttons (map chips and bottom buttons) are grouped: Online first, then Parked, then not in use.
         // Inside each group they keep their usual order.
-        const EC_STATUS_RANK = { online: 0, standby: 1, offline: 2 };
+        const EC_USE_RANK = { online: 0, parked: 1, idle: 2 };
         function ecDriverEntriesByStatus(driversObj) {
             return Object.entries(driversObj).map(function(entry, i) {
-                const drv = entry[1];
-                const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
-                const st = getGPSStatus(drv.lastLocation?.updatedAt, devId).status;
-                const rank = EC_STATUS_RANK[st] !== undefined ? EC_STATUS_RANK[st] : 3;
-                return { entry: entry, rank: rank, i: i };
+                const rank = EC_USE_RANK[ecUseStateFor(entry[0], entry[1]).use];
+                return { entry: entry, rank: rank === undefined ? 3 : rank, i: i };
             }).sort(function(a, b) { return (a.rank - b.rank) || (a.i - b.i); }).map(function(x) { return x.entry; });
         }
 
@@ -9720,7 +9778,8 @@
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 const color = drv.color || '#f7c948';
                 // Name only; the status shows like the bottom buttons: Online glows, Standby / Offline are dimmed
-                const statusTitle = status.status.charAt(0).toUpperCase() + status.status.slice(1);
+                const use = ecUseState(id, drv, status);
+                const statusTitle = ecUseTitle({ status: status, use: use });
                 const nameHtml = ecEsc(getDriverNickname(id) || getDriverDisplayName(id, drv));
                 let row = existingRows[String(id)];
                 if (!row) {
@@ -9748,9 +9807,9 @@
                     if (nameSpan) nameSpan.classList.toggle('nick-name', !!getDriverNickname(id));
                 }
                 // keep the ETA hold / label classes; only swap the status class
-                if (!row.classList.contains('ec-st-' + status.status)) {
-                    row.classList.remove('ec-st-online', 'ec-st-standby', 'ec-st-offline');
-                    row.classList.add('ec-st-' + status.status);
+                if (!row.classList.contains('ec-st-' + use)) {
+                    row.classList.remove('ec-st-online', 'ec-st-parked', 'ec-st-idle');
+                    row.classList.add('ec-st-' + use);
                 }
                 if (row.title !== statusTitle) row.title = statusTitle;
                 const currentAtIndex = container.children[index] || null;
@@ -10290,11 +10349,13 @@
                 // the button itself: Online glows, Standby and Offline are dimmed (see FULL-SCREEN HOME LAYOUT)
                 const color = drv.color || '#f7c948';
                 const nameText = getDriverNickname(id) || getDriverDisplayName(id, drv);
-                badgeRows.push({ id: id, color: color, status: status.status, html: `
-              <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(status.status.charAt(0).toUpperCase() + status.status.slice(1))}, last update ${ecEsc(lastUpdateText)}">
+                const use = ecUseState(id, drv, status);
+                const parkedHtml = use === 'parked' ? '<span class="ec-parked" aria-hidden="true">P</span>' : '';
+                badgeRows.push({ id: id, color: color, status: use, html: `
+              <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(ecUseTitle({ status: status, use: use }))}, last update ${ecEsc(lastUpdateText)}">
                 <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
-                <span class="last-update">${lastUpdateText}</span>
+                ${parkedHtml}<span class="last-update">${lastUpdateText}</span>
                 ${lowBattHtml}
               </div>
             ` });
@@ -11775,6 +11836,7 @@
             ecStartIdleWatch();
             ecWatchConnection();
             ecWatchServerClock();
+            ecWatchVehicleClaims(); // who is punched in on each vehicle: Parked vs not in use
             document.removeEventListener('visibilitychange', ecOnVisibilityChange);
             document.addEventListener('visibilitychange', ecOnVisibilityChange);
             if (ecAttentionInterval) clearInterval(ecAttentionInterval);
