@@ -5158,7 +5158,7 @@
             box-sizing: border-box;
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 999px;
-            background: rgba(12, 13, 20, 0.78);
+            background: rgba(12, 13, 20, 0.88);
             -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
@@ -5185,14 +5185,21 @@
             box-shadow: 0 0 10px -1px color-mix(in srgb, var(--drv, #f7c948) 55%, transparent),
                 inset 0 0 8px -2px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent);
         }
+        /* (the chip's background stays solid so map labels don't show through; the name and border dim) */
         #mapDriverControl .driver-entry.ec-st-standby,
         #mapDriverControl .driver-entry.ec-st-offline {
-            opacity: 0.5;
-            filter: saturate(0.5);
             box-shadow: none;
+            border-color: rgba(255, 255, 255, 0.07);
         }
-        #mapDriverControl .driver-entry.ec-st-standby:hover,
-        #mapDriverControl .driver-entry.ec-st-offline:hover { opacity: 0.8; }
+        body.light-mode #mapDriverControl .driver-entry.ec-st-standby,
+        body.light-mode #mapDriverControl .driver-entry.ec-st-offline { border-color: #e2e2e2; }
+        #mapDriverControl .driver-entry.ec-st-standby .driver-name,
+        #mapDriverControl .driver-entry.ec-st-offline .driver-name {
+            opacity: 0.45;
+            filter: saturate(0.5);
+        }
+        #mapDriverControl .driver-entry.ec-st-standby:hover .driver-name,
+        #mapDriverControl .driver-entry.ec-st-offline:hover .driver-name { opacity: 0.8; }
         #mapDriverControl .driver-eta-label { max-width: 150px; }
         body.light-mode #mapDriverControl .driver-entry {
             background: rgba(255, 255, 255, 0.92);
