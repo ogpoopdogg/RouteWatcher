@@ -5406,6 +5406,18 @@
         body:not(.light-mode) #driverBadges .driver-badge.ec-st-online .last-update { color: #dfe3ec; }
         body.light-mode #driverBadges .driver-badge.ec-st-online { background: color-mix(in srgb, var(--drv, #f7c948) 13%, #fff) !important; }
         body.light-mode #mapDriverControl .driver-entry.ec-st-online { background: color-mix(in srgb, var(--drv, #f7c948) 13%, #fff); }
+        /* Online AND someone clocked in on it whose nickname shows (Time Clock vehicle claim): a thin yellow border,
+           so the vehicles really working stand out (class set by ecClockedInOnline) */
+        #driverBadges .driver-badge.ec-st-online.ec-tc-on,
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-online.ec-tc-on,
+        #mapDriverControl .driver-entry.ec-st-online.ec-tc-on,
+        body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online.ec-tc-on {
+            border: 1px solid #ffd400 !important;
+        }
+        body.light-mode #driverBadges .driver-badge.ec-st-online.ec-tc-on,
+        body.light-mode #mapDriverControl .driver-entry.ec-st-online.ec-tc-on {
+            border: 1px solid #d9a800 !important;
+        }
 
         /* Floating buttons sit over the map, just above the driver buttons */
         .ec-voice-btn,
@@ -10304,6 +10316,13 @@
             const at = drv && drv.lastLocation && drv.lastLocation.updatedAt;
             return (at && ecServerNow() - at < EC_PARKED_DIM_MS) ? 'parked' : 'idle';
         }
+        // Online, with a nickname, and someone is clocked in on this GPS in the Time Clock (vehicle_claims, which the
+        // Time Clock removes at punch out) -> thin yellow border. Needs Time Clock access (admins and Gil).
+        function ecClockedInOnline(id, use) {
+            if (use !== 'online' || !ecInUse.readable || !getDriverNickname(id)) return false;
+            const claim = ecInUse.claims && ecInUse.claims[id];
+            return !!(claim && typeof claim === 'object');
+        }
         function ecUseStateFor(id, drv) {
             const devId = drv && drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
             const status = getGPSStatus(drv && drv.lastLocation ? drv.lastLocation.updatedAt : undefined, devId);
@@ -10383,6 +10402,7 @@
                     row.classList.remove('ec-st-online', 'ec-st-parked', 'ec-st-idle');
                     row.classList.add('ec-st-' + use);
                 }
+                row.classList.toggle('ec-tc-on', ecClockedInOnline(id, use));
                 if (row.title !== statusTitle) row.title = statusTitle;
                 const currentAtIndex = container.children[index] || null;
                 if (currentAtIndex !== row) container.insertBefore(row, currentAtIndex);
@@ -10923,7 +10943,7 @@
                 const nameText = getDriverNickname(id) || getDriverDisplayName(id, drv);
                 const use = ecUseState(id, drv, status);
                 const parkedHtml = use === 'parked' ? '<span class="ec-parked" aria-hidden="true">P</span>' : '';
-                badgeRows.push({ id: id, color: color, status: use, html: `
+                badgeRows.push({ id: id, color: color, status: use, tc: ecClockedInOnline(id, use), html: `
               <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(ecUseTitle({ status: status, use: use }))}, last update ${ecEsc(lastUpdateText)}">
                 <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
@@ -10941,7 +10961,7 @@
                 badgeRows.forEach(function(row, ecBadgeIndex) {
                     const id = row.id;
                     const badge = document.createElement('div');
-                    badge.className = 'driver-badge ec-st-' + row.status;
+                    badge.className = 'driver-badge ec-st-' + row.status + (row.tc ? ' ec-tc-on' : '');
                     badge.dataset.driverId = id;
                     badge.style.borderLeftColor = row.color;
                     badge.style.setProperty('--drv', row.color);
