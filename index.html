@@ -5216,8 +5216,8 @@
         #dispatch-map .gm-style-cc,
         #dispatch-map a[href^="https://maps.google.com/maps"] { display: none !important; }
 
-        /* Map buttons: Fit, full screen and Street View side by side in the bottom right corner */
-        #dispatch-map .ec-main-fit-ctl { margin: 0 0 10px 0; }
+        /* Map buttons: Fit, full screen and Street View side by side in the bottom left corner */
+        #dispatch-map .ec-main-fit-ctl { margin: 0 0 10px -10px; } /* even 10px gaps between the three */
         #dispatch-map .ec-main-fit-ctl .map-fit-btn {
             width: 40px;
             height: 40px;
@@ -5420,20 +5420,27 @@
         }
 
         /* Floating buttons sit over the map, just above the driver buttons */
+        /* Mic in the bottom right (easy to reach with the thumb), its middle on the same line as the map buttons
+           in the bottom left (40px tall, 10px above the driver buttons: middle at 30px; 48px mic -> bottom 6px) */
         .ec-voice-btn,
         .install-app-btn[style*="flex"] ~ .ec-voice-btn {
-            left: calc(10px + env(safe-area-inset-left, 0px));
-            right: auto;
-            bottom: calc(var(--ec-bottom-bar, 50px) + 12px);
+            left: auto;
+            right: calc(10px + env(safe-area-inset-right, 0px));
+            bottom: calc(var(--ec-bottom-bar, 50px) + 6px);
             width: 48px;
             height: 48px;
         }
         .ec-voice-btn svg { width: 22px; height: 22px; }
-        .ec-voice-caption,
+        .ec-voice-caption {
+            left: auto;
+            right: calc(10px + env(safe-area-inset-right, 0px));
+            bottom: calc(var(--ec-bottom-bar, 50px) + 66px);
+        }
+        /* the install button also sits on the right, just above the mic: the caption goes above it */
         .install-app-btn[style*="flex"] ~ .ec-voice-caption {
-            left: calc(10px + env(safe-area-inset-left, 0px));
-            right: auto;
-            bottom: calc(var(--ec-bottom-bar, 50px) + 70px);
+            left: auto;
+            right: calc(10px + env(safe-area-inset-right, 0px));
+            bottom: calc(var(--ec-bottom-bar, 50px) + 124px);
         }
         .install-app-btn {
             right: calc(10px + env(safe-area-inset-right, 0px));
@@ -10068,11 +10075,11 @@
                 mapTypeControl: false,
                 keyboardShortcuts: false,
                 // No zoom buttons or arrow pad (pinch / mouse wheel zoom); Fit, full screen and Street View
-                // sit side by side in the bottom right corner
+                // sit side by side in the bottom left corner (the mic button has the bottom right, for the thumb)
                 zoomControl: false,
                 cameraControl: false,
-                fullscreenControlOptions: { position: google.maps.ControlPosition.BOTTOM_RIGHT },
-                streetViewControlOptions: { position: google.maps.ControlPosition.BOTTOM_RIGHT }
+                fullscreenControlOptions: { position: google.maps.ControlPosition.BOTTOM_LEFT },
+                streetViewControlOptions: { position: google.maps.ControlPosition.BOTTOM_LEFT }
             });
             mapInitialized = true;
             ecTrackApi('maps__dispatch');
@@ -10097,7 +10104,7 @@
             });
             fitControlDiv.className = 'ec-main-fit-ctl';
             fitControlDiv.index = 0; // between Street View and full screen, in the same row
-            map.controls[google.maps.ControlPosition.BOTTOM_RIGHT].push(fitControlDiv);
+            map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(fitControlDiv);
 
             // Save this user's map view (not shared), at most once per 1.5 s of panning
             let mapViewSaveTimer = null;
