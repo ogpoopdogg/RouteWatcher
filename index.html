@@ -5210,6 +5210,12 @@
             color: color-mix(in srgb, var(--drv, #f7c948) 72%, #000) !important;
         }
 
+        /* Main map: the Google logo and the Map data / Terms / Report a map error line are hidden at the owner's
+           request (staff-only app). Google Maps Platform Terms 3.2.2(b) say not to hide this attribution; this was
+           explained and the owner chose to hide it. Delete these two rules to bring them back. */
+        #dispatch-map .gm-style-cc,
+        #dispatch-map a[href^="https://maps.google.com/maps"] { display: none !important; }
+
         /* Map buttons: Fit, full screen and Street View side by side in the bottom right corner */
         #dispatch-map .ec-main-fit-ctl { margin: 0 0 10px 0; }
         #dispatch-map .ec-main-fit-ctl .map-fit-btn {
@@ -5356,12 +5362,12 @@
         }
         @media (prefers-reduced-motion: reduce) { #driverBadges .ec-low-batt { animation: none; } }
 
-        /* Floating buttons sit over the map, above the driver buttons (and above the Google logo) */
+        /* Floating buttons sit over the map, just above the driver buttons */
         .ec-voice-btn,
         .install-app-btn[style*="flex"] ~ .ec-voice-btn {
             left: calc(10px + env(safe-area-inset-left, 0px));
             right: auto;
-            bottom: calc(var(--ec-bottom-bar, 50px) + 34px);
+            bottom: calc(var(--ec-bottom-bar, 50px) + 12px);
             width: 48px;
             height: 48px;
         }
@@ -5370,7 +5376,7 @@
         .install-app-btn[style*="flex"] ~ .ec-voice-caption {
             left: calc(10px + env(safe-area-inset-left, 0px));
             right: auto;
-            bottom: calc(var(--ec-bottom-bar, 50px) + 90px);
+            bottom: calc(var(--ec-bottom-bar, 50px) + 70px);
         }
         .install-app-btn {
             right: calc(10px + env(safe-area-inset-right, 0px));
