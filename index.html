@@ -5430,11 +5430,12 @@
         .ec-notice { bottom: calc(var(--ec-bottom-bar, 50px) + 24px); }
 
         /* =====================================================================
-           APP-OPEN INTRO: plays after login and when the app opens.
-           Same dark map grid and route lines as the login screen; the routes
-           run into a GPS ring around the logo, the logo scans in like a
-           hologram, sends out a GPS ping, then flies into the header.
-           Built by ecIntroPlay(); tap anywhere to skip.
+           APP-OPEN INTRO = the loading screen. Plays as soon as the app opens:
+           the login screen's map grid and route lines run into a GPS ring
+           around the logo, the logo scans in like a hologram and pings. The
+           login box then slides in over it (the ring and logo move up), or,
+           when already signed in, the logo flies into the header.
+           Script: "LOADING SCREEN" right after #ecIntroTpl. Tap to hurry it.
            ===================================================================== */
         #ecIntro {
             --u: 1px; /* one unit of the 1440x900 scene, set from JS so the HTML logo lines up with the SVG ring */
@@ -5450,7 +5451,25 @@
             transition: background-color 0.5s ease;
         }
         #ecIntro.ec-out { background: transparent; pointer-events: none; transition: background 0.55s ease 0.1s; }
-        #ecIntro .ec-intro-scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+        #ecIntro .ec-intro-stage {
+            position: absolute;
+            inset: 0;
+            transform-origin: 50% 50%;
+            transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        /* the scene is twice the screen each way so it still fills the screen when the stage moves for the login box */
+        #ecIntro .ec-intro-scene { position: absolute; left: -50%; top: -50%; width: 200%; height: 200%; }
+        #ecIntro.ec-login .ec-intro-text { opacity: 0; transition: opacity 0.3s ease; }
+        /* login box over the loading screen: no scene or logo of its own, sits under the ring */
+        #login-overlay.ec-intro-mode {
+            z-index: 100001;
+            background: transparent;
+            align-items: flex-start;
+            overflow-y: auto;
+        }
+        html.ec-intro-boot #login-overlay { display: none; }
+        #login-overlay.ec-intro-mode .ec-login-scene,
+        #login-overlay.ec-intro-mode .ec-login-logo { display: none; }
         #ecIntro.ec-out .ec-intro-scene,
         #ecIntro.ec-out .ec-intro-text,
         #ecIntro.ec-out .ec-intro-radar { opacity: 0; transition: opacity 0.45s ease; }
@@ -5626,10 +5645,10 @@
         @keyframes ecIntroBlink { 50% { opacity: 0.25; } }
 
         /* header waits for the logo to land, then plays its own entrance */
-        body.ec-intro-on #app > header .header-logo { opacity: 0; }
-        body.ec-intro-on #app > header .header-title,
-        body.ec-intro-on #app > header .header-title::after,
-        body.ec-intro-on #app > header .badge { animation-play-state: paused; }
+        html.ec-intro-on #app > header .header-logo { opacity: 0; }
+        html.ec-intro-on #app > header .header-title,
+        html.ec-intro-on #app > header .header-title::after,
+        html.ec-intro-on #app > header .badge { animation-play-state: paused; }
         #app > header .ec-logo.ec-landed { animation: ecLogoLand 0.9s ease-out; }
         @keyframes ecLogoLand {
             0% { filter: drop-shadow(0 0 16px rgba(247, 201, 72, 1)) brightness(1.6); }
@@ -5640,6 +5659,10 @@
     </style>
 </head>
 <body>
+    <script>
+        // loading screen coming (see LOADING SCREEN): keep the plain login screen hidden until it is needed
+        try { if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) document.documentElement.classList.add('ec-intro-boot'); } catch (e) {}
+    </script>
 
     <!-- Login Overlay -->
     <div id="login-overlay">
@@ -5721,14 +5744,17 @@
 
     <div id="ecIdleBanner" class="ec-idle-banner" aria-hidden="true"></div>
 
-    <!-- App-open intro (see APP-OPEN INTRO in the styles and ecIntroPlay); cloned in when the app opens -->
+    <!-- Loading screen (see APP-OPEN INTRO in the styles): plays as soon as the app opens. The login box
+         slides in over it; once signed in, the logo flies into the header. -->
     <template id="ecIntroTpl">
         <div id="ecIntro" aria-hidden="true">
-            <svg class="ec-intro-scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <div class="ec-intro-stage">
+            <!-- twice the screen each way, so the scene still fills the screen when it moves up for the login box -->
+            <svg class="ec-intro-scene" viewBox="-720 -450 2880 1800" preserveAspectRatio="xMidYMid slice" focusable="false">
                 <defs>
                     <pattern id="ecIGridMinor" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/></pattern>
                     <pattern id="ecIGridMajor" width="200" height="200" patternUnits="userSpaceOnUse"><rect width="200" height="200" fill="url(#ecIGridMinor)"/><path d="M200 0H0V200" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/></pattern>
-                    <radialGradient id="ecISceneFade" cx="50%" cy="50%" r="65%"><stop offset="0%" stop-color="#090a10" stop-opacity="0"/><stop offset="100%" stop-color="#090a10" stop-opacity="0.95"/></radialGradient>
+                    <radialGradient id="ecISceneFade" gradientUnits="userSpaceOnUse" cx="720" cy="720" r="936" gradientTransform="scale(1 0.625)"><stop offset="0%" stop-color="#090a10" stop-opacity="0"/><stop offset="100%" stop-color="#090a10" stop-opacity="0.95"/></radialGradient>
                     <filter id="ecIGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
                     <path id="ecIR1" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330"/>
                     <path id="ecIR2" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600"/>
@@ -5737,8 +5763,8 @@
                     <path id="ecIR5" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365"/>
                     <path id="ecIR6" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535"/>
                 </defs>
-                <rect width="1440" height="900" fill="url(#ecIGridMajor)"/>
-                <!-- the login screen's faint background routes, so the two screens feel like one -->
+                <rect x="-720" y="-450" width="2880" height="1800" fill="url(#ecIGridMajor)"/>
+                <!-- the login screen's faint background routes -->
                 <g fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2">
                     <path d="M-20 620H260Q280 620 280 600V430Q280 410 300 410H610Q630 410 630 390V250Q630 230 650 230H980"/>
                     <path d="M1460 700H1180Q1160 700 1160 680V560Q1160 540 1140 540H880Q860 540 860 520V380Q860 360 880 360H1060"/>
@@ -5754,119 +5780,54 @@
                     <use href="#ecIR6"/>
                 </g>
                 <!-- GPS ring around the logo: the routes plug into it -->
-                <g fill="none" opacity="0">
-                    <animate attributeName="opacity" to="1" dur="0.5s" begin="indefinite" data-at="0.3" fill="freeze"/>
+                <g class="ec-iring" fill="none" opacity="0">
                     <circle class="ec-intro-ring" cx="720" cy="450" r="120" stroke="rgba(247,201,72,0.55)" stroke-width="1.5" stroke-dasharray="16 7"/>
                     <circle class="ec-intro-ring2" cx="720" cy="450" r="132" stroke="rgba(90,169,255,0.35)" stroke-width="1" stroke-dasharray="2 10"/>
                     <circle cx="720" cy="450" r="106" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
                 </g>
+                <!-- each route: coloured line drawing in, a dot riding its tip, then data dashes flowing into the ring
+                     (moved by the LOADING SCREEN script, frame by frame) -->
                 <g fill="none" stroke-linecap="round" filter="url(#ecIGlow)">
-                    <path d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" pathLength="1" stroke="#f7c948" stroke-width="2.5" stroke-dasharray="1" stroke-dashoffset="1">
-                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.05" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
-                    </path>
-                    <path d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" pathLength="1" stroke="#34d27b" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
-                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.15" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
-                    </path>
-                    <path d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" pathLength="1" stroke="#5aa9ff" stroke-width="2.5" stroke-dasharray="1" stroke-dashoffset="1">
-                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.25" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
-                    </path>
-                    <path d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" pathLength="1" stroke="#f7c948" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
-                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.3" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
-                    </path>
-                    <path d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" pathLength="1" stroke="#5aa9ff" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
-                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.4" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
-                    </path>
-                    <path d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" pathLength="1" stroke="#34d27b" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
-                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.45" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
-                    </path>
-                    <path d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
-                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.05" fill="freeze"/>
-                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.05" repeatCount="indefinite"/>
-                    </path>
-                    <path d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
-                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.15" fill="freeze"/>
-                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.15" repeatCount="indefinite"/>
-                    </path>
-                    <path d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
-                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.25" fill="freeze"/>
-                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.25" repeatCount="indefinite"/>
-                    </path>
-                    <path d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
-                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.3" fill="freeze"/>
-                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.3" repeatCount="indefinite"/>
-                    </path>
-                    <path d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
-                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.4" fill="freeze"/>
-                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.4" repeatCount="indefinite"/>
-                    </path>
-                    <path d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
-                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.45" fill="freeze"/>
-                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.45" repeatCount="indefinite"/>
-                    </path>
-                    <circle r="5" fill="#fff" opacity="0">
-                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.05"/>
-                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.05" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR1"/></animateMotion>
-                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.05" fill="freeze"/>
-                    </circle>
-                    <circle r="5" fill="#fff" opacity="0">
-                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.15"/>
-                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.15" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR2"/></animateMotion>
-                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.15" fill="freeze"/>
-                    </circle>
-                    <circle r="5" fill="#fff" opacity="0">
-                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.25"/>
-                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.25" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR3"/></animateMotion>
-                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.25" fill="freeze"/>
-                    </circle>
-                    <circle r="5" fill="#fff" opacity="0">
-                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.3"/>
-                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.3" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR4"/></animateMotion>
-                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.3" fill="freeze"/>
-                    </circle>
-                    <circle r="5" fill="#fff" opacity="0">
-                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.4"/>
-                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.4" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR5"/></animateMotion>
-                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.4" fill="freeze"/>
-                    </circle>
-                    <circle r="5" fill="#fff" opacity="0">
-                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.45"/>
-                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.45" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR6"/></animateMotion>
-                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.45" fill="freeze"/>
-                    </circle>
+                    <path d="M560 -470V-20" stroke="#f7c948" stroke-width="2.5"/>
+                    <path d="M-740 330H-20" stroke="#34d27b" stroke-width="2"/>
+                    <path d="M880 1370V920" stroke="#5aa9ff" stroke-width="2.5"/>
+                    <path d="M2180 570H1460" stroke="#f7c948" stroke-width="2"/>
+                    <path d="M900 -470V-20" stroke="#5aa9ff" stroke-width="2"/>
+                    <path d="M540 1370V920" stroke="#34d27b" stroke-width="2"/>
+                    <path class="ec-ir" data-i="1" data-at="0.05" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#f7c948" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="2" data-at="0.15" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="3" data-at="0.25" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#5aa9ff" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="4" data-at="0.3" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#f7c948" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="5" data-at="0.4" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#5aa9ff" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="6" data-at="0.45" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-if" data-i="1" data-at="0.05" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="2" data-at="0.15" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="3" data-at="0.25" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="4" data-at="0.3" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="5" data-at="0.4" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="6" data-at="0.45" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <circle class="ec-id" data-i="1" data-at="0.05" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="2" data-at="0.15" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="3" data-at="0.25" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="4" data-at="0.3" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="5" data-at="0.4" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="6" data-at="0.45" r="5" fill="#fff" opacity="0"/>
                 </g>
                 <!-- ports on the ring light up as each route arrives -->
                 <g filter="url(#ecIGlow)">
-                    <circle cx="720" cy="330" r="4.5" fill="#f7c948" opacity="0">
-                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.05" fill="freeze"/>
-                    </circle>
-                    <circle cx="600" cy="450" r="4.5" fill="#34d27b" opacity="0">
-                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.15" fill="freeze"/>
-                    </circle>
-                    <circle cx="720" cy="570" r="4.5" fill="#5aa9ff" opacity="0">
-                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.25" fill="freeze"/>
-                    </circle>
-                    <circle cx="840" cy="450" r="4.5" fill="#f7c948" opacity="0">
-                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.3" fill="freeze"/>
-                    </circle>
-                    <circle cx="805" cy="365" r="4.5" fill="#5aa9ff" opacity="0">
-                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.4" fill="freeze"/>
-                    </circle>
-                    <circle cx="635" cy="535" r="4.5" fill="#34d27b" opacity="0">
-                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.45" fill="freeze"/>
-                    </circle>
+                    <circle class="ec-ip" data-at="0.05" cx="720" cy="330" r="4.5" fill="#f7c948" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.15" cx="600" cy="450" r="4.5" fill="#34d27b" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.25" cx="720" cy="570" r="4.5" fill="#5aa9ff" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.3" cx="840" cy="450" r="4.5" fill="#f7c948" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.4" cx="805" cy="365" r="4.5" fill="#5aa9ff" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.45" cx="635" cy="535" r="4.5" fill="#34d27b" opacity="0"/>
                 </g>
-                <!-- GPS ping from the pin once the logo is in -->
+                <!-- GPS pings from the pin, every 3 s once the logo is in -->
                 <g fill="none" stroke="#f7c948" stroke-width="2">
-                    <circle cx="720" cy="443" r="20" opacity="0">
-                        <animate attributeName="r" from="20" to="230" dur="1.1s" begin="indefinite" data-at="1.85" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.6 0.4 1"/>
-                        <animate attributeName="opacity" values="0.9;0" dur="1.1s" begin="indefinite" data-at="1.85" fill="freeze"/>
-                    </circle>
-                    <circle cx="720" cy="443" r="20" opacity="0">
-                        <animate attributeName="r" from="20" to="230" dur="1.1s" begin="indefinite" data-at="2.25" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.6 0.4 1"/>
-                        <animate attributeName="opacity" values="0.9;0" dur="1.1s" begin="indefinite" data-at="2.25" fill="freeze"/>
-                    </circle>
+                    <circle class="ec-iping" data-at="1.85" cx="720" cy="443" r="20" opacity="0"/>
+                    <circle class="ec-iping" data-at="2.25" cx="720" cy="443" r="20" opacity="0"/>
                 </g>
-                <rect width="1440" height="900" fill="url(#ecISceneFade)"/>
+                <rect x="-720" y="-450" width="2880" height="1800" fill="url(#ecISceneFade)"/>
             </svg>
             <div class="ec-intro-radar"></div>
             <div class="ec-intro-logo">
@@ -5880,8 +5841,220 @@
                 <span class="ec-intro-title">E&amp;C DISPATCH</span>
                 <span class="ec-intro-sub">LIVE GPS</span>
             </span></div>
+          </div>
         </div>
     </template>
+    <script>
+        // ===== LOADING SCREEN (APP-OPEN INTRO) =====
+        // Starts as soon as the page opens, before Firebase loads. The route lines run into a GPS ring, the logo
+        // scans in and pings. Then either the login box slides in over it (ecIntroShowLogin), or, when already
+        // signed in, the logo flies into the header and the app shows (ecIntroToApp). Waits for the logo to
+        // finish (about 2.3 s) unless tapped. Reduced motion: no animation, the plain login screen is used.
+        (function() {
+            const EC_INTRO_READY_MS = 2300;
+            let st = null;
+            function reduced() {
+                try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
+            }
+            function loginEl() { return document.getElementById('login-overlay'); }
+            function mount() {
+                const tpl = document.getElementById('ecIntroTpl');
+                if (reduced() || !tpl || !tpl.content) return null;
+                const frag = tpl.content.cloneNode(true);
+                const el = frag.querySelector('#ecIntro');
+                if (!el) return null;
+                const login = loginEl();
+                if (login) { login.classList.add('ec-intro-mode'); login.style.display = 'none'; }
+                document.documentElement.classList.add('ec-intro-on');
+                document.body.appendChild(frag);
+                const s = { el: el, stage: el.querySelector('.ec-intro-stage'), ready: false, want: null, done: false, loginShown: false };
+                s.fit = function() {
+                    // one unit of the 1440x900 scene ("slice" scaling), so the HTML logo sits inside the SVG ring
+                    const u = Math.max(el.clientWidth / 1440, el.clientHeight / 900);
+                    el.style.setProperty('--u', u + 'px');
+                    s.u = u;
+                    layout(s);
+                };
+                s.fit();
+                window.addEventListener('resize', s.fit);
+                animateScene(s);
+                scramble(s, el.querySelector('.ec-intro-title'));
+                s.timer = setTimeout(function() { markReady(s); }, EC_INTRO_READY_MS);
+                el.addEventListener('pointerdown', function() { markReady(s); });
+                return s;
+            }
+            // The SVG scene, moved frame by frame (SVG's own timed animations would wait for the whole page to load)
+            const DRAW_S = 1.0;
+            const easeInOut = function(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; };
+            const easeOut = function(p) { return 1 - Math.pow(1 - p, 3); };
+            const clamp01 = function(p) { return p < 0 ? 0 : (p > 1 ? 1 : p); };
+            function animateScene(s) {
+                const el = s.el;
+                const at = function(n) { return parseFloat(n.getAttribute('data-at')) || 0; };
+                const geo = {};
+                el.querySelectorAll('defs path[id^="ecIR"]').forEach(function(p) {
+                    try { geo[p.id.slice(4)] = { p: p, len: p.getTotalLength() }; } catch (e) {}
+                });
+                const ring = el.querySelector('.ec-iring');
+                const lines = Array.prototype.map.call(el.querySelectorAll('.ec-ir'), function(n) { return { n: n, t: at(n), g: geo[n.getAttribute('data-i')] }; });
+                const flows = Array.prototype.map.call(el.querySelectorAll('.ec-if'), function(n) { return { n: n, t: at(n) + DRAW_S }; });
+                const dots = Array.prototype.map.call(el.querySelectorAll('.ec-id'), function(n) { return { n: n, t: at(n), g: geo[n.getAttribute('data-i')] }; });
+                const ports = Array.prototype.map.call(el.querySelectorAll('.ec-ip'), function(n) { return { n: n, t: at(n) + DRAW_S }; });
+                const pings = Array.prototype.map.call(el.querySelectorAll('.ec-iping'), function(n) { return { n: n, t: at(n) }; });
+                lines.forEach(function(l) { if (l.g) l.n.setAttribute('stroke-dasharray', l.g.len + ' ' + l.g.len); });
+                flows.forEach(function(f) { f.n.setAttribute('stroke-dasharray', '7 29'); });
+                const t0 = performance.now();
+                const frame = function(now) {
+                    if (!el.isConnected && s.done) return;
+                    const t = (now - t0) / 1000;
+                    if (ring) ring.setAttribute('opacity', clamp01((t - 0.3) / 0.5));
+                    lines.forEach(function(l) {
+                        if (!l.g || t < l.t) return;
+                        const p = easeInOut(clamp01((t - l.t) / DRAW_S));
+                        l.n.setAttribute('opacity', 1);
+                        l.n.setAttribute('stroke-dashoffset', l.g.len * (1 - p));
+                    });
+                    dots.forEach(function(d) {
+                        if (!d.g || t < d.t) return;
+                        const k = (t - d.t) / DRAW_S;
+                        const pt = d.g.p.getPointAtLength(d.g.len * easeInOut(clamp01(k)));
+                        d.n.setAttribute('cx', pt.x);
+                        d.n.setAttribute('cy', pt.y);
+                        // rides the tip, then bursts as it reaches the ring
+                        const b = (k - 1) * DRAW_S / 0.35;
+                        d.n.setAttribute('r', k < 1 ? 5 : (b < 0.5 ? 5 + 12 * b : Math.max(0, 11 - 22 * (b - 0.5))));
+                        d.n.setAttribute('opacity', b >= 1 ? 0 : 1);
+                    });
+                    flows.forEach(function(f) {
+                        if (t < f.t) return;
+                        f.n.setAttribute('opacity', 0.75 * clamp01((t - f.t) / 0.2));
+                        f.n.setAttribute('stroke-dashoffset', -(((t - f.t) * 160) % 36));
+                    });
+                    ports.forEach(function(p) { p.n.setAttribute('opacity', clamp01((t - p.t) / 0.15)); });
+                    pings.forEach(function(p) {
+                        if (t < p.t) return;
+                        const c = ((t - p.t) % 3) / 3;
+                        const q = c / 0.37;
+                        p.n.setAttribute('r', q < 1 ? 20 + 210 * easeOut(q) : 20);
+                        p.n.setAttribute('opacity', q < 1 ? 0.9 * (1 - q) : 0);
+                    });
+                    if (el.isConnected || !s.done) requestAnimationFrame(frame);
+                };
+                requestAnimationFrame(frame);
+            }
+            // "E&C DISPATCH" decodes from random characters, left to right
+            function scramble(s, title) {
+                if (!title) return;
+                const word = title.textContent;
+                title.style.width = title.offsetWidth + 'px'; // keep the box steady while the letters change
+                title.style.whiteSpace = 'nowrap';
+                title.style.overflow = 'hidden';
+                const glyphs = '01#/<>=+*%';
+                const t0 = performance.now() + 1450;
+                const tick = function(now) {
+                    if (s.done || !title.isConnected) return;
+                    const k = (now - t0) / 550;
+                    if (k >= 1) { title.textContent = word; return; }
+                    if (k >= 0) {
+                        title.textContent = word.split('').map(function(ch, i) {
+                            return (ch === ' ' || i < k * word.length) ? ch : glyphs[Math.floor(Math.random() * glyphs.length)];
+                        }).join('');
+                    }
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            }
+            function markReady(s) {
+                if (s.ready || s.done) return;
+                s.ready = true;
+                clearTimeout(s.timer);
+                if (s.want === 'app') fly(s);
+                else if (s.want === 'login') showLogin(s);
+            }
+            // With the login box up: the ring and logo move (and shrink if needed) into the space above the box
+            function layout(s) {
+                const login = loginEl();
+                if (!s.loginShown || !login) { if (s.stage) s.stage.style.transform = ''; return; }
+                const box = login.querySelector('.login-box');
+                const h = s.el.clientHeight;
+                const R = 134 * s.u;
+                const boxH = box ? box.offsetHeight : 320;
+                const gap = 16;
+                const sc = Math.max(0.4, Math.min(1, (h - boxH - gap * 3) / (2 * R)));
+                const top0 = Math.max(gap, (h - (2 * R * sc + gap + boxH)) / 2);
+                const cy = top0 + R * sc;
+                s.stage.style.transform = 'translateY(' + (cy - h / 2) + 'px) scale(' + sc + ')';
+                login.style.paddingTop = (top0 + 2 * R * sc + gap) + 'px';
+            }
+            function showLogin(s) {
+                const login = loginEl();
+                if (!login) return;
+                if (!s.loginShown) {
+                    s.loginShown = true;
+                    s.el.classList.add('ec-login');
+                    login.style.display = 'flex';
+                }
+                layout(s);
+            }
+            function fly(s) {
+                if (s.done) return;
+                s.done = true;
+                clearTimeout(s.timer);
+                window.removeEventListener('resize', s.fit);
+                const el = s.el;
+                const login = loginEl();
+                if (login && login.style.display !== 'none') {
+                    const hide = function() { login.style.display = 'none'; login.style.paddingTop = ''; };
+                    if (login.animate) login.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250 }).onfinish = hide; else hide();
+                }
+                const logo = el.querySelector('.ec-intro-logo');
+                const target = document.querySelector('#app > header .header-logo');
+                const from = logo ? logo.getBoundingClientRect() : null;
+                const to = target ? target.getBoundingClientRect() : null;
+                el.classList.add('ec-out');
+                const dur = 700;
+                if (logo && from && to && to.width && from.width && logo.animate) {
+                    // shoot the logo into the header logo's spot (same picture, so only move + scale); the stage may
+                    // be scaled for the login box, so screen distances are divided by that scale
+                    const m = (s.stage && s.stage.style.transform.match(/scale\(([\d.]+)\)/)) || null;
+                    const k = m ? parseFloat(m[1]) || 1 : 1;
+                    const dx = (to.left - from.left) / k, dy = (to.top - from.top) / k;
+                    logo.animate([
+                        { transform: 'translate(-50%, -50%)' },
+                        { transform: 'translate(-50%, -50%) translate(' + dx + 'px, ' + dy + 'px) scale(' + (to.width / from.width) + ')' }
+                    ], { duration: dur, easing: 'cubic-bezier(0.65, 0, 0.3, 1)', fill: 'forwards' });
+                } else if (logo) {
+                    logo.style.transition = 'opacity ' + dur + 'ms';
+                    logo.style.opacity = '0';
+                }
+                setTimeout(function() {
+                    document.documentElement.classList.remove('ec-intro-on');
+                    const badge = target ? target.closest('.ec-logo') : null;
+                    if (badge) {
+                        badge.classList.remove('ec-landed');
+                        void badge.offsetWidth;
+                        badge.classList.add('ec-landed');
+                        setTimeout(function() { badge.classList.remove('ec-landed'); }, 1000);
+                    }
+                    el.remove();
+                }, dur);
+            }
+            // Signed out (or sign-in failed): show the login box over the animation once the logo is in
+            window.ecIntroShowLogin = function() {
+                if (!st || st.done) st = mount();
+                if (!st) { const login = loginEl(); if (login) login.style.display = 'flex'; return; }
+                st.want = 'login';
+                if (st.ready) showLogin(st);
+            };
+            // Signed in and allowed: once the logo is in, it flies to the header and the app shows
+            window.ecIntroToApp = function() {
+                if (!st || st.done) { const login = loginEl(); if (login) login.style.display = 'none'; return; }
+                st.want = 'app';
+                if (st.ready) fly(st);
+            };
+            st = mount();
+        })();
+    </script>
 
     <!-- Main App -->
     <div id="app" style="display:none;">
@@ -7079,97 +7252,6 @@
             try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
         }
 
-        // ===== APP-OPEN INTRO =====
-        // Plays when the app opens or someone logs in: the login screen's route lines run into a GPS ring,
-        // the logo scans in, pings, then flies into the header. Tap anywhere to skip. Styles: APP-OPEN INTRO.
-        let ecIntroBusy = false;
-        function ecIntroPlay() {
-            if (ecIntroBusy || ecReducedMotion()) return;
-            const tpl = document.getElementById('ecIntroTpl');
-            if (!tpl || !tpl.content) return;
-            const frag = tpl.content.cloneNode(true);
-            const el = frag.querySelector('#ecIntro');
-            if (!el) return;
-            ecIntroBusy = true;
-            document.body.classList.add('ec-intro-on');
-            document.body.appendChild(frag);
-            const fit = function() {
-                // one unit of the 1440x900 scene ("slice" scaling), so the HTML logo sits inside the SVG ring
-                const u = Math.max(el.clientWidth / 1440, el.clientHeight / 900);
-                el.style.setProperty('--u', u + 'px');
-            };
-            fit();
-            window.addEventListener('resize', fit);
-            const svg = el.querySelector('svg');
-            el.querySelectorAll('[data-at]').forEach(function(a) {
-                try { a.beginElementAt(parseFloat(a.getAttribute('data-at')) || 0); } catch (e) {}
-            });
-            let done = false;
-            const timer = setTimeout(function() { finish(false); }, 2900);
-            function finish(skipped) {
-                if (done) return;
-                done = true;
-                clearTimeout(timer);
-                window.removeEventListener('resize', fit);
-                const logo = el.querySelector('.ec-intro-logo');
-                const target = document.querySelector('#app > header .header-logo');
-                const from = logo ? logo.getBoundingClientRect() : null;
-                const to = target ? target.getBoundingClientRect() : null;
-                el.classList.add('ec-out');
-                const dur = skipped ? 320 : 700;
-                if (logo && from && to && to.width && logo.animate) {
-                    // fly the logo into the header logo's spot (both have the same picture, so only scale + move)
-                    const s = to.width / from.width;
-                    logo.style.left = from.left + 'px';
-                    logo.style.top = from.top + 'px';
-                    logo.style.width = from.width + 'px';
-                    logo.style.transform = 'none';
-                    logo.animate([
-                        { transform: 'translate(0, 0) scale(1)' },
-                        { transform: 'translate(' + (to.left - from.left) + 'px, ' + (to.top - from.top) + 'px) scale(' + s + ')' }
-                    ], { duration: dur, easing: 'cubic-bezier(0.65, 0, 0.3, 1)', fill: 'forwards' });
-                } else if (logo) {
-                    logo.style.transition = 'opacity ' + dur + 'ms';
-                    logo.style.opacity = '0';
-                }
-                setTimeout(function() {
-                    document.body.classList.remove('ec-intro-on');
-                    const badge = target ? target.closest('.ec-logo') : null;
-                    if (badge) {
-                        badge.classList.remove('ec-landed');
-                        void badge.offsetWidth;
-                        badge.classList.add('ec-landed');
-                        setTimeout(function() { badge.classList.remove('ec-landed'); }, 1000);
-                    }
-                    el.remove();
-                    ecIntroBusy = false;
-                }, dur);
-            }
-            const title = el.querySelector('.ec-intro-title');
-            if (title) {
-                const word = title.textContent;
-                title.style.width = title.offsetWidth + 'px'; // keep the box steady while the letters change
-                title.style.whiteSpace = 'nowrap';
-                title.style.overflow = 'hidden';
-                const glyphs = '01#/<>=+*%';
-                const t0 = performance.now() + 1450;
-                const tick = function(now) {
-                    if (done || !title.isConnected) return;
-                    const k = (now - t0) / 550; // letters lock in left to right over 0.55 s
-                    if (k >= 1) { title.textContent = word; return; }
-                    if (k >= 0) {
-                        title.textContent = word.split('').map(function(ch, i) {
-                            return (ch === ' ' || i < k * word.length) ? ch : glyphs[Math.floor(Math.random() * glyphs.length)];
-                        }).join('');
-                    }
-                    requestAnimationFrame(tick);
-                };
-                requestAnimationFrame(tick);
-            }
-            el.addEventListener('pointerdown', function() { finish(true); });
-            if (svg && svg.unpauseAnimations) { try { svg.unpauseAnimations(); } catch (e) {} }
-        }
-
         // ===== THEME =====
         // Switches theme with a circular reveal growing from the logo; browsers without View Transitions switch instantly
         function toggleTheme() {
@@ -7618,9 +7700,8 @@
                 if (!allowed) { ecWarmStop(); return; }
                 currentUserId = user.uid;
                 isAdminUser = (email === 'justin@ec.com');
-                document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('app').style.display = 'flex';
-                ecIntroPlay();
+                ecIntroToApp(); // hides the login box; the loading-screen logo flies into the header
                 // The map will be initialized by the callback from Google Maps script.
                 // But we need to ensure initApp runs after login.
                 initApp();
@@ -7628,13 +7709,14 @@
                     console.warn('Access check failed:', err);
                     const errEl = document.getElementById('loginError');
                     if (errEl) errEl.textContent = 'Could not verify your sign-in. Please try again.';
+                    ecIntroShowLogin();
                 });
             } else {
                 ecWarmStop();
                 ecGateSeq++;
                 currentUserId = null;
                 isAdminUser = false;
-                document.getElementById('login-overlay').style.display = 'flex';
+                ecIntroShowLogin(); // login box slides in over the loading-screen animation
                 document.getElementById('app').style.display = 'none';
             }
         });
