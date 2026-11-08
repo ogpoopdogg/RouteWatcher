@@ -5152,28 +5152,54 @@
         body:not(.light-mode) #mapDriverControl .driver-entry {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 3px 8px;
+            gap: 6px;
+            padding: 6px 12px;
+            min-height: 34px;
+            box-sizing: border-box;
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 999px;
-            background: rgba(12, 13, 20, 0.78);
+            background: rgba(12, 13, 20, 0.88);
             -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             max-width: 100%;
             min-width: 0;
-            font-size: 12px;
+            font-size: 14px;
             line-height: 1.25;
+            transition: opacity 0.3s ease, filter 0.3s ease, box-shadow 0.3s ease, background 0.2s ease;
         }
         body:not(.light-mode) #mapDriverControl .driver-entry:hover { background: rgba(28, 30, 44, 0.9); }
         #mapDriverControl .driver-name,
         #mapDriverControl .driver-name.nick-name {
             color: var(--drv, #f7c948);
             font-weight: 700;
-            font-size: 12px;
-            max-width: 130px;
+            font-size: 14px;
+            max-width: 150px;
         }
-        #mapDriverControl .driver-status-dot { width: 8px; height: 8px; flex: 0 0 auto; }
+        #mapDriverControl .driver-status-dot { display: none; }
+        /* Same as the bottom buttons: Online glows softly in the driver's color, Standby / Offline are dimmed */
+        #mapDriverControl .driver-entry.ec-st-online,
+        body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online,
+        body.light-mode #mapDriverControl .driver-entry.ec-st-online {
+            border-color: color-mix(in srgb, var(--drv, #f7c948) 75%, transparent);
+            box-shadow: 0 0 10px -1px color-mix(in srgb, var(--drv, #f7c948) 55%, transparent),
+                inset 0 0 8px -2px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent);
+        }
+        /* (the chip's background stays solid so map labels don't show through; the name and border dim) */
+        #mapDriverControl .driver-entry.ec-st-standby,
+        #mapDriverControl .driver-entry.ec-st-offline {
+            box-shadow: none;
+            border-color: rgba(255, 255, 255, 0.07);
+        }
+        body.light-mode #mapDriverControl .driver-entry.ec-st-standby,
+        body.light-mode #mapDriverControl .driver-entry.ec-st-offline { border-color: #e2e2e2; }
+        #mapDriverControl .driver-entry.ec-st-standby .driver-name,
+        #mapDriverControl .driver-entry.ec-st-offline .driver-name {
+            opacity: 0.45;
+            filter: saturate(0.5);
+        }
+        #mapDriverControl .driver-entry.ec-st-standby:hover .driver-name,
+        #mapDriverControl .driver-entry.ec-st-offline:hover .driver-name { opacity: 0.8; }
         #mapDriverControl .driver-eta-label { max-width: 150px; }
         body.light-mode #mapDriverControl .driver-entry {
             background: rgba(255, 255, 255, 0.92);
@@ -5239,10 +5265,12 @@
         #driverBadges .driver-badge .badge-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 8px;
             width: 100%;
         }
+        /* name on the left; the time (and a low-battery warning after it) on the right */
+        #driverBadges .driver-badge .badge-row .last-update { margin-left: auto !important; }
         #driverBadges .driver-badge .badge-row .name,
         body:not(.light-mode) #driverBadges .driver-badge .badge-row .name {
             color: var(--drv, #f7c948);
@@ -5276,17 +5304,57 @@
             opacity: 1;
             filter: none;
         }
-        /* Standby / Offline: dimmed (an alarm still shows at full strength) */
+        /* Standby / Offline: dimmed (an alarm and a low battery still show at full strength). The name, time and
+           border fade rather than the whole button, so the low-battery warning stays bright. */
         #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
         #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)),
         body:not(.light-mode) #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
-            opacity: 0.45;
-            filter: saturate(0.5);
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)),
+        body.light-mode #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
+        body.light-mode #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
+            border-color: color-mix(in srgb, var(--drv, #f7c948) 18%, transparent) !important;
             box-shadow: none;
         }
-        #driverBadges .driver-badge.ec-st-standby:hover,
-        #driverBadges .driver-badge.ec-st-offline:hover { opacity: 0.75; }
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)),
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) {
+            background: color-mix(in srgb, var(--drv, #f7c948) 4%, rgba(17, 18, 27, 0.92));
+        }
+        #driverBadges .driver-badge.ec-st-standby:not(:has(.alarm-badge)) :is(.name, .last-update),
+        #driverBadges .driver-badge.ec-st-offline:not(:has(.alarm-badge)) :is(.name, .last-update) {
+            opacity: 0.45;
+            filter: saturate(0.5);
+            transition: opacity 0.2s ease;
+        }
+        #driverBadges .driver-badge.ec-st-standby:hover :is(.name, .last-update),
+        #driverBadges .driver-badge.ec-st-offline:hover :is(.name, .last-update) { opacity: 0.75; }
+
+        /* Low battery (below 30%): small red battery + % at the right end, pulsing gently */
+        #driverBadges .ec-low-batt {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            margin-left: -2px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #ff6b5b;
+            background: rgba(239, 90, 76, 0.14);
+            border: 1px solid rgba(239, 90, 76, 0.45);
+            animation: ecLowBattPulse 1.6s ease-in-out infinite;
+        }
+        #driverBadges .ec-low-batt .ec-batt { width: 13px; height: 7px; margin-right: 4px; }
+        #driverBadges .ec-low-batt .ec-batt::after { top: 1px; }
+        body.light-mode #driverBadges .ec-low-batt,
+        body.light-mode #driverBadges .ec-low-batt * { color: #c0392b !important; }
+        body.light-mode #driverBadges .ec-low-batt { background: rgba(231, 76, 60, 0.1); }
+        @keyframes ecLowBattPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 90, 76, 0); }
+            50% { opacity: 0.55; box-shadow: 0 0 8px 0 rgba(239, 90, 76, 0.55); }
+        }
+        @media (prefers-reduced-motion: reduce) { #driverBadges .ec-low-batt { animation: none; } }
 
         /* Floating buttons sit over the map, above the driver buttons (and above the Google logo) */
         .ec-voice-btn,
@@ -9645,18 +9713,14 @@
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 const color = drv.color || '#f7c948';
-                let statusColor = '#e74c3c';
-                if (status.class === 'status-online') statusColor = '#2ecc71';
-                else if (status.class === 'status-standby') statusColor = '#f1c40f';
+                // Name only; the status shows like the bottom buttons: Online glows, Standby / Offline are dimmed
                 const statusTitle = status.status.charAt(0).toUpperCase() + status.status.slice(1);
-                const onlineClass = status.status === 'online' ? ' is-online' : '';
                 const nameHtml = ecEsc(getDriverNickname(id) || getDriverDisplayName(id, drv));
                 let row = existingRows[String(id)];
                 if (!row) {
                     const temp = document.createElement('div');
                     temp.innerHTML = `<div class="driver-entry" onclick="showDriverLocation('${ecAttrJs(id)}')">
               <span class="driver-name${getDriverNickname(id) ? ' nick-name' : ''}">${nameHtml}</span>
-              <span class="driver-status-dot${onlineClass}" style="background:${statusColor};" title="${statusTitle}" aria-label="${statusTitle}"></span>
             </div>`;
                     row = temp.firstElementChild;
                     row.dataset.driverId = String(id);
@@ -9676,18 +9740,13 @@
                         nameSpan._nameHtml = nameHtml;
                     }
                     if (nameSpan) nameSpan.classList.toggle('nick-name', !!getDriverNickname(id));
-                    const statusSpan = row.querySelector('.driver-status-dot');
-                    if (statusSpan) {
-                        const statusClassName = 'driver-status-dot' + onlineClass;
-                        if (statusSpan.className !== statusClassName) statusSpan.className = statusClassName;
-                        if (statusSpan._statusColor !== statusColor) {
-                            statusSpan.style.background = statusColor;
-                            statusSpan._statusColor = statusColor;
-                        }
-                        if (statusSpan.getAttribute('title') !== statusTitle) statusSpan.setAttribute('title', statusTitle);
-                        if (statusSpan.getAttribute('aria-label') !== statusTitle) statusSpan.setAttribute('aria-label', statusTitle);
-                    }
                 }
+                // keep the ETA hold / label classes; only swap the status class
+                if (!row.classList.contains('ec-st-' + status.status)) {
+                    row.classList.remove('ec-st-online', 'ec-st-standby', 'ec-st-offline');
+                    row.classList.add('ec-st-' + status.status);
+                }
+                if (row.title !== statusTitle) row.title = statusTitle;
                 const currentAtIndex = container.children[index] || null;
                 if (currentAtIndex !== row) container.insertBefore(row, currentAtIndex);
                 index++;
@@ -10169,6 +10228,7 @@
         // First-load stagger: badges are rebuilt whenever one changes, so the intro only runs once and a rebuild
         // during the intro continues from the same point instead of starting over
         let ecBadgeIntroStart = 0;
+        const EC_LOW_BATTERY_PCT = 30; // below this, the driver's bottom button shows a pulsing battery + %
         const EC_BADGE_INTRO_MS = 1800;
         function renderDriverBadges() {
             renderAttentionStrip();
@@ -10211,6 +10271,15 @@
                     alarmHtml = `<span class="alarm-badge" title="Tracker alarm">⚠️</span>`;
                 }
 
+                // Low battery: a small pulsing battery + % at the right end, only below EC_LOW_BATTERY_PCT
+                // (FleetHunt trucks don't report a battery, so they never show it)
+                let lowBattHtml = '';
+                const battVal = ecIsFleetHunt(drv) ? null : ecBatteryValue(drv);
+                if (battVal !== null && battVal < EC_LOW_BATTERY_PCT) {
+                    const pct = Math.max(0, Math.round(battVal));
+                    lowBattHtml = `<span class="ec-low-batt" title="Battery ${pct}%" aria-label="Battery ${pct}%"><span class="ec-batt" style="--lvl:${Math.min(100, pct) / 100}" aria-hidden="true"></span>${pct}%</span>`;
+                }
+
                 // Only the name (in the driver's color) and the time since the last GPS fix. The status shows in
                 // the button itself: Online glows, Standby and Offline are dimmed (see FULL-SCREEN HOME LAYOUT)
                 const color = drv.color || '#f7c948';
@@ -10220,6 +10289,7 @@
                 <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
                 <span class="last-update">${lastUpdateText}</span>
+                ${lowBattHtml}
               </div>
             ` });
             }
