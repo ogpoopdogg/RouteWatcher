@@ -5455,7 +5455,7 @@
             position: absolute;
             inset: 0;
             transform-origin: 50% 50%;
-            transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
         /* the scene is twice the screen each way so it still fills the screen when the stage moves for the login box */
         #ecIntro .ec-intro-scene { position: absolute; left: -50%; top: -50%; width: 200%; height: 200%; }
@@ -5491,7 +5491,7 @@
             -webkit-mask: radial-gradient(circle, #000 0 69%, transparent 70%);
             mask: radial-gradient(circle, #000 0 69%, transparent 70%);
             opacity: 0;
-            animation: ecIntroRadarIn 0.6s ease 0.35s forwards, ecIntroSpin 1.5s linear infinite;
+            animation: ecIntroRadarIn 0.4s ease 0.2s forwards, ecIntroSpin 1.5s linear infinite;
             pointer-events: none;
         }
         @keyframes ecIntroRadarIn { to { opacity: 1; } }
@@ -5516,7 +5516,7 @@
             mask: url(icon3.png) center / contain no-repeat;
             filter: drop-shadow(0 0 6px rgba(247, 201, 72, 0.8));
             opacity: 0;
-            animation: ecIntroHolo 1.5s steps(1, end) 0.55s forwards;
+            animation: ecIntroHolo 0.95s steps(1, end) 0.34s forwards;
         }
         @keyframes ecIntroHolo {
             0% { opacity: 0.5; }
@@ -5530,7 +5530,7 @@
             object-fit: contain;
             -webkit-clip-path: inset(-30% -30% 100% -30%);
             clip-path: inset(-30% -30% 100% -30%);
-            animation: ecIntroRevealGlow 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s forwards, ecIntroFlash 0.9s ease-out 1.85s;
+            animation: ecIntroRevealGlow 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s forwards, ecIntroFlash 0.6s ease-out 1.15s;
         }
         /* same reveal, but with room around the picture so its glow is not cut off square */
         @keyframes ecIntroRevealGlow {
@@ -5554,8 +5554,8 @@
             clip-path: inset(0 0 100% 0);
             opacity: 0;
         }
-        #ecIntro .ec-intro-ghost.c { background: #2ee6ff; animation: ecIntroGlitchC 0.8s steps(1, end) 1.15s, ecIntroReveal 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s forwards; }
-        #ecIntro .ec-intro-ghost.m { background: #ff3df2; animation: ecIntroGlitchM 0.8s steps(1, end) 1.15s, ecIntroReveal 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s forwards; }
+        #ecIntro .ec-intro-ghost.c { background: #2ee6ff; animation: ecIntroGlitchC 0.5s steps(1, end) 0.71s, ecIntroReveal 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s forwards; }
+        #ecIntro .ec-intro-ghost.m { background: #ff3df2; animation: ecIntroGlitchM 0.5s steps(1, end) 0.71s, ecIntroReveal 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s forwards; }
         @keyframes ecIntroGlitchC {
             0% { opacity: 0.9; transform: translate(-5px, 0); }
             20% { opacity: 0.7; transform: translate(3px, -1px); }
@@ -5583,7 +5583,7 @@
             background: linear-gradient(90deg, transparent, #fff3c4 20%, #fff 50%, #fff3c4 80%, transparent);
             box-shadow: 0 0 12px 3px rgba(247, 201, 72, 0.85), 0 0 30px 6px rgba(247, 201, 72, 0.35);
             opacity: 0;
-            animation: ecIntroScan 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s;
+            animation: ecIntroScan 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s;
         }
         @keyframes ecIntroScan {
             0% { top: 0; opacity: 1; }
@@ -5609,7 +5609,7 @@
             border: 1px solid rgba(247, 201, 72, 0.22);
             box-shadow: 0 0 24px rgba(9, 10, 16, 0.9);
             opacity: 0;
-            animation: ecIntroFade 0.25s ease 1.4s forwards;
+            animation: ecIntroFade 0.2s ease 0.85s forwards;
         }
         #ecIntro .ec-intro-title {
             display: block;
@@ -5619,7 +5619,7 @@
             color: #fff !important;
             text-shadow: 0 0 14px rgba(247, 201, 72, 0.55);
             opacity: 0;
-            animation: ecIntroFade 0.3s ease 1.45s forwards;
+            animation: ecIntroFade 0.2s ease 0.88s forwards;
         }
         #ecIntro .ec-intro-sub {
             display: inline-flex;
@@ -5630,7 +5630,7 @@
             letter-spacing: 0.24em;
             color: #34d27b !important;
             opacity: 0;
-            animation: ecIntroFade 0.3s ease 1.85s forwards;
+            animation: ecIntroFade 0.2s ease 1.15s forwards;
         }
         #ecIntro .ec-intro-sub::before {
             content: '';
@@ -5794,38 +5794,38 @@
                     <path d="M2180 570H1460" stroke="#f7c948" stroke-width="2"/>
                     <path d="M900 -470V-20" stroke="#5aa9ff" stroke-width="2"/>
                     <path d="M540 1370V920" stroke="#34d27b" stroke-width="2"/>
-                    <path class="ec-ir" data-i="1" data-at="0.05" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#f7c948" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="2" data-at="0.15" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="3" data-at="0.25" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#5aa9ff" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="4" data-at="0.3" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#f7c948" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="5" data-at="0.4" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#5aa9ff" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="6" data-at="0.45" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-if" data-i="1" data-at="0.05" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="2" data-at="0.15" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="3" data-at="0.25" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="4" data-at="0.3" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="5" data-at="0.4" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="6" data-at="0.45" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <circle class="ec-id" data-i="1" data-at="0.05" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="2" data-at="0.15" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="3" data-at="0.25" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="4" data-at="0.3" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="5" data-at="0.4" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="6" data-at="0.45" r="5" fill="#fff" opacity="0"/>
+                    <path class="ec-ir" data-i="1" data-at="0.03" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#f7c948" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="2" data-at="0.09" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="3" data-at="0.15" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#5aa9ff" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="4" data-at="0.19" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#f7c948" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="5" data-at="0.25" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#5aa9ff" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-ir" data-i="6" data-at="0.28" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
+                    <path class="ec-if" data-i="1" data-at="0.03" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="2" data-at="0.09" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="3" data-at="0.15" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="4" data-at="0.19" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="5" data-at="0.25" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <path class="ec-if" data-i="6" data-at="0.28" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#fff" stroke-width="1.6" opacity="0"/>
+                    <circle class="ec-id" data-i="1" data-at="0.03" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="2" data-at="0.09" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="3" data-at="0.15" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="4" data-at="0.19" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="5" data-at="0.25" r="5" fill="#fff" opacity="0"/>
+                    <circle class="ec-id" data-i="6" data-at="0.28" r="5" fill="#fff" opacity="0"/>
                 </g>
                 <!-- ports on the ring light up as each route arrives -->
                 <g filter="url(#ecIGlow)">
-                    <circle class="ec-ip" data-at="0.05" cx="720" cy="330" r="4.5" fill="#f7c948" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.15" cx="600" cy="450" r="4.5" fill="#34d27b" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.25" cx="720" cy="570" r="4.5" fill="#5aa9ff" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.3" cx="840" cy="450" r="4.5" fill="#f7c948" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.4" cx="805" cy="365" r="4.5" fill="#5aa9ff" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.45" cx="635" cy="535" r="4.5" fill="#34d27b" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.03" cx="720" cy="330" r="4.5" fill="#f7c948" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.09" cx="600" cy="450" r="4.5" fill="#34d27b" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.15" cx="720" cy="570" r="4.5" fill="#5aa9ff" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.19" cx="840" cy="450" r="4.5" fill="#f7c948" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.25" cx="805" cy="365" r="4.5" fill="#5aa9ff" opacity="0"/>
+                    <circle class="ec-ip" data-at="0.28" cx="635" cy="535" r="4.5" fill="#34d27b" opacity="0"/>
                 </g>
                 <!-- GPS pings from the pin, every 3 s once the logo is in -->
                 <g fill="none" stroke="#f7c948" stroke-width="2">
-                    <circle class="ec-iping" data-at="1.85" cx="720" cy="443" r="20" opacity="0"/>
-                    <circle class="ec-iping" data-at="2.25" cx="720" cy="443" r="20" opacity="0"/>
+                    <circle class="ec-iping" data-at="1.15" cx="720" cy="443" r="20" opacity="0"/>
+                    <circle class="ec-iping" data-at="1.4" cx="720" cy="443" r="20" opacity="0"/>
                 </g>
                 <rect x="-720" y="-450" width="2880" height="1800" fill="url(#ecISceneFade)"/>
             </svg>
@@ -5849,9 +5849,9 @@
         // Starts as soon as the page opens, before Firebase loads. The route lines run into a GPS ring, the logo
         // scans in and pings. Then either the login box slides in over it (ecIntroShowLogin), or, when already
         // signed in, the logo flies into the header and the app shows (ecIntroToApp). Waits for the logo to
-        // finish (about 2.3 s) unless tapped. Reduced motion: no animation, the plain login screen is used.
+        // finish (about 1.45 s; the fly to the header takes 0.55 s) unless tapped. Reduced motion: no animation, the plain login screen is used.
         (function() {
-            const EC_INTRO_READY_MS = 2300;
+            const EC_INTRO_READY_MS = 1450;
             let st = null;
             function reduced() {
                 try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
@@ -5884,7 +5884,7 @@
                 return s;
             }
             // The SVG scene, moved frame by frame (SVG's own timed animations would wait for the whole page to load)
-            const DRAW_S = 1.0;
+            const DRAW_S = 0.62;
             const easeInOut = function(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; };
             const easeOut = function(p) { return 1 - Math.pow(1 - p, 3); };
             const clamp01 = function(p) { return p < 0 ? 0 : (p > 1 ? 1 : p); };
@@ -5907,7 +5907,7 @@
                 const frame = function(now) {
                     if (!el.isConnected && s.done) return;
                     const t = (now - t0) / 1000;
-                    if (ring) ring.setAttribute('opacity', clamp01((t - 0.3) / 0.5));
+                    if (ring) ring.setAttribute('opacity', clamp01((t - 0.18) / 0.3));
                     lines.forEach(function(l) {
                         if (!l.g || t < l.t) return;
                         const p = easeInOut(clamp01((t - l.t) / DRAW_S));
@@ -5950,10 +5950,10 @@
                 title.style.whiteSpace = 'nowrap';
                 title.style.overflow = 'hidden';
                 const glyphs = '01#/<>=+*%';
-                const t0 = performance.now() + 1450;
+                const t0 = performance.now() + 880;
                 const tick = function(now) {
                     if (s.done || !title.isConnected) return;
-                    const k = (now - t0) / 550;
+                    const k = (now - t0) / 350;
                     if (k >= 1) { title.textContent = word; return; }
                     if (k >= 0) {
                         title.textContent = word.split('').map(function(ch, i) {
@@ -6012,7 +6012,7 @@
                 const from = logo ? logo.getBoundingClientRect() : null;
                 const to = target ? target.getBoundingClientRect() : null;
                 el.classList.add('ec-out');
-                const dur = 700;
+                const dur = 550;
                 if (logo && from && to && to.width && from.width && logo.animate) {
                     // shoot the logo into the header logo's spot (same picture, so only move + scale); the stage may
                     // be scaled for the login box, so screen distances are divided by that scale
