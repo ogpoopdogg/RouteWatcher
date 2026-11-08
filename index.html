@@ -5428,6 +5428,215 @@
             bottom: calc(var(--ec-bottom-bar, 50px) + 66px);
         }
         .ec-notice { bottom: calc(var(--ec-bottom-bar, 50px) + 24px); }
+
+        /* =====================================================================
+           APP-OPEN INTRO: plays after login and when the app opens.
+           Same dark map grid and route lines as the login screen; the routes
+           run into a GPS ring around the logo, the logo scans in like a
+           hologram, sends out a GPS ping, then flies into the header.
+           Built by ecIntroPlay(); tap anywhere to skip.
+           ===================================================================== */
+        #ecIntro {
+            --u: 1px; /* one unit of the 1440x900 scene, set from JS so the HTML logo lines up with the SVG ring */
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            overflow: hidden;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            background:
+                radial-gradient(ellipse 70% 55% at 50% 45%, rgba(247, 201, 72, 0.07), transparent 70%),
+                #090a10;
+            transition: background-color 0.5s ease;
+        }
+        #ecIntro.ec-out { background: transparent; pointer-events: none; transition: background 0.55s ease 0.1s; }
+        #ecIntro .ec-intro-scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+        #ecIntro.ec-out .ec-intro-scene,
+        #ecIntro.ec-out .ec-intro-text,
+        #ecIntro.ec-out .ec-intro-radar { opacity: 0; transition: opacity 0.45s ease; }
+        /* the dashed GPS ring turns slowly while the routes come in */
+        #ecIntro .ec-intro-ring { transform-box: view-box; transform-origin: 720px 450px; animation: ecIntroSpin 9s linear infinite; }
+        #ecIntro .ec-intro-ring2 { transform-box: view-box; transform-origin: 720px 450px; animation: ecIntroSpin 14s linear infinite reverse; }
+        @keyframes ecIntroSpin { to { transform: rotate(360deg); } }
+
+        /* radar sweep behind the logo */
+        #ecIntro .ec-intro-radar {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: calc(var(--u) * 236);
+            height: calc(var(--u) * 236);
+            margin: calc(var(--u) * -118) 0 0 calc(var(--u) * -118);
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(247, 201, 72, 0) 0deg, rgba(247, 201, 72, 0) 280deg, rgba(247, 201, 72, 0.28) 356deg, rgba(247, 201, 72, 0.55) 360deg);
+            -webkit-mask: radial-gradient(circle, #000 0 69%, transparent 70%);
+            mask: radial-gradient(circle, #000 0 69%, transparent 70%);
+            opacity: 0;
+            animation: ecIntroRadarIn 0.6s ease 0.35s forwards, ecIntroSpin 1.5s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes ecIntroRadarIn { to { opacity: 1; } }
+
+        /* the logo: hologram grid outline first, then a scan line fills it in solid */
+        #ecIntro .ec-intro-logo {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: calc(var(--u) * 160);
+            aspect-ratio: 532 / 469;
+            transform: translate(-50%, -50%);
+            transform-origin: 0 0;
+        }
+        #ecIntro .ec-intro-logo > * { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+        #ecIntro .ec-intro-holo {
+            background:
+                repeating-linear-gradient(0deg, rgba(247, 201, 72, 0.95) 0 1px, transparent 1px 5px),
+                repeating-linear-gradient(90deg, rgba(247, 201, 72, 0.55) 0 1px, transparent 1px 5px),
+                rgba(247, 201, 72, 0.12);
+            -webkit-mask: url(icon3.png) center / contain no-repeat;
+            mask: url(icon3.png) center / contain no-repeat;
+            filter: drop-shadow(0 0 6px rgba(247, 201, 72, 0.8));
+            opacity: 0;
+            animation: ecIntroHolo 1.5s steps(1, end) 0.55s forwards;
+        }
+        @keyframes ecIntroHolo {
+            0% { opacity: 0.5; }
+            8% { opacity: 0.1; }
+            14% { opacity: 0.85; }
+            20% { opacity: 0.3; }
+            26%, 70% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        #ecIntro .ec-intro-img {
+            object-fit: contain;
+            -webkit-clip-path: inset(-30% -30% 100% -30%);
+            clip-path: inset(-30% -30% 100% -30%);
+            animation: ecIntroRevealGlow 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s forwards, ecIntroFlash 0.9s ease-out 1.85s;
+        }
+        /* same reveal, but with room around the picture so its glow is not cut off square */
+        @keyframes ecIntroRevealGlow {
+            from { -webkit-clip-path: inset(-30% -30% 100% -30%); clip-path: inset(-30% -30% 100% -30%); }
+            to { -webkit-clip-path: inset(-30% -30% -30% -30%); clip-path: inset(-30% -30% -30% -30%); }
+        }
+        @keyframes ecIntroReveal {
+            from { -webkit-clip-path: inset(0 0 100% 0); clip-path: inset(0 0 100% 0); }
+            to { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
+        }
+        @keyframes ecIntroFlash {
+            0% { filter: brightness(1.9) drop-shadow(0 0 18px rgba(247, 201, 72, 1)); }
+            100% { filter: brightness(1) drop-shadow(0 0 10px rgba(247, 201, 72, 0.45)); }
+        }
+        #ecIntro .ec-intro-img { filter: drop-shadow(0 0 10px rgba(247, 201, 72, 0.45)); }
+        /* colour-split ghosts behind the logo: only their edges peek out, jittering while the scan runs */
+        #ecIntro .ec-intro-ghost {
+            -webkit-mask: url(icon3.png) center / contain no-repeat;
+            mask: url(icon3.png) center / contain no-repeat;
+            -webkit-clip-path: inset(0 0 100% 0);
+            clip-path: inset(0 0 100% 0);
+            opacity: 0;
+        }
+        #ecIntro .ec-intro-ghost.c { background: #2ee6ff; animation: ecIntroGlitchC 0.8s steps(1, end) 1.15s, ecIntroReveal 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s forwards; }
+        #ecIntro .ec-intro-ghost.m { background: #ff3df2; animation: ecIntroGlitchM 0.8s steps(1, end) 1.15s, ecIntroReveal 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s forwards; }
+        @keyframes ecIntroGlitchC {
+            0% { opacity: 0.9; transform: translate(-5px, 0); }
+            20% { opacity: 0.7; transform: translate(3px, -1px); }
+            40% { opacity: 0.9; transform: translate(-7px, 1px); }
+            60% { opacity: 0.6; transform: translate(-3px, 0); }
+            80% { opacity: 0.2; transform: translate(-1px, 0); }
+            100% { opacity: 0; transform: none; }
+        }
+        @keyframes ecIntroGlitchM {
+            0% { opacity: 0.9; transform: translate(5px, 1px); }
+            20% { opacity: 0.7; transform: translate(-3px, 0); }
+            40% { opacity: 0.9; transform: translate(6px, -1px); }
+            60% { opacity: 0.6; transform: translate(3px, 0); }
+            80% { opacity: 0.15; transform: translate(1px, 0); }
+            100% { opacity: 0; transform: none; }
+        }
+        /* the bright scan line that sweeps down the logo */
+        #ecIntro .ec-intro-scan {
+            height: 3px;
+            top: 0;
+            bottom: auto;
+            left: -14%;
+            width: 128%;
+            border-radius: 2px;
+            background: linear-gradient(90deg, transparent, #fff3c4 20%, #fff 50%, #fff3c4 80%, transparent);
+            box-shadow: 0 0 12px 3px rgba(247, 201, 72, 0.85), 0 0 30px 6px rgba(247, 201, 72, 0.35);
+            opacity: 0;
+            animation: ecIntroScan 0.7s cubic-bezier(0.45, 0, 0.25, 1) 1.15s;
+        }
+        @keyframes ecIntroScan {
+            0% { top: 0; opacity: 1; }
+            92% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        /* name + status under the ring */
+        #ecIntro .ec-intro-text {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(50% + var(--u) * 150);
+            text-align: center;
+            pointer-events: none;
+        }
+        #ecIntro .ec-intro-text > span:first-child {
+            /* dark read-out box so the route lines pass behind the words */
+            display: inline-block;
+            padding: 9px 16px 10px;
+            border-radius: 10px;
+            background: rgba(9, 10, 16, 0.88);
+            border: 1px solid rgba(247, 201, 72, 0.22);
+            box-shadow: 0 0 24px rgba(9, 10, 16, 0.9);
+            opacity: 0;
+            animation: ecIntroFade 0.25s ease 1.4s forwards;
+        }
+        #ecIntro .ec-intro-title {
+            display: block;
+            font: 800 clamp(17px, 2.4vw, 24px)/1.2 'Inter', sans-serif;
+            letter-spacing: 0.32em;
+            padding-left: 0.32em;
+            color: #fff !important;
+            text-shadow: 0 0 14px rgba(247, 201, 72, 0.55);
+            opacity: 0;
+            animation: ecIntroFade 0.3s ease 1.45s forwards;
+        }
+        #ecIntro .ec-intro-sub {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            letter-spacing: 0.24em;
+            color: #34d27b !important;
+            opacity: 0;
+            animation: ecIntroFade 0.3s ease 1.85s forwards;
+        }
+        #ecIntro .ec-intro-sub::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #34d27b;
+            box-shadow: 0 0 8px #34d27b;
+            animation: ecIntroBlink 0.8s steps(1, end) infinite;
+        }
+        @keyframes ecIntroFade { to { opacity: 1; } }
+        @keyframes ecIntroBlink { 50% { opacity: 0.25; } }
+
+        /* header waits for the logo to land, then plays its own entrance */
+        body.ec-intro-on #app > header .header-logo { opacity: 0; }
+        body.ec-intro-on #app > header .header-title,
+        body.ec-intro-on #app > header .header-title::after,
+        body.ec-intro-on #app > header .badge { animation-play-state: paused; }
+        #app > header .ec-logo.ec-landed { animation: ecLogoLand 0.9s ease-out; }
+        @keyframes ecLogoLand {
+            0% { filter: drop-shadow(0 0 16px rgba(247, 201, 72, 1)) brightness(1.6); }
+            100% { filter: drop-shadow(0 0 8px rgba(247, 201, 72, 0.32)); }
+        }
+        @media (prefers-reduced-motion: reduce) { #ecIntro { display: none; } }
+
     </style>
 </head>
 <body>
@@ -5511,6 +5720,168 @@
     <div id="ecNotice" class="ec-notice" role="alert"></div>
 
     <div id="ecIdleBanner" class="ec-idle-banner" aria-hidden="true"></div>
+
+    <!-- App-open intro (see APP-OPEN INTRO in the styles and ecIntroPlay); cloned in when the app opens -->
+    <template id="ecIntroTpl">
+        <div id="ecIntro" aria-hidden="true">
+            <svg class="ec-intro-scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+                <defs>
+                    <pattern id="ecIGridMinor" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/></pattern>
+                    <pattern id="ecIGridMajor" width="200" height="200" patternUnits="userSpaceOnUse"><rect width="200" height="200" fill="url(#ecIGridMinor)"/><path d="M200 0H0V200" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/></pattern>
+                    <radialGradient id="ecISceneFade" cx="50%" cy="50%" r="65%"><stop offset="0%" stop-color="#090a10" stop-opacity="0"/><stop offset="100%" stop-color="#090a10" stop-opacity="0.95"/></radialGradient>
+                    <filter id="ecIGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    <path id="ecIR1" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330"/>
+                    <path id="ecIR2" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600"/>
+                    <path id="ecIR3" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570"/>
+                    <path id="ecIR4" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840"/>
+                    <path id="ecIR5" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365"/>
+                    <path id="ecIR6" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535"/>
+                </defs>
+                <rect width="1440" height="900" fill="url(#ecIGridMajor)"/>
+                <!-- the login screen's faint background routes, so the two screens feel like one -->
+                <g fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2">
+                    <path d="M-20 620H260Q280 620 280 600V430Q280 410 300 410H610Q630 410 630 390V250Q630 230 650 230H980"/>
+                    <path d="M1460 700H1180Q1160 700 1160 680V560Q1160 540 1140 540H880Q860 540 860 520V380Q860 360 880 360H1060"/>
+                    <path d="M420 -20V140Q420 160 440 160H760Q780 160 780 180V300"/>
+                    <path d="M1100 920V800Q1100 780 1080 780H720Q700 780 700 760V640Q700 620 680 620H520"/>
+                </g>
+                <g fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2">
+                    <use href="#ecIR1"/>
+                    <use href="#ecIR2"/>
+                    <use href="#ecIR3"/>
+                    <use href="#ecIR4"/>
+                    <use href="#ecIR5"/>
+                    <use href="#ecIR6"/>
+                </g>
+                <!-- GPS ring around the logo: the routes plug into it -->
+                <g fill="none" opacity="0">
+                    <animate attributeName="opacity" to="1" dur="0.5s" begin="indefinite" data-at="0.3" fill="freeze"/>
+                    <circle class="ec-intro-ring" cx="720" cy="450" r="120" stroke="rgba(247,201,72,0.55)" stroke-width="1.5" stroke-dasharray="16 7"/>
+                    <circle class="ec-intro-ring2" cx="720" cy="450" r="132" stroke="rgba(90,169,255,0.35)" stroke-width="1" stroke-dasharray="2 10"/>
+                    <circle cx="720" cy="450" r="106" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                </g>
+                <g fill="none" stroke-linecap="round" filter="url(#ecIGlow)">
+                    <path d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" pathLength="1" stroke="#f7c948" stroke-width="2.5" stroke-dasharray="1" stroke-dashoffset="1">
+                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.05" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
+                    </path>
+                    <path d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" pathLength="1" stroke="#34d27b" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
+                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.15" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
+                    </path>
+                    <path d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" pathLength="1" stroke="#5aa9ff" stroke-width="2.5" stroke-dasharray="1" stroke-dashoffset="1">
+                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.25" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
+                    </path>
+                    <path d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" pathLength="1" stroke="#f7c948" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
+                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.3" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
+                    </path>
+                    <path d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" pathLength="1" stroke="#5aa9ff" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
+                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.4" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
+                    </path>
+                    <path d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" pathLength="1" stroke="#34d27b" stroke-width="2" stroke-dasharray="1" stroke-dashoffset="1">
+                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.0s" begin="indefinite" data-at="0.45" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.3 1"/>
+                    </path>
+                    <path d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
+                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.05" fill="freeze"/>
+                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.05" repeatCount="indefinite"/>
+                    </path>
+                    <path d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
+                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.15" fill="freeze"/>
+                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.15" repeatCount="indefinite"/>
+                    </path>
+                    <path d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
+                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.25" fill="freeze"/>
+                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.25" repeatCount="indefinite"/>
+                    </path>
+                    <path d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
+                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.3" fill="freeze"/>
+                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.3" repeatCount="indefinite"/>
+                    </path>
+                    <path d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
+                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.4" fill="freeze"/>
+                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.4" repeatCount="indefinite"/>
+                    </path>
+                    <path d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" pathLength="1" stroke="#fff" stroke-width="1.6" stroke-dasharray="0.012 0.05" opacity="0">
+                        <animate attributeName="opacity" to="0.75" dur="0.2s" begin="indefinite" data-at="1.45" fill="freeze"/>
+                        <animate attributeName="stroke-dashoffset" from="0" to="-0.124" dur="0.45s" begin="indefinite" data-at="1.45" repeatCount="indefinite"/>
+                    </path>
+                    <circle r="5" fill="#fff" opacity="0">
+                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.05"/>
+                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.05" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR1"/></animateMotion>
+                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.05" fill="freeze"/>
+                    </circle>
+                    <circle r="5" fill="#fff" opacity="0">
+                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.15"/>
+                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.15" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR2"/></animateMotion>
+                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.15" fill="freeze"/>
+                    </circle>
+                    <circle r="5" fill="#fff" opacity="0">
+                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.25"/>
+                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.25" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR3"/></animateMotion>
+                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.25" fill="freeze"/>
+                    </circle>
+                    <circle r="5" fill="#fff" opacity="0">
+                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.3"/>
+                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.3" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR4"/></animateMotion>
+                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.3" fill="freeze"/>
+                    </circle>
+                    <circle r="5" fill="#fff" opacity="0">
+                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.4"/>
+                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.4" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR5"/></animateMotion>
+                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.4" fill="freeze"/>
+                    </circle>
+                    <circle r="5" fill="#fff" opacity="0">
+                        <set attributeName="opacity" to="1" begin="indefinite" data-at="0.45"/>
+                        <animateMotion dur="1.0s" begin="indefinite" data-at="0.45" fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.3 1"><mpath href="#ecIR6"/></animateMotion>
+                        <animate attributeName="r" values="5;11;0" dur="0.35s" begin="indefinite" data-at="1.45" fill="freeze"/>
+                    </circle>
+                </g>
+                <!-- ports on the ring light up as each route arrives -->
+                <g filter="url(#ecIGlow)">
+                    <circle cx="720" cy="330" r="4.5" fill="#f7c948" opacity="0">
+                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.05" fill="freeze"/>
+                    </circle>
+                    <circle cx="600" cy="450" r="4.5" fill="#34d27b" opacity="0">
+                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.15" fill="freeze"/>
+                    </circle>
+                    <circle cx="720" cy="570" r="4.5" fill="#5aa9ff" opacity="0">
+                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.25" fill="freeze"/>
+                    </circle>
+                    <circle cx="840" cy="450" r="4.5" fill="#f7c948" opacity="0">
+                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.3" fill="freeze"/>
+                    </circle>
+                    <circle cx="805" cy="365" r="4.5" fill="#5aa9ff" opacity="0">
+                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.4" fill="freeze"/>
+                    </circle>
+                    <circle cx="635" cy="535" r="4.5" fill="#34d27b" opacity="0">
+                        <animate attributeName="opacity" to="1" dur="0.15s" begin="indefinite" data-at="1.45" fill="freeze"/>
+                    </circle>
+                </g>
+                <!-- GPS ping from the pin once the logo is in -->
+                <g fill="none" stroke="#f7c948" stroke-width="2">
+                    <circle cx="720" cy="443" r="20" opacity="0">
+                        <animate attributeName="r" from="20" to="230" dur="1.1s" begin="indefinite" data-at="1.85" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.6 0.4 1"/>
+                        <animate attributeName="opacity" values="0.9;0" dur="1.1s" begin="indefinite" data-at="1.85" fill="freeze"/>
+                    </circle>
+                    <circle cx="720" cy="443" r="20" opacity="0">
+                        <animate attributeName="r" from="20" to="230" dur="1.1s" begin="indefinite" data-at="2.25" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.6 0.4 1"/>
+                        <animate attributeName="opacity" values="0.9;0" dur="1.1s" begin="indefinite" data-at="2.25" fill="freeze"/>
+                    </circle>
+                </g>
+                <rect width="1440" height="900" fill="url(#ecISceneFade)"/>
+            </svg>
+            <div class="ec-intro-radar"></div>
+            <div class="ec-intro-logo">
+                <i class="ec-intro-holo"></i>
+                <i class="ec-intro-ghost c"></i>
+                <i class="ec-intro-ghost m"></i>
+                <img class="ec-intro-img" src="icon3.png" alt="" onerror="this.onerror=null;this.src='icon2.png'">
+                <i class="ec-intro-scan"></i>
+            </div>
+            <div class="ec-intro-text"><span>
+                <span class="ec-intro-title">E&amp;C DISPATCH</span>
+                <span class="ec-intro-sub">LIVE GPS</span>
+            </span></div>
+        </div>
+    </template>
 
     <!-- Main App -->
     <div id="app" style="display:none;">
@@ -6708,6 +7079,97 @@
             try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
         }
 
+        // ===== APP-OPEN INTRO =====
+        // Plays when the app opens or someone logs in: the login screen's route lines run into a GPS ring,
+        // the logo scans in, pings, then flies into the header. Tap anywhere to skip. Styles: APP-OPEN INTRO.
+        let ecIntroBusy = false;
+        function ecIntroPlay() {
+            if (ecIntroBusy || ecReducedMotion()) return;
+            const tpl = document.getElementById('ecIntroTpl');
+            if (!tpl || !tpl.content) return;
+            const frag = tpl.content.cloneNode(true);
+            const el = frag.querySelector('#ecIntro');
+            if (!el) return;
+            ecIntroBusy = true;
+            document.body.classList.add('ec-intro-on');
+            document.body.appendChild(frag);
+            const fit = function() {
+                // one unit of the 1440x900 scene ("slice" scaling), so the HTML logo sits inside the SVG ring
+                const u = Math.max(el.clientWidth / 1440, el.clientHeight / 900);
+                el.style.setProperty('--u', u + 'px');
+            };
+            fit();
+            window.addEventListener('resize', fit);
+            const svg = el.querySelector('svg');
+            el.querySelectorAll('[data-at]').forEach(function(a) {
+                try { a.beginElementAt(parseFloat(a.getAttribute('data-at')) || 0); } catch (e) {}
+            });
+            let done = false;
+            const timer = setTimeout(function() { finish(false); }, 2900);
+            function finish(skipped) {
+                if (done) return;
+                done = true;
+                clearTimeout(timer);
+                window.removeEventListener('resize', fit);
+                const logo = el.querySelector('.ec-intro-logo');
+                const target = document.querySelector('#app > header .header-logo');
+                const from = logo ? logo.getBoundingClientRect() : null;
+                const to = target ? target.getBoundingClientRect() : null;
+                el.classList.add('ec-out');
+                const dur = skipped ? 320 : 700;
+                if (logo && from && to && to.width && logo.animate) {
+                    // fly the logo into the header logo's spot (both have the same picture, so only scale + move)
+                    const s = to.width / from.width;
+                    logo.style.left = from.left + 'px';
+                    logo.style.top = from.top + 'px';
+                    logo.style.width = from.width + 'px';
+                    logo.style.transform = 'none';
+                    logo.animate([
+                        { transform: 'translate(0, 0) scale(1)' },
+                        { transform: 'translate(' + (to.left - from.left) + 'px, ' + (to.top - from.top) + 'px) scale(' + s + ')' }
+                    ], { duration: dur, easing: 'cubic-bezier(0.65, 0, 0.3, 1)', fill: 'forwards' });
+                } else if (logo) {
+                    logo.style.transition = 'opacity ' + dur + 'ms';
+                    logo.style.opacity = '0';
+                }
+                setTimeout(function() {
+                    document.body.classList.remove('ec-intro-on');
+                    const badge = target ? target.closest('.ec-logo') : null;
+                    if (badge) {
+                        badge.classList.remove('ec-landed');
+                        void badge.offsetWidth;
+                        badge.classList.add('ec-landed');
+                        setTimeout(function() { badge.classList.remove('ec-landed'); }, 1000);
+                    }
+                    el.remove();
+                    ecIntroBusy = false;
+                }, dur);
+            }
+            const title = el.querySelector('.ec-intro-title');
+            if (title) {
+                const word = title.textContent;
+                title.style.width = title.offsetWidth + 'px'; // keep the box steady while the letters change
+                title.style.whiteSpace = 'nowrap';
+                title.style.overflow = 'hidden';
+                const glyphs = '01#/<>=+*%';
+                const t0 = performance.now() + 1450;
+                const tick = function(now) {
+                    if (done || !title.isConnected) return;
+                    const k = (now - t0) / 550; // letters lock in left to right over 0.55 s
+                    if (k >= 1) { title.textContent = word; return; }
+                    if (k >= 0) {
+                        title.textContent = word.split('').map(function(ch, i) {
+                            return (ch === ' ' || i < k * word.length) ? ch : glyphs[Math.floor(Math.random() * glyphs.length)];
+                        }).join('');
+                    }
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            }
+            el.addEventListener('pointerdown', function() { finish(true); });
+            if (svg && svg.unpauseAnimations) { try { svg.unpauseAnimations(); } catch (e) {} }
+        }
+
         // ===== THEME =====
         // Switches theme with a circular reveal growing from the logo; browsers without View Transitions switch instantly
         function toggleTheme() {
@@ -7158,6 +7620,7 @@
                 isAdminUser = (email === 'justin@ec.com');
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('app').style.display = 'flex';
+                ecIntroPlay();
                 // The map will be initialized by the callback from Google Maps script.
                 // But we need to ensure initApp runs after login.
                 initApp();
