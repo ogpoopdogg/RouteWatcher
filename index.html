@@ -5152,8 +5152,10 @@
         body:not(.light-mode) #mapDriverControl .driver-entry {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 3px 8px;
+            gap: 6px;
+            padding: 6px 12px;
+            min-height: 34px;
+            box-sizing: border-box;
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 999px;
             background: rgba(12, 13, 20, 0.78);
@@ -5162,18 +5164,35 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             max-width: 100%;
             min-width: 0;
-            font-size: 12px;
+            font-size: 14px;
             line-height: 1.25;
+            transition: opacity 0.3s ease, filter 0.3s ease, box-shadow 0.3s ease, background 0.2s ease;
         }
         body:not(.light-mode) #mapDriverControl .driver-entry:hover { background: rgba(28, 30, 44, 0.9); }
         #mapDriverControl .driver-name,
         #mapDriverControl .driver-name.nick-name {
             color: var(--drv, #f7c948);
             font-weight: 700;
-            font-size: 12px;
-            max-width: 130px;
+            font-size: 14px;
+            max-width: 150px;
         }
-        #mapDriverControl .driver-status-dot { width: 8px; height: 8px; flex: 0 0 auto; }
+        #mapDriverControl .driver-status-dot { display: none; }
+        /* Same as the bottom buttons: Online glows softly in the driver's color, Standby / Offline are dimmed */
+        #mapDriverControl .driver-entry.ec-st-online,
+        body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online,
+        body.light-mode #mapDriverControl .driver-entry.ec-st-online {
+            border-color: color-mix(in srgb, var(--drv, #f7c948) 75%, transparent);
+            box-shadow: 0 0 10px -1px color-mix(in srgb, var(--drv, #f7c948) 55%, transparent),
+                inset 0 0 8px -2px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent);
+        }
+        #mapDriverControl .driver-entry.ec-st-standby,
+        #mapDriverControl .driver-entry.ec-st-offline {
+            opacity: 0.5;
+            filter: saturate(0.5);
+            box-shadow: none;
+        }
+        #mapDriverControl .driver-entry.ec-st-standby:hover,
+        #mapDriverControl .driver-entry.ec-st-offline:hover { opacity: 0.8; }
         #mapDriverControl .driver-eta-label { max-width: 150px; }
         body.light-mode #mapDriverControl .driver-entry {
             background: rgba(255, 255, 255, 0.92);
@@ -9645,18 +9664,14 @@
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 const color = drv.color || '#f7c948';
-                let statusColor = '#e74c3c';
-                if (status.class === 'status-online') statusColor = '#2ecc71';
-                else if (status.class === 'status-standby') statusColor = '#f1c40f';
+                // Name only; the status shows like the bottom buttons: Online glows, Standby / Offline are dimmed
                 const statusTitle = status.status.charAt(0).toUpperCase() + status.status.slice(1);
-                const onlineClass = status.status === 'online' ? ' is-online' : '';
                 const nameHtml = ecEsc(getDriverNickname(id) || getDriverDisplayName(id, drv));
                 let row = existingRows[String(id)];
                 if (!row) {
                     const temp = document.createElement('div');
                     temp.innerHTML = `<div class="driver-entry" onclick="showDriverLocation('${ecAttrJs(id)}')">
               <span class="driver-name${getDriverNickname(id) ? ' nick-name' : ''}">${nameHtml}</span>
-              <span class="driver-status-dot${onlineClass}" style="background:${statusColor};" title="${statusTitle}" aria-label="${statusTitle}"></span>
             </div>`;
                     row = temp.firstElementChild;
                     row.dataset.driverId = String(id);
@@ -9676,18 +9691,13 @@
                         nameSpan._nameHtml = nameHtml;
                     }
                     if (nameSpan) nameSpan.classList.toggle('nick-name', !!getDriverNickname(id));
-                    const statusSpan = row.querySelector('.driver-status-dot');
-                    if (statusSpan) {
-                        const statusClassName = 'driver-status-dot' + onlineClass;
-                        if (statusSpan.className !== statusClassName) statusSpan.className = statusClassName;
-                        if (statusSpan._statusColor !== statusColor) {
-                            statusSpan.style.background = statusColor;
-                            statusSpan._statusColor = statusColor;
-                        }
-                        if (statusSpan.getAttribute('title') !== statusTitle) statusSpan.setAttribute('title', statusTitle);
-                        if (statusSpan.getAttribute('aria-label') !== statusTitle) statusSpan.setAttribute('aria-label', statusTitle);
-                    }
                 }
+                // keep the ETA hold / label classes; only swap the status class
+                if (!row.classList.contains('ec-st-' + status.status)) {
+                    row.classList.remove('ec-st-online', 'ec-st-standby', 'ec-st-offline');
+                    row.classList.add('ec-st-' + status.status);
+                }
+                if (row.title !== statusTitle) row.title = statusTitle;
                 const currentAtIndex = container.children[index] || null;
                 if (currentAtIndex !== row) container.insertBefore(row, currentAtIndex);
                 index++;
