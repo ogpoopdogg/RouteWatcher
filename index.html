@@ -9609,10 +9609,23 @@
             pulseAnimationId = requestAnimationFrame(animate);
         }
 
+        // Driver buttons (map chips and bottom buttons) are grouped: Online first, then Standby, then Offline.
+        // Inside each group they keep their usual order.
+        const EC_STATUS_RANK = { online: 0, standby: 1, offline: 2 };
+        function ecDriverEntriesByStatus(driversObj) {
+            return Object.entries(driversObj).map(function(entry, i) {
+                const drv = entry[1];
+                const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
+                const st = getGPSStatus(drv.lastLocation?.updatedAt, devId).status;
+                const rank = EC_STATUS_RANK[st] !== undefined ? EC_STATUS_RANK[st] : 3;
+                return { entry: entry, rank: rank, i: i };
+            }).sort(function(a, b) { return (a.rank - b.rank) || (a.i - b.i); }).map(function(x) { return x.entry; });
+        }
+
         function updateMapDriverControl() {
             const container = document.getElementById('mapDriverControl');
             if (!container) return;
-            const entries = Object.entries(getFilteredDrivers());
+            const entries = ecDriverEntriesByStatus(getFilteredDrivers());
             if (entries.length === 0) {
                 container.innerHTML = '<div style="color:var(--muted);">No drivers</div>';
                 return;
@@ -10160,7 +10173,7 @@
         function renderDriverBadges() {
             renderAttentionStrip();
             const container = document.getElementById('driverBadges');
-            const entries = Object.entries(getFilteredDrivers());
+            const entries = ecDriverEntriesByStatus(getFilteredDrivers());
             if (container.classList.contains('ec-intro') && performance.now() - ecBadgeIntroStart > EC_BADGE_INTRO_MS) {
                 container.classList.remove('ec-intro');
             }
