@@ -5243,16 +5243,22 @@
 
         /* Driver buttons at the bottom: compact chips in rows, name in the driver's color + time since
            the last GPS fix. Online glows softly; Standby and Offline are dimmed like they're not in use. */
+        /* Two buttons on every line, all exactly the same size; a lone last button sits in the middle.
+           Long text gets smaller to fit (ecFitBadgeText) instead of the button getting bigger. */
         #driverBadges {
+            --ec-badge-gap: 6px;
             flex: 0 0 auto;
             display: flex;
             flex-wrap: wrap;
-            justify-content: flex-start;
-            gap: 4px;
+            justify-content: center;
+            align-content: flex-start;
+            gap: var(--ec-badge-gap);
             padding: 4px;
             padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
-            padding-left: calc(4px + env(safe-area-inset-left, 0px));
-            padding-right: calc(4px + env(safe-area-inset-right, 0px));
+            /* on wide screens the side padding grows so there are still only two buttons on a line (each up
+               to 320px) in the middle */
+            padding-left: max(calc(4px + env(safe-area-inset-left, 0px)), calc((100% - 646px) / 2));
+            padding-right: max(calc(4px + env(safe-area-inset-right, 0px)), calc((100% - 646px) / 2));
             max-height: 38vh;
             max-height: 38dvh;
             overflow-y: auto;
@@ -5262,17 +5268,28 @@
         #driverBadges .driver-badge,
         body:not(.light-mode) #driverBadges .driver-badge,
         body.light-mode #driverBadges .driver-badge {
-            flex: 1 1 auto;
+            /* half the line each (at most 320px on big screens so they don't stretch across a monitor) */
+            --ec-badge-w: min(calc((100% - var(--ec-badge-gap)) / 2), 320px);
+            flex: 0 0 var(--ec-badge-w);
+            width: var(--ec-badge-w);
             min-width: 0;
-            max-width: 100%;
-            min-height: 34px;
-            padding: 4px 12px;
+            max-width: var(--ec-badge-w);
+            height: 36px;
+            min-height: 36px;
+            max-height: 36px;
+            box-sizing: border-box;
+            overflow: hidden;
+            padding: 4px 10px;
             border-radius: 10px;
             border: 1px solid color-mix(in srgb, var(--drv, #f7c948) 45%, transparent) !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: stretch;
             text-align: left;
             font-size: 13px;
             transform: none;
+            --ec-fs: 1;
         }
         body:not(.light-mode) #driverBadges .driver-badge {
             background: color-mix(in srgb, var(--drv, #f7c948) 10%, rgba(17, 18, 27, 0.92));
@@ -5284,8 +5301,9 @@
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            gap: 8px;
+            gap: calc(8px * var(--ec-fs, 1));
             width: 100%;
+            min-width: 0;
         }
         /* name on the left; the time (and a low-battery warning after it) on the right */
         #driverBadges .driver-badge .badge-row .last-update { margin-left: auto !important; }
@@ -5293,6 +5311,7 @@
         body:not(.light-mode) #driverBadges .driver-badge .badge-row .name {
             color: var(--drv, #f7c948);
             font-weight: 700;
+            font-size: calc(13px * var(--ec-fs, 1));
             min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -5305,12 +5324,13 @@
         body:not(.light-mode) #driverBadges .driver-badge .last-update {
             flex: 0 0 auto;
             margin: 0;
-            font-size: 11px;
+            font-size: calc(11px * var(--ec-fs, 1));
             font-weight: 600;
             color: var(--muted);
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
-        #driverBadges .driver-badge .alarm-badge { flex: 0 0 auto; padding: 0 5px; font-size: 11px; border-radius: 8px; }
+        #driverBadges .driver-badge .alarm-badge { flex: 0 0 auto; padding: 0 5px; font-size: calc(11px * var(--ec-fs, 1)); border-radius: 8px; }
 
         /* Online: soft glow in the driver's color */
         #driverBadges .driver-badge.ec-st-online,
@@ -5350,13 +5370,13 @@
         #driverBadges .ec-parked {
             flex: 0 0 auto;
             margin-left: auto;
-            width: 17px;
-            height: 17px;
+            width: calc(17px * var(--ec-fs, 1));
+            height: calc(17px * var(--ec-fs, 1));
             border-radius: 5px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: calc(11px * var(--ec-fs, 1));
             font-weight: 800;
             color: #fff;
             background: #3b82f6;
@@ -5371,11 +5391,12 @@
             align-items: center;
             gap: 0;
             margin-left: -2px;
-            padding: 1px 6px;
+            padding: 1px calc(6px * var(--ec-fs, 1));
             border-radius: 8px;
-            font-size: 11px;
+            font-size: calc(11px * var(--ec-fs, 1));
             font-weight: 700;
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
             color: #ff6b5b;
             background: rgba(239, 90, 76, 0.14);
             border: 1px solid rgba(239, 90, 76, 0.45);
@@ -7310,6 +7331,7 @@
             localStorage.setItem('ec_theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
             updateMapStyles();
             updateMapMarkers(); // driver marker text colour depends on the theme
+            ecFitBadgeText(document.getElementById('driverBadges')); // text can be a little wider in the other theme
             if (modalDriverMarker && activeModalDriverId && drivers[activeModalDriverId]) {
                 const themeDrv = drivers[activeModalDriverId];
                 modalDriverMarker.setIcon(getDriverIcon(getDriverDisplayName(activeModalDriverId, themeDrv), themeDrv.color || '#f7c948', themeDrv.heading));
@@ -10990,16 +11012,65 @@
                     });
                     container.appendChild(badge);
                 });
+                ecFitBadgeText(container);
             }
             updateMapDriverControl();
+        }
+
+        // Every bottom button is the same size, so when a name (plus time, P, battery) is too long for its
+        // button, make that button's text smaller step by step until it fits (down to 60%; past that the
+        // name is cut with "…" as a last resort)
+        function ecTextWidth(el) {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const pad = parseFloat(getComputedStyle(el).paddingLeft) + parseFloat(getComputedStyle(el).paddingRight);
+            return range.getBoundingClientRect().width + (pad || 0);
+        }
+        function ecFitBadgeText(container) {
+            if (!container) return;
+            const EC_BADGE_MIN_TEXT = 0.6;
+            const badges = container.querySelectorAll('.driver-badge');
+            badges.forEach(function(badge) { badge.style.setProperty('--ec-fs', '1'); });
+            badges.forEach(function(badge) {
+                const row = badge.querySelector('.badge-row');
+                const name = badge.querySelector('.badge-row .name');
+                if (!row || !name || !row.clientWidth) return;
+                // full width of everything in the line (name at its natural width) vs the room in the button;
+                // measured exactly, because the browser rounds scrollWidth and a name over by a fraction of a
+                // pixel would still get "…"
+                const tooBig = function() {
+                    const items = row.children;
+                    let need = 0, n = 0;
+                    for (let i = 0; i < items.length; i++) {
+                        const w = items[i] === name ? ecTextWidth(name) : items[i].getBoundingClientRect().width;
+                        if (w > 0) { need += w; n++; }
+                    }
+                    need += Math.max(0, n - 1) * (parseFloat(getComputedStyle(row).columnGap) || 0);
+                    return need > row.getBoundingClientRect().width - 1;
+                };
+                let fs = 1;
+                while (tooBig() && fs > EC_BADGE_MIN_TEXT + 0.001) {
+                    fs = Math.max(EC_BADGE_MIN_TEXT, Math.round((fs - 0.04) * 100) / 100);
+                    badge.style.setProperty('--ec-fs', String(fs));
+                }
+            });
         }
 
         // The driver buttons' height, so the floating mic / Install App button can sit just above them
         if (typeof ResizeObserver !== 'undefined') {
             const ecBadgeBarEl = document.getElementById('driverBadges');
+            let ecBadgeBarW = 0;
             if (ecBadgeBarEl) new ResizeObserver(function() {
-                document.documentElement.style.setProperty('--ec-bottom-bar', Math.ceil(ecBadgeBarEl.getBoundingClientRect().height) + 'px');
+                const r = ecBadgeBarEl.getBoundingClientRect();
+                document.documentElement.style.setProperty('--ec-bottom-bar', Math.ceil(r.height) + 'px');
+                // the buttons got wider or narrower (phone turned, window resized): fit the text again
+                if (Math.round(r.width) !== ecBadgeBarW) {
+                    ecBadgeBarW = Math.round(r.width);
+                    ecFitBadgeText(ecBadgeBarEl);
+                }
             }).observe(ecBadgeBarEl);
+            // the app's font can arrive after the first buttons are drawn and change how wide the text is
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(function() { ecFitBadgeText(ecBadgeBarEl); });
         }
 
         // ===== DRIVER MODAL =====
