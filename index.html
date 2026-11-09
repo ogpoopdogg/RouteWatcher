@@ -5184,14 +5184,14 @@
 
         /* Driver buttons at the bottom: compact chips in rows, name in the driver's color + time since
            the last GPS fix. Online glows softly; Standby and Offline are dimmed like they're not in use. */
-        /* Two buttons on every line, all exactly the same size; a lone last button sits in the middle.
+        /* Two buttons on every line, all exactly the same size; a lone last button stays on the left.
            Long text gets smaller to fit (ecFitBadgeText) instead of the button getting bigger. */
         #driverBadges {
             --ec-badge-gap: 6px;
             flex: 0 0 auto;
             display: flex;
             flex-wrap: wrap;
-            justify-content: center;
+            justify-content: flex-start;
             align-content: flex-start;
             gap: var(--ec-badge-gap);
             padding: 4px;
