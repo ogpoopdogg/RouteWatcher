@@ -2952,58 +2952,6 @@
             color: var(--accent);
         }
 
-        /* ===== Zoom level indicator ===== */
-        .zoom-indicator {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translate(-50%, -12px);
-            z-index: 30;
-            pointer-events: none;
-            opacity: 0;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            background: rgba(11, 11, 20, 0.82);
-            border: 1px solid var(--border);
-            color: #fff;
-            border-radius: 30px;
-            padding: 5px 14px;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.4px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(4px);
-            transition: opacity 0.25s ease, transform 0.25s ease;
-        }
-        .zoom-indicator.visible {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-        .zoom-indicator .zoom-bar {
-            width: 54px;
-            height: 4px;
-            border-radius: 3px;
-            background: rgba(255, 255, 255, 0.18);
-            overflow: hidden;
-        }
-        .zoom-indicator .zoom-bar span {
-            display: block;
-            height: 100%;
-            width: 0%;
-            border-radius: 3px;
-            background: var(--accent);
-            transition: width 0.2s ease;
-        }
-        body.light-mode .zoom-indicator {
-            background: rgba(255, 255, 255, 0.92);
-            border-color: #ddd;
-            color: #000;
-        }
-        body.light-mode .zoom-indicator .zoom-bar {
-            background: rgba(0, 0, 0, 0.12);
-        }
-
         /* ===== Settings modal stability ===== */
         .settings-modal .settings-card {
             overscroll-behavior: contain;
@@ -3492,7 +3440,6 @@
         button, input, select, textarea { font-family: inherit; }
         .driver-badge .last-update,
         .driver-badge .battery,
-        .zoom-indicator,
         .route-time-box .rt-value,
         #historyResult { font-variant-numeric: tabular-nums; }
 
@@ -4043,12 +3990,6 @@
         .map-driver-control .driver-entry { transition: background 0.2s ease; border-radius: 8px; }
         body:not(.light-mode) .map-driver-control .driver-entry { border-bottom-color: var(--ec-line); }
         body:not(.light-mode) .map-driver-control .driver-entry:hover { background: rgba(255, 255, 255, 0.05); }
-        body:not(.light-mode) .zoom-indicator {
-            background: rgba(12, 13, 20, 0.82);
-            border-color: var(--ec-line-strong);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-        }
 
         /* =====================================================================
            DRIVER MODAL
@@ -5243,14 +5184,14 @@
 
         /* Driver buttons at the bottom: compact chips in rows, name in the driver's color + time since
            the last GPS fix. Online glows softly; Standby and Offline are dimmed like they're not in use. */
-        /* Two buttons on every line, all exactly the same size; a lone last button sits in the middle.
+        /* Two buttons on every line, all exactly the same size; a lone last button stays on the left.
            Long text gets smaller to fit (ecFitBadgeText) instead of the button getting bigger. */
         #driverBadges {
             --ec-badge-gap: 6px;
             flex: 0 0 auto;
             display: flex;
             flex-wrap: wrap;
-            justify-content: center;
+            justify-content: flex-start;
             align-content: flex-start;
             gap: var(--ec-badge-gap);
             padding: 4px;
@@ -6152,7 +6093,6 @@
                 <div id="dispatch-map"></div>
                 <!-- Driver names + addresses: a plain page element (not a Google Maps control) so it shows as soon as driver data arrives -->
                 <div id="mapDriverControl" class="map-driver-control map-driver-overlay"></div>
-                <div class="zoom-indicator" id="mainZoomIndicator"><span id="mainZoomValue">65%</span><span class="zoom-bar"><span id="mainZoomBar"></span></span></div>
             </div>
             <div class="driver-badge-container" id="driverBadges"></div>
 
@@ -6253,7 +6193,7 @@
             <!-- Row for map and manifest -->
             <div class="modal-map-row">
                 <div class="modal-map" id="driverMapBox"><div id="driver-map"></div>
-                    <div class="rt-pick-banner" id="rtPickBanner" role="status" hidden><span class="rt-pick-dot" id="rtPickDot"></span><span id="rtPickText"></span><button type="button" class="sp-btn" onclick="ecRtCancel()">Cancel</button></div><div class="zoom-indicator" id="driverZoomIndicator"><span id="driverZoomValue">65%</span><span class="zoom-bar"><span id="driverZoomBar"></span></span></div></div>
+                    <div class="rt-pick-banner" id="rtPickBanner" role="status" hidden><span class="rt-pick-dot" id="rtPickDot"></span><span id="rtPickText"></span><button type="button" class="sp-btn" onclick="ecRtCancel()">Cancel</button></div></div>
                 <div class="modal-stops-container">
                     <div id="historicalStopList" class="ec-contact-list"></div>
                 </div>
@@ -7796,7 +7736,6 @@
         let driverNicknames = {};
         let nicknameTargetDriverId = null;
         let settingsDriverKeys = [];
-        let zoomIndicatorTimers = {};
         let ecAttentionInterval = null;
         let suppressGpsSideEffects = false; // true while replaying historical points
 
@@ -8294,31 +8233,6 @@
             const holder = c ? people.find(q => q.ek === c.ek && q.shift.id === c.shiftId && q.shift.vehicleId === gpsId) : null;
             if (holder) return { note: holder.name + ' has this vehicle in Time Clock, so this nickname stays until you change it.' };
             return { person: p };
-        }
-
-        // ===== ZOOM INDICATOR =====
-        function showZoomIndicator(indicatorId, valueId, barId, zoom) {
-            if (typeof zoom !== 'number' || isNaN(zoom)) return;
-            const el = document.getElementById(indicatorId);
-            const val = document.getElementById(valueId);
-            const bar = document.getElementById(barId);
-            if (!el || !val) return;
-            const percent = zoomLevelToPercent(zoom);
-            val.textContent = percent + '%';
-            if (bar) bar.style.width = percent + '%';
-            el.classList.add('visible');
-            if (zoomIndicatorTimers[indicatorId]) clearTimeout(zoomIndicatorTimers[indicatorId]);
-            zoomIndicatorTimers[indicatorId] = setTimeout(function() {
-                el.classList.remove('visible');
-            }, 1400);
-        }
-
-        function attachZoomIndicator(mapObj, indicatorId, valueId, barId) {
-            if (!mapObj || mapObj.ecZoomIndicatorAttached) return;
-            mapObj.ecZoomIndicatorAttached = true;
-            google.maps.event.addListener(mapObj, 'zoom_changed', function() {
-                showZoomIndicator(indicatorId, valueId, barId, mapObj.getZoom());
-            });
         }
 
         // ===== GPS STATUS HELPER =====
@@ -10117,7 +10031,6 @@
             });
             mapInitialized = true;
             ecTrackApi('maps__dispatch');
-            attachZoomIndicator(map, 'mainZoomIndicator', 'mainZoomValue', 'mainZoomBar');
 
             // The driver name/address list (#mapDriverControl) is already on the page and filled in;
             // now that Google Maps is loaded, this call looks up any addresses that still need it.
@@ -10471,7 +10384,6 @@
             // Center and zoom to see surrounding streets (default 65%)
             map.panTo({ lat, lng });
             map.setZoom(DEFAULT_MAP_ZOOM);
-            showZoomIndicator('mainZoomIndicator', 'mainZoomValue', 'mainZoomBar', DEFAULT_MAP_ZOOM);
         }
 
         // ===== DRIVER ETA (long-press a driver in the map driver list) =====
@@ -11175,7 +11087,6 @@
                 } else {
                     driverModalMap = container._map;
                 }
-                attachZoomIndicator(driverModalMap, 'driverZoomIndicator', 'driverZoomValue', 'driverZoomBar');
 
                 if (drv?.lastLocation) {
                     driverModalMap.panTo({ lat: drv.lastLocation.lat, lng: drv.lastLocation.lng });
