@@ -5216,18 +5216,30 @@
         #dispatch-map .gm-style-cc,
         #dispatch-map a[href^="https://maps.google.com/maps"] { display: none !important; }
 
-        /* Map buttons: Fit, full screen and Street View side by side in the bottom left corner */
-        #dispatch-map .ec-main-fit-ctl { margin: 0 0 10px -10px; } /* even 10px gaps between the three */
-        #dispatch-map .ec-main-fit-ctl .map-fit-btn {
+        /* The only map button: Fit, alone in the bottom left, see-through with red lines (no white background).
+           40px tall, 10px above the driver buttons, so its middle lines up with the mic on the right. */
+        #dispatch-map .ec-main-fit-ctl { margin: 0 0 10px 0; } /* 10px from the left edge, like the mic on the right */
+        #dispatch-map .ec-main-fit-ctl .map-fit-btn,
+        body.light-mode #dispatch-map .ec-main-fit-ctl .map-fit-btn {
             width: 40px;
             height: 40px;
             margin: 0;
-            border: none;
+            padding: 0;
+            border: none !important;
             border-radius: 8px;
-            box-shadow: rgba(0, 0, 0, 0.3) 0 1px 4px -1px;
-            background: #fff;
+            box-shadow: none !important;
+            background: transparent !important;
         }
-        #dispatch-map .ec-main-fit-ctl .map-fit-btn svg { width: 22px; height: 22px; stroke: #444; }
+        #dispatch-map .ec-main-fit-ctl .map-fit-btn svg,
+        body.light-mode #dispatch-map .ec-main-fit-ctl .map-fit-btn svg {
+            width: 30px;
+            height: 30px;
+            fill: none !important;
+            stroke: #ff3b3b !important;
+            stroke-width: 2.2;
+            filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.75)); /* keeps the red lines readable over busy map areas */
+        }
+        #dispatch-map .ec-main-fit-ctl .map-fit-btn:active { transform: scale(0.92); }
 
         /* Driver buttons at the bottom: compact chips in rows, name in the driver's color + time since
            the last GPS fix. Online glows softly; Standby and Offline are dimmed like they're not in use. */
@@ -10074,12 +10086,12 @@
                 gestureHandling: 'greedy',
                 mapTypeControl: false,
                 keyboardShortcuts: false,
-                // No zoom buttons or arrow pad (pinch / mouse wheel zoom); Fit, full screen and Street View
-                // sit side by side in the bottom left corner (the mic button has the bottom right, for the thumb)
+                // Only one map button: Fit, alone in the bottom left (the mic button has the bottom right, for the
+                // thumb). No zoom buttons or arrow pad (pinch / mouse wheel zoom), no Street View, no full screen.
                 zoomControl: false,
                 cameraControl: false,
-                fullscreenControlOptions: { position: google.maps.ControlPosition.BOTTOM_LEFT },
-                streetViewControlOptions: { position: google.maps.ControlPosition.BOTTOM_LEFT }
+                streetViewControl: false,
+                fullscreenControl: false
             });
             mapInitialized = true;
             ecTrackApi('maps__dispatch');
@@ -10094,7 +10106,7 @@
             const fitControlDiv = document.createElement('div');
             fitControlDiv.innerHTML = `
             <button class="map-fit-btn" aria-label="Fit all stops">
-              <svg viewBox="0 0 24 24"><path d="M3 3v6h2V5h4V3H3zm16 0v6h2V3h-6v2h4zM3 21v-6h2v4h4v2H3zm16 0v-6h2v6h-6v-2h4z"/><rect x="5" y="5" width="14" height="14" rx="1" stroke="currentColor" fill="none"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.5"/></svg>
             </button>
           `;
             const fitButton = fitControlDiv.querySelector('.map-fit-btn');
@@ -10103,7 +10115,6 @@
                 fitMainMapToStopsAndDrivers();
             });
             fitControlDiv.className = 'ec-main-fit-ctl';
-            fitControlDiv.index = 0; // between Street View and full screen, in the same row
             map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(fitControlDiv);
 
             // Save this user's map view (not shared), at most once per 1.5 s of panning
