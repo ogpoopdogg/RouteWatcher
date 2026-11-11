@@ -9584,9 +9584,15 @@
                 const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading);
 
                 let marker = driverMarkers[id];
+                let glideFrom = null; // where the van is drawn now, when it has to glide to a new fix
                 if (marker) {
-                    const cur = marker.getPosition();
-                    if (!cur || cur.lat() !== pos.lat || cur.lng() !== pos.lng) marker.setPosition(pos);
+                    const target = marker._target;
+                    if (!target || target.lat !== pos.lat || target.lng !== pos.lng) {
+                        const cur = marker.getPosition();
+                        glideFrom = cur ? { lat: cur.lat(), lng: cur.lng() } : null;
+                        marker._target = pos;
+                        if (!glideFrom) marker.setPosition(pos);
+                    }
                     if (marker._iconKey !== iconKey) {
                         marker.setIcon(getDriverIcon(displayName, color, drv.heading));
                         marker._iconKey = iconKey;
@@ -9599,6 +9605,7 @@
                         icon: getDriverIcon(displayName, color, drv.heading)
                     });
                     marker._iconKey = iconKey;
+                    marker._target = pos;
                     marker.addListener('click', function() {
                         openDriverModal(id);
                     });
@@ -9608,7 +9615,8 @@
                 let circle = driverPulseCircles[id];
                 if (circle) {
                     const c = circle.getCenter();
-                    if (!c || c.lat() !== pos.lat || c.lng() !== pos.lng) circle.setCenter(pos);
+                    // (while gliding, the glide moves the ring together with the van)
+                    if (!glideFrom && !ecGlides[id] && (!c || c.lat() !== pos.lat || c.lng() !== pos.lng)) circle.setCenter(pos);
                     if (circle._color !== color) {
                         circle.setOptions({ fillColor: color, strokeColor: color });
                         circle._color = color;
@@ -9628,9 +9636,14 @@
                     circle._color = color;
                     driverPulseCircles[id] = circle;
                 }
+                if (glideFrom) ecStartGlide(id, glideFrom, pos);
+                ecUpdateTrail(id, drv, color);
             }
             for (let id in driverMarkers) {
-                if (!liveDriverIds.has(id)) { driverMarkers[id].setMap(null); delete driverMarkers[id]; }
+                if (!liveDriverIds.has(id)) { driverMarkers[id].setMap(null); delete driverMarkers[id]; delete ecGlides[id]; }
+            }
+            for (let id in ecTrails) {
+                if (!liveDriverIds.has(id)) ecClearTrail(id);
             }
             for (let id in driverPulseCircles) {
                 if (!liveDriverIds.has(id)) { driverPulseCircles[id].setMap(null); delete driverPulseCircles[id]; }
@@ -9656,6 +9669,123 @@
             return String((Math.round((((h % 360) + 360) % 360) / 15) * 15) % 360);
         }
 
+        // ===== SMOOTH GLIDE =====
+        // A new GPS fix slides the van (and its ring) to the new spot over about a second, instead of
+        // jumping. Big jumps (over 3 km, e.g. a GPS glitch or the first fix after a long gap), a hidden
+        // tab and "reduce motion" snap straight there. Steps on the same ~22 per second clock as the
+        // pulse rings, because every step makes Google Maps redraw.
+        const EC_GLIDE_MS = 1000;
+        const EC_GLIDE_MAX_M = 3000;
+        const ecGlides = {}; // driverId -> { from, to, start }
+        let ecGlideFrame = null;
+        let ecGlideLastStep = 0;
+        function ecStartGlide(id, from, to) {
+            const marker = driverMarkers[id];
+            if (!marker) return;
+            if (document.hidden || ecReducedMotion() ||
+                haversineDistance(from.lat, from.lng, to.lat, to.lng) > EC_GLIDE_MAX_M) {
+                delete ecGlides[id];
+                ecPlaceDriver(id, to);
+                return;
+            }
+            ecGlides[id] = { from: from, to: to, start: performance.now() };
+            if (!ecGlideFrame) ecGlideFrame = requestAnimationFrame(ecGlideStep);
+        }
+        function ecPlaceDriver(id, pos) {
+            const marker = driverMarkers[id];
+            if (marker) marker.setPosition(pos);
+            const circle = driverPulseCircles[id];
+            if (circle) circle.setCenter(pos);
+            ecMoveTrailHead(id, pos);
+        }
+        function ecGlideStep(time) {
+            ecGlideFrame = null;
+            const ids = Object.keys(ecGlides);
+            if (!ids.length) return;
+            if (time - ecGlideLastStep >= EC_PULSE_STEP_MS) {
+                ecGlideLastStep = time;
+                ids.forEach(function(id) {
+                    const g = ecGlides[id];
+                    const t = Math.min(1, (time - g.start) / EC_GLIDE_MS);
+                    const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // ease in and out
+                    ecPlaceDriver(id, t >= 1 ? g.to : {
+                        lat: g.from.lat + (g.to.lat - g.from.lat) * e,
+                        lng: g.from.lng + (g.to.lng - g.from.lng) * e
+                    });
+                    if (t >= 1) delete ecGlides[id];
+                });
+            }
+            if (Object.keys(ecGlides).length) ecGlideFrame = requestAnimationFrame(ecGlideStep);
+        }
+
+        // ===== FADING TRAIL =====
+        // Online vans leave a short trail of where they drove in the last 2 minutes (points this page
+        // has received since it was opened), fading out toward the tail. Main map only. Drawn as a few
+        // pieces with rising opacity, because a single Google Maps line can't fade along its length.
+        const EC_TRAIL_MS = 2 * 60 * 1000;
+        const EC_TRAIL_PIECES = 4;
+        const ecTrails = {}; // driverId -> { lines: [Polyline], color }
+        function ecClearTrail(id) {
+            const t = ecTrails[id];
+            if (t) t.lines.forEach(function(l) { l.setMap(null); });
+            delete ecTrails[id];
+        }
+        function ecUpdateTrail(id, drv, color) {
+            const marker = driverMarkers[id];
+            if (!marker || ecUseStateFor(id, drv).use !== 'online') { ecClearTrail(id); return; }
+            const now = ecServerNow();
+            const target = marker._target;
+            const pts = (driverTracks[id] || []).filter(function(p) {
+                return now - p.timestamp < EC_TRAIL_MS && !(target && p.lat === target.lat && p.lng === target.lng);
+            }).slice(-16).map(function(p) { return { lat: p.lat, lng: p.lng }; });
+            if (!pts.length) { ecClearTrail(id); return; }
+            const cur = marker.getPosition();
+            if (cur) pts.push({ lat: cur.lat(), lng: cur.lng() });
+            if (pts.length < 2) { ecClearTrail(id); return; }
+            let t = ecTrails[id];
+            if (t && t.color !== color) { ecClearTrail(id); t = null; }
+            if (!t) {
+                t = ecTrails[id] = { color: color, lines: [] };
+                for (let i = 0; i < EC_TRAIL_PIECES; i++) {
+                    t.lines.push(new google.maps.Polyline({
+                        map: map, clickable: false, zIndex: 1,
+                        strokeColor: color, strokeWeight: 4,
+                        strokeOpacity: 0.15 + 0.6 * (i + 1) / EC_TRAIL_PIECES // tail faint, head strong
+                    }));
+                }
+            }
+            // Split the points into pieces that share their end points, oldest piece first
+            const per = (pts.length - 1) / EC_TRAIL_PIECES;
+            for (let i = 0; i < EC_TRAIL_PIECES; i++) {
+                const a = Math.floor(i * per), b = Math.ceil((i + 1) * per);
+                t.lines[i].setPath(b > a ? pts.slice(a, b + 1) : []);
+            }
+        }
+        // While gliding, keep the trail's head stuck to the van
+        function ecMoveTrailHead(id, pos) {
+            const t = ecTrails[id];
+            if (!t) return;
+            const head = t.lines[EC_TRAIL_PIECES - 1].getPath();
+            if (head && head.getLength()) head.setAt(head.getLength() - 1, new google.maps.LatLng(pos.lat, pos.lng));
+        }
+
+        // Top-down cargo van in the driver's colour, nose pointing up (north), drawn centred on (0, 0)
+        // and about 34 px long. Rotated to the GPS heading; with no heading it simply faces up.
+        function ecCargoVanSvg(color, isLight) {
+            const glass = isLight ? '#1f2937' : '#0b0d14';
+            return `<ellipse cx="1" cy="2" rx="10" ry="17.5" fill="#000000" fill-opacity="0.35"/>` +              // soft shadow
+                `<rect x="-9.5" y="-17" width="19" height="34" rx="4.5" fill="${color}" stroke="#ffffff" stroke-width="1.6"/>` + // body
+                `<path d="M-7.5 -9.5 Q0 -12 7.5 -9.5 L6.5 -13.6 Q0 -15.2 -6.5 -13.6 Z" fill="${glass}" fill-opacity="0.9"/>` + // windshield
+                `<rect x="-7" y="-7.2" width="14" height="21.8" rx="2" fill="#ffffff" fill-opacity="0.22"/>` +  // cargo roof
+                `<path d="M-6 -2.5 H6 M-6 2.5 H6 M-6 7.5 H6" stroke="#000000" stroke-opacity="0.22" stroke-width="1"/>` + // roof ribs
+                `<rect x="-12.2" y="-10.5" width="2.8" height="4" rx="1" fill="${color}" stroke="#ffffff" stroke-width="1"/>` + // mirrors
+                `<rect x="9.4" y="-10.5" width="2.8" height="4" rx="1" fill="${color}" stroke="#ffffff" stroke-width="1"/>` +
+                `<rect x="-7.6" y="-16.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/>` +            // headlights
+                `<rect x="4" y="-16.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/>` +
+                `<rect x="-7.6" y="15.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/>` +              // tail lights
+                `<rect x="4.6" y="15.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/>`;
+        }
+
         function getDriverIcon(name, color, heading = null) {
             const rawName = String(name == null ? '' : name);
             const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
@@ -9665,22 +9795,20 @@
             const pillFill = isLight ? '#ffffff' : 'rgba(12,13,20,0.88)';
             const width = Math.max(50, Math.min(220, rawName.length * 7 + 16)); // wide enough that long names are not clipped
             const half = width / 2;
-            const cy = 44;
+            const cy = 45; // the van's centre (= the GPS spot); room for the van at any angle below the name
+            const height = 66;
             const headingKey = ecHeadingKey(heading);
-            const arrow = headingKey === 'n' ? '' :
-                `<path d="M${half} ${cy - 23} l5.5 7.5 h-11 z" fill="${safeColor}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round" transform="rotate(${headingKey} ${half} ${cy})"/>`;
+            const turn = headingKey === 'n' ? 0 : headingKey;
             const svg =
-                `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="64">` +
+                `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
                 `<rect x="1" y="1" width="${width - 2}" height="19" rx="9.5" fill="${pillFill}" stroke="${safeColor}" stroke-width="1.5"/>` +
                 `<text x="${half}" y="14.5" text-anchor="middle" fill="${textColor}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold">${safeName}</text>` +
-                `<circle cx="${half}" cy="${cy}" r="14.5" fill="${safeColor}" fill-opacity="0.18" stroke="${safeColor}" stroke-opacity="0.55" stroke-width="1.5"/>` +
-                arrow +
-                `<circle cx="${half}" cy="${cy}" r="9" fill="${safeColor}" stroke="#ffffff" stroke-width="2.5"/>` +
+                `<g transform="translate(${half} ${cy}) rotate(${turn})">` + ecCargoVanSvg(safeColor, isLight) + `</g>` +
                 `</svg>`;
             return {
                 url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
                 anchor: new google.maps.Point(half, cy),
-                scaledSize: new google.maps.Size(width, 64)
+                scaledSize: new google.maps.Size(width, height)
             };
         }
 
