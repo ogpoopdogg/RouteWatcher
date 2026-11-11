@@ -18,6 +18,10 @@
     <link rel="preload" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" as="script">
     <link rel="preload" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" as="script">
     <link rel="preload" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" as="script">
+    <!-- Google Maps starts downloading right away (async: it never holds up the page). It can finish before
+         the main script has defined initMap, so this stand-in notes that and the main script calls initMap. -->
+    <script>window.initMap = function() { window.ecMapsLoadedEarly = true; };</script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=geometry&loading=async&callback=initMap" async></script>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon2.png" type="image/png">
     <link rel="apple-touch-icon" href="icon2.png">
@@ -49,6 +53,10 @@
             width: 100%;
             flex: 1;
         }
+        /* FAST START (script at the top of <body>): signed in last time on this device = the map screen shows
+           at once, without waiting for Firebase. If Firebase then says signed out, the login screen comes back. */
+        html.ec-signed-in #login-overlay { display: none; }
+        html.ec-signed-in #app { display: flex !important; }
         :root {
             --accent: #f7c948;
             --card: #16161f;
@@ -3089,15 +3097,12 @@
             gap: 6px;
             margin-left: auto;
         }
-        .header-logo {
-            animation: ecLogoIn 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
         .header-title {
             position: relative;
             display: inline-block;
             overflow: hidden;
             padding-right: 2px;
-            animation: ecTitleIn 950ms cubic-bezier(0.22, 1, 0.36, 1) both;
+            letter-spacing: 0.4px; /* what the old entrance animation left it at */
         }
         .header-title::after {
             content: '';
@@ -3111,26 +3116,9 @@
             pointer-events: none;
             animation: ecTitleSheen 1500ms ease-in-out 650ms 1 both;
         }
-        header .badge {
-            animation: ecBadgeIn 800ms cubic-bezier(0.22, 1, 0.36, 1) 450ms both;
-        }
-        @keyframes ecLogoIn {
-            0% { opacity: 0; transform: translateX(-16px) scale(0.55) rotate(-20deg); filter: blur(6px); }
-            60% { opacity: 1; transform: translateX(0) scale(1.1) rotate(4deg); filter: blur(0); }
-            100% { opacity: 1; transform: translateX(0) scale(1) rotate(0deg); filter: blur(0); }
-        }
-        @keyframes ecTitleIn {
-            0% { opacity: 0; transform: translateY(12px); letter-spacing: 7px; }
-            100% { opacity: 1; transform: translateY(0); letter-spacing: 0.4px; }
-        }
         @keyframes ecTitleSheen {
             0% { transform: translateX(-180%); }
             100% { transform: translateX(340%); }
-        }
-        @keyframes ecBadgeIn {
-            0% { opacity: 0; transform: scale(0.4); }
-            60% { opacity: 1; transform: scale(1.18); }
-            100% { opacity: 1; transform: scale(1); }
         }
 
         /* ===== Stop info window copy buttons ===== */
@@ -3302,6 +3290,27 @@
             display: block;
         }
         body.light-mode .ec-notice { color: #fff !important; }
+        /* "New version ready" (the app opened from its saved copy and sw.js found a newer one): tap to load it */
+        .ec-update-bar {
+            position: fixed;
+            left: 50%;
+            top: calc(env(safe-area-inset-top, 0px) + 58px);
+            transform: translateX(-50%);
+            z-index: 100001;
+            max-width: calc(100vw - 32px);
+            border: 0;
+            border-radius: 999px;
+            padding: 8px 16px;
+            background: #f7c948;
+            color: #0b0b14;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            cursor: pointer;
+        }
+        .ec-update-bar[hidden] { display: none; }
         /* ===== Inactivity pause: the screen dims slightly while sleeping ===== */
         .ec-idle-banner {
             display: none;
@@ -3531,7 +3540,6 @@
             max-width: 380px;
             padding: 34px 32px 28px;
             border-radius: 22px;
-            animation: ecLoginIn 0.9s var(--ec-ease-out, ease-out) 0.1s backwards;
         }
         body:not(.light-mode) .login-box {
             background: rgba(16, 17, 26, 0.66);
@@ -3549,10 +3557,6 @@
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(247, 201, 72, 0.8), transparent);
         }
-        @keyframes ecLoginIn {
-            from { opacity: 0; transform: translateY(18px) scale(0.98); filter: blur(4px); }
-            to { opacity: 1; transform: none; filter: none; }
-        }
         .ec-login-logo {
             display: flex;
             justify-content: center;
@@ -3562,12 +3566,6 @@
             height: 60px;
             width: auto;
             display: block;
-            animation: ecLoginLogoIn 1.1s var(--ec-ease-out, ease-out) 0.35s backwards;
-        }
-        @keyframes ecLoginLogoIn {
-            0% { opacity: 0; transform: scale(0.6) rotate(-8deg); filter: blur(6px); }
-            60% { opacity: 1; transform: scale(1.06) rotate(1deg); filter: blur(0); }
-            100% { opacity: 1; transform: none; filter: none; }
         }
         .login-box h2 {
             font-size: 13px;
@@ -3717,7 +3715,6 @@
             from { background-position: -240px 0, 0 0; }
             to { background-position: calc(100% + 240px) 0, 0 0; }
         }
-        body:not(.light-mode) .header-title { letter-spacing: 0.06em; }
 
         /* LIVE badge: broadcast dot */
         body:not(.light-mode) header .badge {
@@ -3800,14 +3797,6 @@
         /* =====================================================================
            DRIVER BADGES
            ===================================================================== */
-        .driver-badge-container.ec-intro .driver-badge {
-            animation: ecBadgeIntro 0.6s var(--ec-ease-out, ease-out) backwards;
-            animation-delay: calc(var(--i, 0) * 60ms + var(--ec-intro-t, 0ms));
-        }
-        @keyframes ecBadgeIntro {
-            from { opacity: 0; transform: translateY(12px) scale(0.985); }
-            to { opacity: 1; transform: none; }
-        }
         body:not(.light-mode) .driver-badge {
             background:
                 linear-gradient(90deg, color-mix(in srgb, var(--drv, #f7c948) 15%, transparent) 0%, transparent 40%),
@@ -3960,11 +3949,6 @@
         /* =====================================================================
            MAP
            ===================================================================== */
-        .map-wrapper:not(.hidden) { animation: ecMapReveal 0.55s var(--ec-ease-out, ease-out); }
-        @keyframes ecMapReveal {
-            from { opacity: 0; transform: translateY(-8px); clip-path: inset(0 0 100% 0 round 20px); }
-            to { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 20px); }
-        }
         body:not(.light-mode) .map-wrapper {
             border-radius: 18px;
             border: 1px solid var(--ec-line-strong);
@@ -5422,241 +5406,19 @@
         }
         .ec-notice { bottom: calc(var(--ec-bottom-bar, 50px) + 24px); }
 
-        /* =====================================================================
-           APP-OPEN INTRO = the loading screen. Plays as soon as the app opens:
-           the login screen's map grid and route lines run into a GPS ring
-           around the logo, the logo scans in like a hologram and pings. The
-           login box then slides in over it (the ring and logo move up), or,
-           when already signed in, the logo flies into the header.
-           Script: "LOADING SCREEN" right after #ecIntroTpl. Tap to hurry it.
-           ===================================================================== */
-        #ecIntro {
-            --u: 1px; /* one unit of the 1440x900 scene, set from JS so the HTML logo lines up with the SVG ring */
-            position: fixed;
-            inset: 0;
-            z-index: 100000;
-            overflow: hidden;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            background:
-                radial-gradient(ellipse 70% 55% at 50% 45%, rgba(247, 201, 72, 0.07), transparent 70%),
-                #090a10;
-            transition: background-color 0.5s ease;
-        }
-        #ecIntro.ec-out { background: transparent; pointer-events: none; transition: background 0.55s ease 0.1s; }
-        #ecIntro .ec-intro-stage {
-            position: absolute;
-            inset: 0;
-            transform-origin: 50% 50%;
-            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-        /* the scene is twice the screen each way so it still fills the screen when the stage moves for the login box */
-        #ecIntro .ec-intro-scene { position: absolute; left: -50%; top: -50%; width: 200%; height: 200%; }
-        #ecIntro.ec-login .ec-intro-text { opacity: 0; transition: opacity 0.3s ease; }
-        /* login box over the loading screen: no scene or logo of its own, sits under the ring */
-        #login-overlay.ec-intro-mode {
-            z-index: 100001;
-            background: transparent;
-            align-items: flex-start;
-            overflow-y: auto;
-        }
-        html.ec-intro-boot #login-overlay { display: none; }
-        #login-overlay.ec-intro-mode .ec-login-scene,
-        #login-overlay.ec-intro-mode .ec-login-logo { display: none; }
-        #ecIntro.ec-out .ec-intro-scene,
-        #ecIntro.ec-out .ec-intro-text,
-        #ecIntro.ec-out .ec-intro-radar { opacity: 0; transition: opacity 0.45s ease; }
-        /* the dashed GPS ring turns slowly while the routes come in */
-        #ecIntro .ec-intro-ring { transform-box: view-box; transform-origin: 720px 450px; animation: ecIntroSpin 9s linear infinite; }
-        #ecIntro .ec-intro-ring2 { transform-box: view-box; transform-origin: 720px 450px; animation: ecIntroSpin 14s linear infinite reverse; }
-        @keyframes ecIntroSpin { to { transform: rotate(360deg); } }
-
-        /* radar sweep behind the logo */
-        #ecIntro .ec-intro-radar {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: calc(var(--u) * 236);
-            height: calc(var(--u) * 236);
-            margin: calc(var(--u) * -118) 0 0 calc(var(--u) * -118);
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, rgba(247, 201, 72, 0) 0deg, rgba(247, 201, 72, 0) 280deg, rgba(247, 201, 72, 0.28) 356deg, rgba(247, 201, 72, 0.55) 360deg);
-            -webkit-mask: radial-gradient(circle, #000 0 69%, transparent 70%);
-            mask: radial-gradient(circle, #000 0 69%, transparent 70%);
-            opacity: 0;
-            animation: ecIntroRadarIn 0.4s ease 0.2s forwards, ecIntroSpin 1.5s linear infinite;
-            pointer-events: none;
-        }
-        @keyframes ecIntroRadarIn { to { opacity: 1; } }
-
-        /* the logo: hologram grid outline first, then a scan line fills it in solid */
-        #ecIntro .ec-intro-logo {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: calc(var(--u) * 160);
-            aspect-ratio: 532 / 469;
-            transform: translate(-50%, -50%);
-            transform-origin: 0 0;
-        }
-        #ecIntro .ec-intro-logo > * { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
-        #ecIntro .ec-intro-holo {
-            background:
-                repeating-linear-gradient(0deg, rgba(247, 201, 72, 0.95) 0 1px, transparent 1px 5px),
-                repeating-linear-gradient(90deg, rgba(247, 201, 72, 0.55) 0 1px, transparent 1px 5px),
-                rgba(247, 201, 72, 0.12);
-            -webkit-mask: url(icon3.png) center / contain no-repeat;
-            mask: url(icon3.png) center / contain no-repeat;
-            filter: drop-shadow(0 0 6px rgba(247, 201, 72, 0.8));
-            opacity: 0;
-            animation: ecIntroHolo 0.95s steps(1, end) 0.34s forwards;
-        }
-        @keyframes ecIntroHolo {
-            0% { opacity: 0.5; }
-            8% { opacity: 0.1; }
-            14% { opacity: 0.85; }
-            20% { opacity: 0.3; }
-            26%, 70% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-        #ecIntro .ec-intro-img {
-            object-fit: contain;
-            -webkit-clip-path: inset(-30% -30% 100% -30%);
-            clip-path: inset(-30% -30% 100% -30%);
-            animation: ecIntroRevealGlow 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s forwards, ecIntroFlash 0.6s ease-out 1.15s;
-        }
-        /* same reveal, but with room around the picture so its glow is not cut off square */
-        @keyframes ecIntroRevealGlow {
-            from { -webkit-clip-path: inset(-30% -30% 100% -30%); clip-path: inset(-30% -30% 100% -30%); }
-            to { -webkit-clip-path: inset(-30% -30% -30% -30%); clip-path: inset(-30% -30% -30% -30%); }
-        }
-        @keyframes ecIntroReveal {
-            from { -webkit-clip-path: inset(0 0 100% 0); clip-path: inset(0 0 100% 0); }
-            to { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
-        }
-        @keyframes ecIntroFlash {
-            0% { filter: brightness(1.9) drop-shadow(0 0 18px rgba(247, 201, 72, 1)); }
-            100% { filter: brightness(1) drop-shadow(0 0 10px rgba(247, 201, 72, 0.45)); }
-        }
-        #ecIntro .ec-intro-img { filter: drop-shadow(0 0 10px rgba(247, 201, 72, 0.45)); }
-        /* colour-split ghosts behind the logo: only their edges peek out, jittering while the scan runs */
-        #ecIntro .ec-intro-ghost {
-            -webkit-mask: url(icon3.png) center / contain no-repeat;
-            mask: url(icon3.png) center / contain no-repeat;
-            -webkit-clip-path: inset(0 0 100% 0);
-            clip-path: inset(0 0 100% 0);
-            opacity: 0;
-        }
-        #ecIntro .ec-intro-ghost.c { background: #2ee6ff; animation: ecIntroGlitchC 0.5s steps(1, end) 0.71s, ecIntroReveal 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s forwards; }
-        #ecIntro .ec-intro-ghost.m { background: #ff3df2; animation: ecIntroGlitchM 0.5s steps(1, end) 0.71s, ecIntroReveal 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s forwards; }
-        @keyframes ecIntroGlitchC {
-            0% { opacity: 0.9; transform: translate(-5px, 0); }
-            20% { opacity: 0.7; transform: translate(3px, -1px); }
-            40% { opacity: 0.9; transform: translate(-7px, 1px); }
-            60% { opacity: 0.6; transform: translate(-3px, 0); }
-            80% { opacity: 0.2; transform: translate(-1px, 0); }
-            100% { opacity: 0; transform: none; }
-        }
-        @keyframes ecIntroGlitchM {
-            0% { opacity: 0.9; transform: translate(5px, 1px); }
-            20% { opacity: 0.7; transform: translate(-3px, 0); }
-            40% { opacity: 0.9; transform: translate(6px, -1px); }
-            60% { opacity: 0.6; transform: translate(3px, 0); }
-            80% { opacity: 0.15; transform: translate(1px, 0); }
-            100% { opacity: 0; transform: none; }
-        }
-        /* the bright scan line that sweeps down the logo */
-        #ecIntro .ec-intro-scan {
-            height: 3px;
-            top: 0;
-            bottom: auto;
-            left: -14%;
-            width: 128%;
-            border-radius: 2px;
-            background: linear-gradient(90deg, transparent, #fff3c4 20%, #fff 50%, #fff3c4 80%, transparent);
-            box-shadow: 0 0 12px 3px rgba(247, 201, 72, 0.85), 0 0 30px 6px rgba(247, 201, 72, 0.35);
-            opacity: 0;
-            animation: ecIntroScan 0.45s cubic-bezier(0.45, 0, 0.25, 1) 0.71s;
-        }
-        @keyframes ecIntroScan {
-            0% { top: 0; opacity: 1; }
-            92% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
-        }
-
-        /* name + status under the ring */
-        #ecIntro .ec-intro-text {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: calc(50% + var(--u) * 150);
-            text-align: center;
-            pointer-events: none;
-        }
-        #ecIntro .ec-intro-text > span:first-child {
-            /* dark read-out box so the route lines pass behind the words */
-            display: inline-block;
-            padding: 9px 16px 10px;
-            border-radius: 10px;
-            background: rgba(9, 10, 16, 0.88);
-            border: 1px solid rgba(247, 201, 72, 0.22);
-            box-shadow: 0 0 24px rgba(9, 10, 16, 0.9);
-            opacity: 0;
-            animation: ecIntroFade 0.2s ease 0.85s forwards;
-        }
-        #ecIntro .ec-intro-title {
-            display: block;
-            font: 800 clamp(17px, 2.4vw, 24px)/1.2 'Inter', sans-serif;
-            letter-spacing: 0.32em;
-            padding-left: 0.32em;
-            color: #fff !important;
-            text-shadow: 0 0 14px rgba(247, 201, 72, 0.55);
-            opacity: 0;
-            animation: ecIntroFade 0.2s ease 0.88s forwards;
-        }
-        #ecIntro .ec-intro-sub {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 10px;
-            font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            letter-spacing: 0.24em;
-            color: #34d27b !important;
-            opacity: 0;
-            animation: ecIntroFade 0.2s ease 1.15s forwards;
-        }
-        #ecIntro .ec-intro-sub::before {
-            content: '';
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #34d27b;
-            box-shadow: 0 0 8px #34d27b;
-            animation: ecIntroBlink 0.8s steps(1, end) infinite;
-        }
-        @keyframes ecIntroFade { to { opacity: 1; } }
-        @keyframes ecIntroBlink { 50% { opacity: 0.25; } }
-
-        /* header waits for the logo to land, then plays its own entrance */
-        html.ec-intro-on #app > header .header-logo { opacity: 0; }
-        html.ec-intro-on #app > header .header-title,
-        html.ec-intro-on #app > header .header-title::after,
-        html.ec-intro-on #app > header .badge { animation-play-state: paused; }
-        #app > header .ec-logo.ec-landed { animation: ecLogoLand 0.9s ease-out; }
-        @keyframes ecLogoLand {
-            0% { filter: drop-shadow(0 0 16px rgba(247, 201, 72, 1)) brightness(1.6); }
-            100% { filter: drop-shadow(0 0 8px rgba(247, 201, 72, 0.32)); }
-        }
-        @media (prefers-reduced-motion: reduce) { #ecIntro { display: none; } }
-
     </style>
 </head>
 <body>
     <script>
-        // loading screen coming (see LOADING SCREEN): keep the plain login screen hidden until it is needed
-        try { if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) document.documentElement.classList.add('ec-intro-boot'); } catch (e) {}
+        // ===== FAST START =====
+        // Runs before anything shows: light mode is applied now (no dark flash), and a device that was signed in
+        // last time goes straight to the map screen (Google Maps loads in parallel with Firebase). Firebase checks
+        // the sign-in in the background; ecShowApp / ecShowLogin then keep or undo this.
+        try {
+            if (localStorage.getItem('ec_theme') === 'light') document.body.classList.add('light-mode');
+            if (localStorage.getItem('ec_signed_in') === '1') document.documentElement.classList.add('ec-signed-in');
+        } catch (e) {}
     </script>
-
     <!-- Login Overlay -->
     <div id="login-overlay">
         <!-- Decorative background: route lines that draw themselves across a map grid -->
@@ -5735,319 +5497,10 @@
 
     <div id="ecNotice" class="ec-notice" role="alert"></div>
 
+    <button type="button" id="ecUpdateBar" class="ec-update-bar" hidden onclick="location.reload()">New version ready · tap to load</button>
+
     <div id="ecIdleBanner" class="ec-idle-banner" aria-hidden="true"></div>
 
-    <!-- Loading screen (see APP-OPEN INTRO in the styles): plays as soon as the app opens. The login box
-         slides in over it; once signed in, the logo flies into the header. -->
-    <template id="ecIntroTpl">
-        <div id="ecIntro" aria-hidden="true">
-          <div class="ec-intro-stage">
-            <!-- twice the screen each way, so the scene still fills the screen when it moves up for the login box -->
-            <svg class="ec-intro-scene" viewBox="-720 -450 2880 1800" preserveAspectRatio="xMidYMid slice" focusable="false">
-                <defs>
-                    <pattern id="ecIGridMinor" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/></pattern>
-                    <pattern id="ecIGridMajor" width="200" height="200" patternUnits="userSpaceOnUse"><rect width="200" height="200" fill="url(#ecIGridMinor)"/><path d="M200 0H0V200" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/></pattern>
-                    <radialGradient id="ecISceneFade" gradientUnits="userSpaceOnUse" cx="720" cy="720" r="936" gradientTransform="scale(1 0.625)"><stop offset="0%" stop-color="#090a10" stop-opacity="0"/><stop offset="100%" stop-color="#090a10" stop-opacity="0.95"/></radialGradient>
-                    <filter id="ecIGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-                    <path id="ecIR1" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330"/>
-                    <path id="ecIR2" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600"/>
-                    <path id="ecIR3" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570"/>
-                    <path id="ecIR4" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840"/>
-                    <path id="ecIR5" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365"/>
-                    <path id="ecIR6" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535"/>
-                </defs>
-                <rect x="-720" y="-450" width="2880" height="1800" fill="url(#ecIGridMajor)"/>
-                <!-- the login screen's faint background routes -->
-                <g fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2">
-                    <path d="M-20 620H260Q280 620 280 600V430Q280 410 300 410H610Q630 410 630 390V250Q630 230 650 230H980"/>
-                    <path d="M1460 700H1180Q1160 700 1160 680V560Q1160 540 1140 540H880Q860 540 860 520V380Q860 360 880 360H1060"/>
-                    <path d="M420 -20V140Q420 160 440 160H760Q780 160 780 180V300"/>
-                    <path d="M1100 920V800Q1100 780 1080 780H720Q700 780 700 760V640Q700 620 680 620H520"/>
-                </g>
-                <g fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2">
-                    <use href="#ecIR1"/>
-                    <use href="#ecIR2"/>
-                    <use href="#ecIR3"/>
-                    <use href="#ecIR4"/>
-                    <use href="#ecIR5"/>
-                    <use href="#ecIR6"/>
-                </g>
-                <!-- GPS ring around the logo: the routes plug into it -->
-                <g class="ec-iring" fill="none" opacity="0">
-                    <circle class="ec-intro-ring" cx="720" cy="450" r="120" stroke="rgba(247,201,72,0.55)" stroke-width="1.5" stroke-dasharray="16 7"/>
-                    <circle class="ec-intro-ring2" cx="720" cy="450" r="132" stroke="rgba(90,169,255,0.35)" stroke-width="1" stroke-dasharray="2 10"/>
-                    <circle cx="720" cy="450" r="106" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-                </g>
-                <!-- each route: coloured line drawing in, a dot riding its tip, then data dashes flowing into the ring
-                     (moved by the LOADING SCREEN script, frame by frame) -->
-                <g fill="none" stroke-linecap="round" filter="url(#ecIGlow)">
-                    <path d="M560 -470V-20" stroke="#f7c948" stroke-width="2.5"/>
-                    <path d="M-740 330H-20" stroke="#34d27b" stroke-width="2"/>
-                    <path d="M880 1370V920" stroke="#5aa9ff" stroke-width="2.5"/>
-                    <path d="M2180 570H1460" stroke="#f7c948" stroke-width="2"/>
-                    <path d="M900 -470V-20" stroke="#5aa9ff" stroke-width="2"/>
-                    <path d="M540 1370V920" stroke="#34d27b" stroke-width="2"/>
-                    <path class="ec-ir" data-i="1" data-at="0.03" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#f7c948" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="2" data-at="0.09" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="3" data-at="0.15" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#5aa9ff" stroke-width="2.5" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="4" data-at="0.19" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#f7c948" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="5" data-at="0.25" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#5aa9ff" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-ir" data-i="6" data-at="0.28" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#34d27b" stroke-width="2" stroke-dasharray="1 0" opacity="0"/>
-                    <path class="ec-if" data-i="1" data-at="0.03" d="M560 -20V150Q560 170 580 170H700Q720 170 720 190V330" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="2" data-at="0.09" d="M-20 330H360Q380 330 380 350V430Q380 450 400 450H600" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="3" data-at="0.15" d="M880 920V770Q880 750 860 750H740Q720 750 720 730V570" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="4" data-at="0.19" d="M1460 570H1080Q1060 570 1060 550V470Q1060 450 1040 450H840" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="5" data-at="0.25" d="M900 -20V220Q900 240 880 240H825Q805 240 805 260V365" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <path class="ec-if" data-i="6" data-at="0.28" d="M540 920V680Q540 660 560 660H615Q635 660 635 640V535" stroke="#fff" stroke-width="1.6" opacity="0"/>
-                    <circle class="ec-id" data-i="1" data-at="0.03" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="2" data-at="0.09" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="3" data-at="0.15" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="4" data-at="0.19" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="5" data-at="0.25" r="5" fill="#fff" opacity="0"/>
-                    <circle class="ec-id" data-i="6" data-at="0.28" r="5" fill="#fff" opacity="0"/>
-                </g>
-                <!-- ports on the ring light up as each route arrives -->
-                <g filter="url(#ecIGlow)">
-                    <circle class="ec-ip" data-at="0.03" cx="720" cy="330" r="4.5" fill="#f7c948" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.09" cx="600" cy="450" r="4.5" fill="#34d27b" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.15" cx="720" cy="570" r="4.5" fill="#5aa9ff" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.19" cx="840" cy="450" r="4.5" fill="#f7c948" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.25" cx="805" cy="365" r="4.5" fill="#5aa9ff" opacity="0"/>
-                    <circle class="ec-ip" data-at="0.28" cx="635" cy="535" r="4.5" fill="#34d27b" opacity="0"/>
-                </g>
-                <!-- GPS pings from the pin, every 3 s once the logo is in -->
-                <g fill="none" stroke="#f7c948" stroke-width="2">
-                    <circle class="ec-iping" data-at="1.15" cx="720" cy="443" r="20" opacity="0"/>
-                    <circle class="ec-iping" data-at="1.4" cx="720" cy="443" r="20" opacity="0"/>
-                </g>
-                <rect x="-720" y="-450" width="2880" height="1800" fill="url(#ecISceneFade)"/>
-            </svg>
-            <div class="ec-intro-radar"></div>
-            <div class="ec-intro-logo">
-                <i class="ec-intro-holo"></i>
-                <i class="ec-intro-ghost c"></i>
-                <i class="ec-intro-ghost m"></i>
-                <img class="ec-intro-img" src="icon3.png" alt="" onerror="this.onerror=null;this.src='icon2.png'">
-                <i class="ec-intro-scan"></i>
-            </div>
-            <div class="ec-intro-text"><span>
-                <span class="ec-intro-title">E&amp;C DISPATCH</span>
-                <span class="ec-intro-sub">LIVE GPS</span>
-            </span></div>
-          </div>
-        </div>
-    </template>
-    <script>
-        // ===== LOADING SCREEN (APP-OPEN INTRO) =====
-        // Starts as soon as the page opens, before Firebase loads. The route lines run into a GPS ring, the logo
-        // scans in and pings. Then either the login box slides in over it (ecIntroShowLogin), or, when already
-        // signed in, the logo flies into the header and the app shows (ecIntroToApp). Waits for the logo to
-        // finish (about 1.45 s; the fly to the header takes 0.55 s) unless tapped. Reduced motion: no animation, the plain login screen is used.
-        (function() {
-            const EC_INTRO_READY_MS = 1450;
-            let st = null;
-            function reduced() {
-                try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
-            }
-            function loginEl() { return document.getElementById('login-overlay'); }
-            function mount() {
-                const tpl = document.getElementById('ecIntroTpl');
-                if (reduced() || !tpl || !tpl.content) return null;
-                const frag = tpl.content.cloneNode(true);
-                const el = frag.querySelector('#ecIntro');
-                if (!el) return null;
-                const login = loginEl();
-                if (login) { login.classList.add('ec-intro-mode'); login.style.display = 'none'; }
-                document.documentElement.classList.add('ec-intro-on');
-                document.body.appendChild(frag);
-                const s = { el: el, stage: el.querySelector('.ec-intro-stage'), ready: false, want: null, done: false, loginShown: false };
-                s.fit = function() {
-                    // one unit of the 1440x900 scene ("slice" scaling), so the HTML logo sits inside the SVG ring
-                    const u = Math.max(el.clientWidth / 1440, el.clientHeight / 900);
-                    el.style.setProperty('--u', u + 'px');
-                    s.u = u;
-                    layout(s);
-                };
-                s.fit();
-                window.addEventListener('resize', s.fit);
-                animateScene(s);
-                scramble(s, el.querySelector('.ec-intro-title'));
-                s.timer = setTimeout(function() { markReady(s); }, EC_INTRO_READY_MS);
-                el.addEventListener('pointerdown', function() { markReady(s); });
-                return s;
-            }
-            // The SVG scene, moved frame by frame (SVG's own timed animations would wait for the whole page to load)
-            const DRAW_S = 0.62;
-            const easeInOut = function(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; };
-            const easeOut = function(p) { return 1 - Math.pow(1 - p, 3); };
-            const clamp01 = function(p) { return p < 0 ? 0 : (p > 1 ? 1 : p); };
-            function animateScene(s) {
-                const el = s.el;
-                const at = function(n) { return parseFloat(n.getAttribute('data-at')) || 0; };
-                const geo = {};
-                el.querySelectorAll('defs path[id^="ecIR"]').forEach(function(p) {
-                    try { geo[p.id.slice(4)] = { p: p, len: p.getTotalLength() }; } catch (e) {}
-                });
-                const ring = el.querySelector('.ec-iring');
-                const lines = Array.prototype.map.call(el.querySelectorAll('.ec-ir'), function(n) { return { n: n, t: at(n), g: geo[n.getAttribute('data-i')] }; });
-                const flows = Array.prototype.map.call(el.querySelectorAll('.ec-if'), function(n) { return { n: n, t: at(n) + DRAW_S }; });
-                const dots = Array.prototype.map.call(el.querySelectorAll('.ec-id'), function(n) { return { n: n, t: at(n), g: geo[n.getAttribute('data-i')] }; });
-                const ports = Array.prototype.map.call(el.querySelectorAll('.ec-ip'), function(n) { return { n: n, t: at(n) + DRAW_S }; });
-                const pings = Array.prototype.map.call(el.querySelectorAll('.ec-iping'), function(n) { return { n: n, t: at(n) }; });
-                lines.forEach(function(l) { if (l.g) l.n.setAttribute('stroke-dasharray', l.g.len + ' ' + l.g.len); });
-                flows.forEach(function(f) { f.n.setAttribute('stroke-dasharray', '7 29'); });
-                const t0 = performance.now();
-                const frame = function(now) {
-                    if (!el.isConnected && s.done) return;
-                    const t = (now - t0) / 1000;
-                    if (ring) ring.setAttribute('opacity', clamp01((t - 0.18) / 0.3));
-                    lines.forEach(function(l) {
-                        if (!l.g || t < l.t) return;
-                        const p = easeInOut(clamp01((t - l.t) / DRAW_S));
-                        l.n.setAttribute('opacity', 1);
-                        l.n.setAttribute('stroke-dashoffset', l.g.len * (1 - p));
-                    });
-                    dots.forEach(function(d) {
-                        if (!d.g || t < d.t) return;
-                        const k = (t - d.t) / DRAW_S;
-                        const pt = d.g.p.getPointAtLength(d.g.len * easeInOut(clamp01(k)));
-                        d.n.setAttribute('cx', pt.x);
-                        d.n.setAttribute('cy', pt.y);
-                        // rides the tip, then bursts as it reaches the ring
-                        const b = (k - 1) * DRAW_S / 0.35;
-                        d.n.setAttribute('r', k < 1 ? 5 : (b < 0.5 ? 5 + 12 * b : Math.max(0, 11 - 22 * (b - 0.5))));
-                        d.n.setAttribute('opacity', b >= 1 ? 0 : 1);
-                    });
-                    flows.forEach(function(f) {
-                        if (t < f.t) return;
-                        f.n.setAttribute('opacity', 0.75 * clamp01((t - f.t) / 0.2));
-                        f.n.setAttribute('stroke-dashoffset', -(((t - f.t) * 160) % 36));
-                    });
-                    ports.forEach(function(p) { p.n.setAttribute('opacity', clamp01((t - p.t) / 0.15)); });
-                    pings.forEach(function(p) {
-                        if (t < p.t) return;
-                        const c = ((t - p.t) % 3) / 3;
-                        const q = c / 0.37;
-                        p.n.setAttribute('r', q < 1 ? 20 + 210 * easeOut(q) : 20);
-                        p.n.setAttribute('opacity', q < 1 ? 0.9 * (1 - q) : 0);
-                    });
-                    if (el.isConnected || !s.done) requestAnimationFrame(frame);
-                };
-                requestAnimationFrame(frame);
-            }
-            // "E&C DISPATCH" decodes from random characters, left to right
-            function scramble(s, title) {
-                if (!title) return;
-                const word = title.textContent;
-                title.style.width = title.offsetWidth + 'px'; // keep the box steady while the letters change
-                title.style.whiteSpace = 'nowrap';
-                title.style.overflow = 'hidden';
-                const glyphs = '01#/<>=+*%';
-                const t0 = performance.now() + 880;
-                const tick = function(now) {
-                    if (s.done || !title.isConnected) return;
-                    const k = (now - t0) / 350;
-                    if (k >= 1) { title.textContent = word; return; }
-                    if (k >= 0) {
-                        title.textContent = word.split('').map(function(ch, i) {
-                            return (ch === ' ' || i < k * word.length) ? ch : glyphs[Math.floor(Math.random() * glyphs.length)];
-                        }).join('');
-                    }
-                    requestAnimationFrame(tick);
-                };
-                requestAnimationFrame(tick);
-            }
-            function markReady(s) {
-                if (s.ready || s.done) return;
-                s.ready = true;
-                clearTimeout(s.timer);
-                if (s.want === 'app') fly(s);
-                else if (s.want === 'login') showLogin(s);
-            }
-            // With the login box up: the ring and logo move (and shrink if needed) into the space above the box
-            function layout(s) {
-                const login = loginEl();
-                if (!s.loginShown || !login) { if (s.stage) s.stage.style.transform = ''; return; }
-                const box = login.querySelector('.login-box');
-                const h = s.el.clientHeight;
-                const R = 134 * s.u;
-                const boxH = box ? box.offsetHeight : 320;
-                const gap = 16;
-                const sc = Math.max(0.4, Math.min(1, (h - boxH - gap * 3) / (2 * R)));
-                const top0 = Math.max(gap, (h - (2 * R * sc + gap + boxH)) / 2);
-                const cy = top0 + R * sc;
-                s.stage.style.transform = 'translateY(' + (cy - h / 2) + 'px) scale(' + sc + ')';
-                login.style.paddingTop = (top0 + 2 * R * sc + gap) + 'px';
-            }
-            function showLogin(s) {
-                const login = loginEl();
-                if (!login) return;
-                if (!s.loginShown) {
-                    s.loginShown = true;
-                    s.el.classList.add('ec-login');
-                    login.style.display = 'flex';
-                }
-                layout(s);
-            }
-            function fly(s) {
-                if (s.done) return;
-                s.done = true;
-                clearTimeout(s.timer);
-                window.removeEventListener('resize', s.fit);
-                const el = s.el;
-                const login = loginEl();
-                if (login && login.style.display !== 'none') {
-                    const hide = function() { login.style.display = 'none'; login.style.paddingTop = ''; };
-                    if (login.animate) login.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250 }).onfinish = hide; else hide();
-                }
-                const logo = el.querySelector('.ec-intro-logo');
-                const target = document.querySelector('#app > header .header-logo');
-                const from = logo ? logo.getBoundingClientRect() : null;
-                const to = target ? target.getBoundingClientRect() : null;
-                el.classList.add('ec-out');
-                const dur = 550;
-                if (logo && from && to && to.width && from.width && logo.animate) {
-                    // shoot the logo into the header logo's spot (same picture, so only move + scale); the stage may
-                    // be scaled for the login box, so screen distances are divided by that scale
-                    const m = (s.stage && s.stage.style.transform.match(/scale\(([\d.]+)\)/)) || null;
-                    const k = m ? parseFloat(m[1]) || 1 : 1;
-                    const dx = (to.left - from.left) / k, dy = (to.top - from.top) / k;
-                    logo.animate([
-                        { transform: 'translate(-50%, -50%)' },
-                        { transform: 'translate(-50%, -50%) translate(' + dx + 'px, ' + dy + 'px) scale(' + (to.width / from.width) + ')' }
-                    ], { duration: dur, easing: 'cubic-bezier(0.65, 0, 0.3, 1)', fill: 'forwards' });
-                } else if (logo) {
-                    logo.style.transition = 'opacity ' + dur + 'ms';
-                    logo.style.opacity = '0';
-                }
-                setTimeout(function() {
-                    document.documentElement.classList.remove('ec-intro-on');
-                    const badge = target ? target.closest('.ec-logo') : null;
-                    if (badge) {
-                        badge.classList.remove('ec-landed');
-                        void badge.offsetWidth;
-                        badge.classList.add('ec-landed');
-                        setTimeout(function() { badge.classList.remove('ec-landed'); }, 1000);
-                    }
-                    el.remove();
-                }, dur);
-            }
-            // Signed out (or sign-in failed): show the login box over the animation once the logo is in
-            window.ecIntroShowLogin = function() {
-                if (!st || st.done) st = mount();
-                if (!st) { const login = loginEl(); if (login) login.style.display = 'flex'; return; }
-                st.want = 'login';
-                if (st.ready) showLogin(st);
-            };
-            // Signed in and allowed: once the logo is in, it flies to the header and the app shows
-            window.ecIntroToApp = function() {
-                if (!st || st.done) { const login = loginEl(); if (login) login.style.display = 'none'; return; }
-                st.want = 'app';
-                if (st.ready) fly(st);
-            };
-            st = mount();
-        })();
-    </script>
 
     <!-- Main App -->
     <div id="app" style="display:none;">
@@ -7302,9 +6755,7 @@
             b._ecRippleTimer = setTimeout(function() { b.classList.remove('ec-ripple'); }, 650);
         }, { capture: true, passive: true });
 
-      if (localStorage.getItem('ec_theme') === 'light') {
-    document.body.classList.add('light-mode');
-}
+        // (light mode is applied by the FAST START script at the top of <body>)
 
         // ===== INSTALL APP =====
         let deferredInstallPrompt = null;
@@ -7331,8 +6782,15 @@
             if (btn) btn.style.display = 'none';
         });
 
-        // Register Service Worker (required for PWA installability)
+        // Register Service Worker (required for PWA installability). It also opens the app from a saved copy
+        // (see sw.js) and says when a newer version has been downloaded: then a tap loads it.
         if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (!e.data || e.data.type !== 'ec-update-ready') return;
+                const bar = document.getElementById('ecUpdateBar');
+                if (bar) bar.hidden = false;
+            });
+            try { navigator.serviceWorker.startMessages(); } catch (e) {}
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
                     .then(reg => console.log('Service Worker registered:', reg))
@@ -7579,6 +7037,7 @@
                 sessionStorage.removeItem(EC_PREV_SESSION_KEY);
             } catch (e) {}
             try { await auth.signOut(); } catch (e) {}
+            ecSetSignedInHint(false);
             location.reload();
         }
 
@@ -7601,6 +7060,7 @@
             } catch (e) { console.warn('Session release failed:', e); }
             try { sessionStorage.removeItem(EC_PREV_SESSION_KEY); } catch (e) {}
             try { await auth.signOut(); } catch (e) { console.warn('Sign out failed:', e); }
+            ecSetSignedInHint(false);
             location.reload();
         }
 
@@ -7680,21 +7140,37 @@
             ecWarmRefs = [];
         }
 
+        // Which screen shows. The device remembers "signed in" so the next open starts on the map (FAST START).
+        function ecSetSignedInHint(on) {
+            try { if (on) localStorage.setItem('ec_signed_in', '1'); else localStorage.removeItem('ec_signed_in'); } catch (e) {}
+            document.documentElement.classList.toggle('ec-signed-in', !!on);
+        }
+        function ecShowApp() {
+            ecSetSignedInHint(true);
+            document.getElementById('app').style.display = 'flex';
+            document.getElementById('login-overlay').style.display = 'none';
+        }
+        function ecShowLogin() {
+            ecSetSignedInHint(false);
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('login-overlay').style.display = 'flex';
+        }
+
         auth.onAuthStateChanged(user => {
             if (user) {
                 const email = user.email;
                 if (!email.endsWith('@ec.com')) {
+                    ecShowLogin();
                     alert('Access denied. Only @ec.com emails allowed.');
                     auth.signOut();
                     return;
                 }
                 ecWarmStart(user.uid);
                 ecAccessGate(user).then(function(allowed) {
-                if (!allowed) { ecWarmStop(); return; }
+                if (!allowed) { ecWarmStop(); return; } // refused: ecDenyLogin signs out, which shows the login screen
                 currentUserId = user.uid;
                 isAdminUser = (email === 'justin@ec.com');
-                document.getElementById('app').style.display = 'flex';
-                ecIntroToApp(); // hides the login box; the loading-screen logo flies into the header
+                ecShowApp();
                 // The map will be initialized by the callback from Google Maps script.
                 // But we need to ensure initApp runs after login.
                 initApp();
@@ -7702,15 +7178,14 @@
                     console.warn('Access check failed:', err);
                     const errEl = document.getElementById('loginError');
                     if (errEl) errEl.textContent = 'Could not verify your sign-in. Please try again.';
-                    ecIntroShowLogin();
+                    ecShowLogin();
                 });
             } else {
                 ecWarmStop();
                 ecGateSeq++;
                 currentUserId = null;
                 isAdminUser = false;
-                ecIntroShowLogin(); // login box slides in over the loading-screen animation
-                document.getElementById('app').style.display = 'none';
+                ecShowLogin();
             }
         });
 
@@ -10011,13 +9486,25 @@
 
         // ===== MAP =====
         let mapInitialized = false;
+        // The last map view on this device ({ uid, lat, lng, zoom }), so the map opens where it was left without
+        // waiting for the database (and without jumping there a moment later)
+        const EC_MAP_VIEW_KEY = 'ec_map_view';
+        let ecPendingMapView = null; // a saved view that arrived from the database before the map was built
+        function ecReadDeviceMapView() {
+            try {
+                const v = JSON.parse(localStorage.getItem(EC_MAP_VIEW_KEY) || 'null');
+                if (v && isFinite(Number(v.lat)) && isFinite(Number(v.lng)) && isFinite(Number(v.zoom))) return v;
+            } catch (e) {}
+            return null;
+        }
 
         function initMap() {
             if (mapInitialized) return;
             const isLight = document.body.classList.contains('light-mode');
+            const startView = ecPendingMapView || ecReadDeviceMapView();
             map = new google.maps.Map(document.getElementById('dispatch-map'), {
-                center: { lat: 49.8425, lng: -99.9497 },
-                zoom: 11,
+                center: startView ? { lat: Number(startView.lat), lng: Number(startView.lng) } : { lat: 49.8425, lng: -99.9497 },
+                zoom: startView ? Number(startView.zoom) : 11,
                 styles: isLight ? [] : mapStyles,
                 gestureHandling: 'greedy',
                 mapTypeControl: false,
@@ -10058,6 +9545,7 @@
                 const center = map.getCenter();
                 const zoom = map.getZoom();
                 if (!center || !zoom || !currentUserId) return;
+                try { localStorage.setItem(EC_MAP_VIEW_KEY, JSON.stringify({ uid: currentUserId, lat: center.lat(), lng: center.lng(), zoom: zoom })); } catch (e) {}
                 if (mapViewSaveTimer) clearTimeout(mapViewSaveTimer);
                 mapViewSaveTimer = setTimeout(function() {
                     mapViewSaveTimer = null;
@@ -10834,25 +10322,11 @@
         }
 
         // ===== DRIVER BADGES =====
-        // First-load stagger: badges are rebuilt whenever one changes, so the intro only runs once and a rebuild
-        // during the intro continues from the same point instead of starting over
-        let ecBadgeIntroStart = 0;
         const EC_LOW_BATTERY_PCT = 30; // below this, the driver's bottom button shows a pulsing battery + %
-        const EC_BADGE_INTRO_MS = 1800;
         function renderDriverBadges() {
             renderAttentionStrip();
             const container = document.getElementById('driverBadges');
             const entries = ecDriverEntriesByStatus(getFilteredDrivers());
-            if (container.classList.contains('ec-intro') && performance.now() - ecBadgeIntroStart > EC_BADGE_INTRO_MS) {
-                container.classList.remove('ec-intro');
-            }
-            if (entries.length > 0 && !ecBadgeIntroStart) {
-                ecBadgeIntroStart = performance.now();
-                container.classList.add('ec-intro');
-            }
-            if (container.classList.contains('ec-intro')) {
-                container.style.setProperty('--ec-intro-t', '-' + Math.round(performance.now() - ecBadgeIntroStart) + 'ms');
-            }
             if (entries.length === 0) {
                 container._ecBadgeSig = null;
                 container.innerHTML =
@@ -10907,17 +10381,16 @@
             // Most updates only move dots on the map: when no badge would look different, keep the ones on
             // screen instead of rebuilding them all (rebuilding also restarted their glow animations)
             const badgeSig = JSON.stringify(badgeRows);
-            if (badgeSig !== container._ecBadgeSig || container.classList.contains('ec-intro')) {
+            if (badgeSig !== container._ecBadgeSig) {
                 container._ecBadgeSig = badgeSig;
                 container.innerHTML = '';
-                badgeRows.forEach(function(row, ecBadgeIndex) {
+                badgeRows.forEach(function(row) {
                     const id = row.id;
                     const badge = document.createElement('div');
                     badge.className = 'driver-badge ec-st-' + row.status + (row.tc ? ' ec-tc-on' : '');
                     badge.dataset.driverId = id;
                     badge.style.borderLeftColor = row.color;
                     badge.style.setProperty('--drv', row.color);
-                    badge.style.setProperty('--i', String(ecBadgeIndex));
                     badge.innerHTML = row.html;
                     badge.addEventListener('click', function() {
                         openDriverModal(id);
@@ -12409,12 +11882,18 @@
                 // Map view: this user's own saved view; the old shared view is only a first-time fallback
                 const sharedMapView = (cfg.map_center_lat && cfg.map_center_lng && cfg.map_zoom)
                     ? { lat: cfg.map_center_lat, lng: cfg.map_center_lng, zoom: cfg.map_zoom } : null;
-                const ownViewRef = currentUserId ? db.ref('users/' + currentUserId + '/dispatch_dashboard/map_view') : null;
-                (ownViewRef ? ownViewRef.once('value').then(v => v.val()).catch(() => null) : Promise.resolve(null)).then(own => {
+                // (the map already opened on this user's last view on this device: nothing to wait for)
+                const deviceView = ecReadDeviceMapView();
+                const ownViewRef = (currentUserId && !(deviceView && deviceView.uid === currentUserId))
+                    ? db.ref('users/' + currentUserId + '/dispatch_dashboard/map_view') : null;
+                if (ownViewRef) ownViewRef.once('value').then(v => v.val()).catch(() => null).then(own => {
                     const view = (own && isFinite(Number(own.lat)) && isFinite(Number(own.lng)) && isFinite(Number(own.zoom))) ? own : sharedMapView;
-                    if (view && map) {
+                    if (!view) return;
+                    if (map) {
                         map.setCenter({ lat: Number(view.lat), lng: Number(view.lng) });
                         map.setZoom(Number(view.zoom));
+                    } else {
+                        ecPendingMapView = view; // initMap opens on it
                     }
                 });
                 // The main map is always on screen now (there is no Map button); forget the old show/hide choice
@@ -13677,9 +13156,11 @@
             if (c && !c.hidden) { if (window.speechSynthesis) speechSynthesis.cancel(); ecVoiceHideCaption(); }
         });
 
+        // Google Maps finished before this script ran (see the stand-in initMap in <head>): build the map now
+        if (window.ecMapsLoadedEarly && window.google && google.maps) initMap();
+
         console.log('✅ E&C Dispatch Tracker loaded.');
         console.log('📍 GPS tracking enabled for drivers with PAJ device IDs.');
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA6umETP8wBUEV41ugAtiNiChUeLmmwmZI&libraries=geometry&loading=async&callback=initMap" async></script>
 </body>
 </html>
