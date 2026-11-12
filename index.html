@@ -5406,6 +5406,239 @@
         }
         .ec-notice { bottom: calc(var(--ec-bottom-bar, 50px) + 24px); }
 
+        /* ================= POLISH PASS (2026-11) =================
+           Looks only: more room for the maps, clearer labels, easier targets. Everything here sits on top of
+           the rules above, so deleting a block brings back the earlier look of that part. */
+
+        /* --- Main screen --- */
+        /* Phone: the name chips over the map stay on ONE line and swipe sideways (they used to wrap onto a
+           second line that covered vans near the top). A soft fade on the right hints at more names. */
+        @media (max-width: 760px) {
+            #mapDriverControl,
+            body:not(.light-mode) #mapDriverControl,
+            body.light-mode #mapDriverControl {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                overflow-y: hidden;
+                max-height: none;
+                padding-right: 28px;
+                scroll-snap-type: x proximity;
+                -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+                mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+            }
+            #mapDriverControl .driver-entry { flex: 0 0 auto; scroll-snap-align: start; }
+        }
+
+        /* Bottom driver buttons: slightly larger text in the same 36px button; "Now" in green */
+        #driverBadges .driver-badge .badge-row .name,
+        body:not(.light-mode) #driverBadges .driver-badge .badge-row .name { font-size: calc(14px * var(--ec-fs, 1)); letter-spacing: -0.01em; }
+        #driverBadges .driver-badge .last-update,
+        body:not(.light-mode) #driverBadges .driver-badge .last-update { font-size: calc(12px * var(--ec-fs, 1)); }
+        #driverBadges .driver-badge .last-update.ec-now,
+        body:not(.light-mode) #driverBadges .driver-badge.ec-st-online .last-update.ec-now { color: #34d67b; font-weight: 700; }
+        body.light-mode #driverBadges .driver-badge .last-update.ec-now { color: #0f8a45 !important; }
+        #driverBadges .driver-badge { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        #driverBadges .driver-badge:active { transform: scale(0.98); }
+
+        /* Header buttons: same look, but the touch area reaches 44px */
+        #app > header .gear-btn { position: relative; }
+        #app > header .gear-btn::after { content: ''; position: absolute; inset: -6px; }
+
+        /* Keyboard users always see where they are */
+        #app :is(button, [role="button"], select, input):focus-visible,
+        .driver-modal :is(button, select, input):focus-visible,
+        #settingsModal :is(button, select, input):focus-visible {
+            outline: 2px solid var(--accent, #f7c948);
+            outline-offset: 2px;
+        }
+
+        /* Computer screens: the map now runs to the bottom of the window and the driver buttons float over
+           its bottom left corner as one glass panel (still two per line, same size). The Fit button sits
+           just above the panel; the mic stays in the bottom right corner. */
+        @media (min-width: 1200px) and (min-height: 560px) {
+            #app .app-grid, body.light-mode #app .app-grid { position: relative; }
+            #driverBadges {
+                position: absolute;
+                left: 12px;
+                bottom: 12px;
+                z-index: 30;
+                width: 580px;
+                max-height: 42vh;
+                padding: 8px !important;
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.10);
+                background: rgba(10, 11, 17, 0.72);
+                -webkit-backdrop-filter: blur(14px) saturate(1.2);
+                backdrop-filter: blur(14px) saturate(1.2);
+                box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+                scrollbar-width: thin;
+            }
+            body.light-mode #driverBadges {
+                background: rgba(255, 255, 255, 0.78);
+                border-color: rgba(0, 0, 0, 0.10);
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+            }
+            #dispatch-map .ec-main-fit-ctl { margin: 0 0 calc(var(--ec-bottom-bar, 50px) + 22px) 6px; }
+            .ec-voice-btn { bottom: 16px; right: 16px; }
+            .ec-voice-caption { bottom: 76px; right: 16px; }
+            .install-app-btn { bottom: 76px; right: 16px; }
+            .install-app-btn[style*="flex"] ~ .ec-voice-caption { bottom: 134px; right: 16px; }
+            .ec-notice { bottom: 24px; }
+        }
+
+
+
+        /* --- Light mode: give the buttons their meaning back ---
+           One old rule paints every light-mode button the same grey, which hid which button is the main one
+           and, in the time picker, which hour / minute / AM-PM is selected. These bring the colours back. */
+        body.light-mode .ec-tp-grid button.is-on,
+        body.light-mode .ec-tp-ampm button.is-on,
+        body.light-mode .ec-tp-done,
+        body.light-mode .settings-actions .save-btn,
+        body.light-mode .nickname-modal .nickname-actions .nick-save,
+        body.light-mode .route-time-box .rt-btn.active {
+            background: #f7c948 !important;
+            border-color: #d9a400 !important;
+            color: #1a1300 !important;
+            font-weight: 700;
+        }
+        body.light-mode .ec-dt-chip.is-on {
+            background: rgba(247, 201, 72, 0.3) !important;
+            border-color: #d9a400 !important;
+        }
+        body.light-mode #historyQuery .ec-btn-go,
+        body.light-mode .ec-test-btn {
+            background: #1faa59 !important;
+            border-color: #178a47 !important;
+            color: #fff !important;
+        }
+        body.light-mode #historyQuery .ec-btn-danger,
+        body.light-mode #driverSettingsList .driver-row-fields .remove-driver,
+        body.light-mode .nickname-modal .nickname-actions .nick-remove {
+            background: #fff !important;
+            border-color: #d64535 !important;
+            color: #c0392b !important;
+        }
+        body.light-mode #historyQuery .ec-btn.ec-btn-route {
+            background: #fff !important;
+            border-color: #0088a8 !important;
+            color: #00708b !important;
+        }
+        body.light-mode #historyQuery .ec-btn.ec-btn-route.active { background: #0088a8 !important; color: #fff !important; }
+        body.light-mode .group-drawer .create-section button {
+            background: #f7c948 !important;
+            border-color: #d9a400 !important;
+            color: #1a1300 !important;
+            font-weight: 700;
+        }
+        /* the "Group name" box was black on the white drawer */
+        body.light-mode .group-drawer .create-section input { background: #fff; border-color: #ccc; color: #000; }
+        body.light-mode .group-drawer .create-section input::placeholder { color: #777; }
+        /* the driver window's header block was white on the grey card */
+        body.light-mode .driver-modal .modal-header { background: #f5f5f5; }
+        body.light-mode .driver-modal .modal-header .close-modal-btn { border-radius: 50% !important; }
+        @media (max-width: 600px) { body.light-mode .driver-modal { background: #f5f5f5; } }
+
+        /* The closed Driver Groups drawer waits just off the right edge, and its shadow was spilling a dark
+           strip onto the right side of every screen: the shadow now only shows while the drawer is open */
+        .group-drawer:not(.open) { box-shadow: none; }
+
+        /* --- Settings --- */
+        /* The colour picker had collapsed into a thin line (a flex rule gave it no height): a real swatch again */
+        #driverSettingsList .driver-row-fields input.drv-color {
+            flex: 0 0 auto;
+            width: 64px;
+            height: 64px;
+            min-height: 64px;
+        }
+        #driverSettingsList .driver-row-toggle,
+        .settings-card .settings-collapsible-toggle,
+        .settings-card .ec-add-driver-btn { min-height: 44px; }
+        /* Save / Close stay in view at the bottom while the list scrolls */
+        .settings-modal .settings-card { padding-bottom: 0; }
+        .settings-modal .settings-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 3;
+            margin: 20px -28px 0;
+            padding: 14px 28px calc(14px + env(safe-area-inset-bottom, 0px));
+            background: var(--card);
+            border-top: 1px solid var(--border);
+        }
+        .settings-modal .settings-actions button { min-height: 44px; }
+        /* Phone: Settings uses the whole screen, like Driver Groups (it was a card with wide dark margins) */
+        @media (max-width: 600px) {
+            .settings-modal { padding: 0; align-items: stretch; }
+            .settings-modal .settings-card {
+                max-width: none;
+                max-height: none;
+                height: 100%;
+                border: none;
+                border-radius: 0;
+                padding: calc(16px + env(safe-area-inset-top, 0px)) 14px 0;
+                box-sizing: border-box;
+            }
+            .settings-card h2 { font-size: 20px; margin-bottom: 14px; }
+            .settings-modal .settings-actions { margin: 16px -14px 0; padding-left: 14px; padding-right: 14px; }
+            .settings-modal .settings-actions button { flex: 1 1 0; }
+        }
+
+        /* --- Driver window --- */
+        .driver-modal .modal-side { display: contents; }
+        /* No stop list for this driver: the empty "Stop List" panel is hidden, so the map gets its room */
+        .driver-modal .modal-stops-container:has(> .ecl-none) { display: none; }
+        .driver-modal .modal-header .header-top { gap: 10px; }
+        .ec-contact-list.ec-map-contact-list.ecl-none { display: none !important; } /* same on the Show Track map */
+        /* Computer screens: controls in a column on the left, the map takes the whole height beside it
+           (it used to sit under the controls, in the bottom half of the window). The empty "Stop List"
+           panel is hidden when the driver has no list, so the map is wider too. */
+        @media (min-width: 1100px) and (min-height: 560px) {
+            .driver-modal .modal-card { flex-direction: row; gap: 20px; overflow: hidden; padding: 18px; }
+            .driver-modal .modal-side {
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                flex: 0 0 400px;
+                width: 400px;
+                min-height: 0;
+                overflow-y: auto;
+                padding-right: 6px;
+                scrollbar-width: thin;
+            }
+            .driver-modal .modal-side .modal-header { position: static; padding: 0; gap: 8px; }
+            .driver-modal .modal-side .header-top h2 { font-size: 22px; }
+            .driver-modal .modal-side .route-time-box { align-self: stretch; }
+            .driver-modal .modal-map-row { margin-top: 0; flex: 1 1 auto; min-width: 0; }
+            .driver-modal .modal-map { min-height: 0; }
+            .driver-modal .modal-stops-container { flex: 0 0 280px; max-width: 280px; }
+            /* the controls stack like on a phone: full-width rows */
+            .driver-modal .modal-side #historyQuery > div { flex-direction: column; align-items: stretch !important; gap: 12px !important; }
+            .driver-modal .modal-side #historyQuery > div > div { flex: none !important; }
+            .driver-modal .modal-side #historyQuery > div > div:nth-child(2) { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px !important; }
+            .driver-modal .modal-side #historyQuery > div > div:nth-child(2) #historyResult { grid-column: 1 / -1; white-space: normal !important; }
+            .driver-modal .modal-side #historyQuery > div > div:nth-child(2) #historyResult:empty { display: none; }
+            .driver-modal .modal-side #historyQuery .ec-btn { height: 42px; padding: 0 8px; white-space: nowrap; }
+            .driver-modal .modal-side .ec-dt { width: 100%; flex: none; }
+            .driver-modal .modal-side .ec-dt-daywrap,
+            .driver-modal .modal-side .ec-dt-day { flex: 1 1 auto; }
+            .driver-modal .modal-side .ec-dt-time { flex: 1 1 0; min-width: 0; }
+            .driver-modal .modal-side .header-top { gap: 10px; }
+            .driver-modal .modal-side .header-top h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .driver-modal .modal-side .header-top .close-modal-btn { margin-left: auto; flex: none; }
+            .driver-modal .modal-side .tc-driver-row:not([hidden]) { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: center; }
+            .driver-modal .modal-side .tc-driver-select { width: 100%; max-width: none; }
+            .driver-modal .modal-side .tc-driver-msg { grid-column: 1 / -1; }
+            .driver-modal .modal-side .tc-driver-msg:empty { display: none; }
+            .driver-modal .modal-side .route-time-box { display: grid; grid-template-columns: 1fr; gap: 4px; }
+            .driver-modal .modal-side .route-time-box .rt-main { justify-content: space-between; align-items: center; }
+            .driver-modal .modal-side .start-points-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 8px; }
+            .driver-modal .modal-side .start-points-bar .sp-title,
+            .driver-modal .modal-side .start-points-bar .sp-hint,
+            .driver-modal .modal-side .start-points-bar .sp-msg { grid-column: 1 / -1; }
+            .driver-modal .modal-side .start-points-bar .sp-msg:empty { display: none; }
+            .driver-modal .modal-side .start-points-bar > .sp-btn { height: 38px; }
+        }
+
     </style>
 </head>
 <body>
@@ -5555,6 +5788,9 @@
     <!-- Driver Modal -->
     <div class="driver-modal" id="driverModal">
         <div class="modal-card">
+            <!-- .modal-side groups the controls. On phones and small windows it has no effect (display: contents);
+                 on a computer screen it becomes a column on the left so the map gets the full height beside it. -->
+            <div class="modal-side">
             <div class="modal-header">
                 <div class="header-top">
                     <h2 id="driverModalTitle">Driver</h2>
@@ -5643,6 +5879,7 @@
                 </div>
                 <div class="start-points-list" id="startPointsList"></div>
             </div>
+            </div><!-- /.modal-side -->
             <!-- Row for map and manifest -->
             <div class="modal-map-row">
                 <div class="modal-map" id="driverMapBox"><div id="driver-map"></div>
@@ -6658,6 +6895,20 @@
             if (!drv || drv.battery === null || drv.battery === undefined || drv.battery === '') return null;
             const n = Number(drv.battery);
             return isFinite(n) ? n : null;
+        }
+
+        // Time since a GPS fix in plain words: "Now" (under a minute), "25 min", "5 h", "5 h 12 min"
+        function ecAgeText(updatedAt) {
+            const totalMinutes = Math.max(0, (ecServerNow() - updatedAt) / 60000);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = Math.floor(totalMinutes % 60);
+            if (hours <= 0 && minutes <= 0) return 'Now';
+            return (hours > 0 ? hours + ' h' : '') + (hours > 0 && minutes > 0 ? ' ' : '') + (minutes > 0 ? minutes + ' min' : '');
+        }
+        // The same for a sentence: "just now", "25 min ago"
+        function ecAgoText(updatedAt) {
+            const t = ecAgeText(updatedAt);
+            return t === 'Now' ? 'just now' : t + ' ago';
         }
 
         // FleetHunt trucks don't report a battery level: always shown as 100% (green)
@@ -8428,18 +8679,8 @@
             if (drv) {
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
-                let lastUp = '—';
-                if (drv.lastLocation?.updatedAt) {
-                    const totalMinutes = (ecServerNow() - drv.lastLocation.updatedAt) / 60000;
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = Math.floor(totalMinutes % 60);
-                    let formatted = '';
-                    if (hours > 0) formatted += `${hours} H`;
-                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
-                    if (!formatted) formatted = '0 Min';
-                    lastUp = formatted;
-                }
-                document.getElementById('overlayStatus').textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
+                const lastUp = drv.lastLocation?.updatedAt ? ecAgoText(drv.lastLocation.updatedAt) : '—';
+                document.getElementById('overlayStatus').textContent = `${status.label} · Updated ${lastUp}`;
                 document.getElementById('overlayStatus').className = status.class;
 
                 let batteryVal = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
@@ -9424,6 +9665,8 @@
                 });
             }
             container.appendChild(head);
+            // nothing to list for this driver: on a computer screen the empty panel is hidden so the map is wider
+            container.classList.toggle('ecl-none', ecContactListState === 'ready' && !names);
 
             let emptyText = '';
             if (ecContactListState === 'loading') emptyText = 'Loading stop list…';
@@ -9566,7 +9809,37 @@
                     hasPoints = true;
                 }
             });
-            if (hasPoints) map.fitBounds(bounds);
+            // keep every van clear of what floats over the map: the name chips at the top and, on a
+            // computer screen, the driver buttons panel at the bottom
+            if (hasPoints) map.fitBounds(bounds, ecMainMapPadding(bounds));
+        }
+        // Fit keeps every van clear of what floats over the map: the name chips at the top and, on a
+        // computer screen, the driver buttons panel in the bottom left corner. The panel can be avoided
+        // by staying above it or by staying to the right of it: whichever lets the map zoom in closer.
+        function ecMainMapPadding(bounds) {
+            const wrap = document.getElementById('mainMapWrapper');
+            const chips = document.getElementById('mapDriverControl');
+            const dock = document.getElementById('driverBadges');
+            const pad = { top: 60, right: 50, bottom: 40, left: 50 };
+            if (!wrap) return pad;
+            const w = wrap.getBoundingClientRect();
+            if (chips) pad.top = Math.round(chips.getBoundingClientRect().height) + 50; // + the name tag over a van
+            if (dock && getComputedStyle(dock).position === 'absolute') {
+                const d = dock.getBoundingClientRect();
+                const above = Object.assign({}, pad, { bottom: Math.round(w.bottom - d.top) + 24 });
+                const beside = Object.assign({}, pad, { left: Math.round(d.right - w.left) + 50 });
+                // the vans' spread in flat map units (Mercator), to compare how far each choice can zoom
+                const y = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+                const ne = bounds.getNorthEast(), sw = bounds.getSouthWest();
+                const spanX = Math.max(1e-9, (ne.lng() - sw.lng()) * Math.PI / 180);
+                const spanY = Math.max(1e-9, y(ne.lat()) - y(sw.lat()));
+                const room = p => Math.min((w.width - p.left - p.right) / spanX, (w.height - p.top - p.bottom) / spanY);
+                Object.assign(pad, room(beside) > room(above) ? beside : above);
+            }
+            // never ask for more padding than the map has (small windows)
+            if (pad.top + pad.bottom > w.height * 0.75) { pad.top = 40; pad.bottom = 40; }
+            if (pad.left + pad.right > w.width * 0.75) { pad.left = 40; pad.right = 40; }
+            return pad;
         }
 
         // ===== UPDATE MAP MARKERS =====
@@ -9581,7 +9854,10 @@
                 const pos = { lat: drv.lastLocation.lat, lng: drv.lastLocation.lng };
                 const color = drv.color || '#f7c948';
                 const displayName = getDriverDisplayName(id, drv);
-                const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading);
+                // Same language as the driver buttons: Online = full colour + pulsing ring, Parked = full
+                // colour + blue P and no ring, not in use = faded and no ring
+                const use = ecUseStateFor(id, drv).use;
+                const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading) + '|' + use;
 
                 let marker = driverMarkers[id];
                 let glideFrom = null; // where the van is drawn now, when it has to glide to a new fix
@@ -9594,7 +9870,8 @@
                         if (!glideFrom) marker.setPosition(pos);
                     }
                     if (marker._iconKey !== iconKey) {
-                        marker.setIcon(getDriverIcon(displayName, color, drv.heading));
+                        marker.setIcon(getDriverIcon(displayName, color, drv.heading, use));
+                        marker.setZIndex(EC_MARKER_Z[use]);
                         marker._iconKey = iconKey;
                     }
                     if (marker.getMap() !== map) marker.setMap(map);
@@ -9602,7 +9879,8 @@
                     marker = new google.maps.Marker({
                         position: pos,
                         map: map,
-                        icon: getDriverIcon(displayName, color, drv.heading)
+                        zIndex: EC_MARKER_Z[use], // vans being driven are drawn over parked and unused ones
+                        icon: getDriverIcon(displayName, color, drv.heading, use)
                     });
                     marker._iconKey = iconKey;
                     marker._target = pos;
@@ -9613,7 +9891,10 @@
                 }
 
                 let circle = driverPulseCircles[id];
-                if (circle) {
+                if (use !== 'online') {
+                    // no ring for a parked or unused van (and nothing to animate for it)
+                    if (circle) { circle.setMap(null); delete driverPulseCircles[id]; }
+                } else if (circle) {
                     const c = circle.getCenter();
                     // (while gliding, the glide moves the ring together with the van)
                     if (!glideFrom && !ecGlides[id] && (!c || c.lat() !== pos.lat || c.lng() !== pos.lng)) circle.setCenter(pos);
@@ -9786,7 +10067,9 @@
                 `<rect x="4.6" y="15.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/>`;
         }
 
-        function getDriverIcon(name, color, heading = null) {
+        const EC_MARKER_Z = { online: 30, parked: 20, idle: 10 };
+        // use: 'online' (default look), 'parked' (blue P on the van) or 'idle' (faded: not in use)
+        function getDriverIcon(name, color, heading = null, use = 'online') {
             const rawName = String(name == null ? '' : name);
             const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
             const safeColor = String(color == null ? '#f7c948' : color).replace(/[^#a-zA-Z0-9(),.% ]/g, '');
@@ -9799,11 +10082,17 @@
             const height = 66;
             const headingKey = ecHeadingKey(heading);
             const turn = headingKey === 'n' ? 0 : headingKey;
+            const idle = use === 'idle';
+            const parkedBadge = use !== 'parked' ? '' :
+                `<g transform="translate(${half + 11} ${cy - 13})"><rect x="-7" y="-7" width="14" height="14" rx="4" fill="#3b82f6" stroke="#ffffff" stroke-width="1.2"/>` +
+                `<text x="0" y="3.6" text-anchor="middle" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold">P</text></g>`;
             const svg =
                 `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+                `<g opacity="${idle ? 0.5 : 1}">` +
                 `<rect x="1" y="1" width="${width - 2}" height="19" rx="9.5" fill="${pillFill}" stroke="${safeColor}" stroke-width="1.5"/>` +
                 `<text x="${half}" y="14.5" text-anchor="middle" fill="${textColor}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold">${safeName}</text>` +
                 `<g transform="translate(${half} ${cy}) rotate(${turn})">` + ecCargoVanSvg(safeColor, isLight) + `</g>` +
+                `</g>` + parkedBadge +
                 `</svg>`;
             return {
                 url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
@@ -9869,11 +10158,11 @@
             db.ref(EC_TC + 'vehicle_claims').on('value', snap => {
                 ecInUse.claims = snap.val() || {};
                 ecInUse.readable = true;
-                if (dashboardLoaded) queueRender({ badges: true, control: true });
+                if (dashboardLoaded) queueRender({ badges: true, markers: true, control: true });
             }, err => {
                 ecInUse.claims = null;
                 ecInUse.readable = false; // not a Time Clock admin or Gil: the time fallback is used
-                if (dashboardLoaded) queueRender({ badges: true, control: true });
+                if (dashboardLoaded) queueRender({ badges: true, markers: true, control: true });
             });
         }
         function ecUseState(id, drv, status) {
@@ -10465,17 +10754,7 @@
             for (let [id, drv] of entries) {
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
-                let lastUpdateText = '—';
-                if (drv.lastLocation?.updatedAt) {
-                    const totalMinutes = (ecServerNow() - drv.lastLocation.updatedAt) / 60000;
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = Math.floor(totalMinutes % 60);
-                    let formatted = '';
-                    if (hours > 0) formatted += `${hours} H`;
-                    if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
-                    if (!formatted) formatted = '0 Min';
-                    lastUpdateText = formatted;
-                }
+                const lastUpdateText = drv.lastLocation?.updatedAt ? ecAgeText(drv.lastLocation.updatedAt) : '—';
 
                 let alarmHtml = '';
                 if (drv.hasAlarm) {
@@ -10501,7 +10780,7 @@
               <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(ecUseTitle({ status: status, use: use }))}, last update ${ecEsc(lastUpdateText)}">
                 <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
-                ${parkedHtml}<span class="last-update">${lastUpdateText}</span>
+                ${parkedHtml}<span class="last-update${lastUpdateText === 'Now' ? ' ec-now' : ''}">${lastUpdateText}</span>
                 ${lowBattHtml}
               </div>
             ` });
@@ -10522,6 +10801,12 @@
                     badge.innerHTML = row.html;
                     badge.addEventListener('click', function() {
                         openDriverModal(id);
+                    });
+                    // also reachable and usable with the keyboard, like a real button
+                    badge.setAttribute('role', 'button');
+                    badge.tabIndex = 0;
+                    badge.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDriverModal(id); }
                     });
                     container.appendChild(badge);
                 });
@@ -10628,18 +10913,8 @@
 
             const devId = drv?.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
             const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
-            let lastUp = '—';
-            if (drv?.lastLocation?.updatedAt) {
-                const totalMinutes = (ecServerNow() - drv.lastLocation.updatedAt) / 60000;
-                const hours = Math.floor(totalMinutes / 60);
-                const minutes = Math.floor(totalMinutes % 60);
-                let formatted = '';
-                if (hours > 0) formatted += `${hours} H`;
-                if (minutes > 0) formatted += (formatted ? ' ' : '') + `${minutes} Min`;
-                if (!formatted) formatted = '0 Min';
-                lastUp = formatted;
-            }
-            statusHeader.textContent = `Status: ${status.label} · Last update: ${lastUp} ago`;
+            const lastUp = drv?.lastLocation?.updatedAt ? ecAgoText(drv.lastLocation.updatedAt) : '—';
+            statusHeader.textContent = `${status.label} · Updated ${lastUp}`;
 
             if (drv) {
                 let batteryVal = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);
@@ -12039,7 +12314,13 @@
             document.removeEventListener('visibilitychange', ecOnVisibilityChange);
             document.addEventListener('visibilitychange', ecOnVisibilityChange);
             if (ecAttentionInterval) clearInterval(ecAttentionInterval);
-            ecAttentionInterval = setInterval(function() { if (!document.hidden && !ecIsIdle()) renderAttentionStrip(); }, 60000);
+            // once a minute: the "25 min" ages, and Online turning to Parked / not in use when a GPS goes
+            // quiet, stay right even when no new position arrives (nothing is redrawn when nothing changed)
+            ecAttentionInterval = setInterval(function() {
+                if (document.hidden || ecIsIdle()) return;
+                if (dashboardLoaded && !settingsOpen) queueRender({ badges: true, markers: true, control: true });
+                else renderAttentionStrip();
+            }, 60000);
 
             window.removeEventListener('beforeunload', ecBeforeUnload);
             window.addEventListener('beforeunload', ecBeforeUnload);
