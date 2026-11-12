@@ -927,6 +927,19 @@
         #driverSettingsList .driver-row-toggle .driver-row-toggle-name {
             flex: 1;
         }
+        #driverSettingsList .driver-row-toggle .driver-row-toggle-batt {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        #driverSettingsList .ec-set-batt { display: inline-flex; align-items: center; }
+        #driverSettingsList .ec-set-batt-none { color: var(--muted); font-weight: 600; }
+        body.light-mode #driverSettingsList .ec-set-batt .ec-batt { color: inherit !important; }
+        body.light-mode #driverSettingsList .ec-set-batt-none { color: #6b7280 !important; }
         #driverSettingsList .driver-row-toggle .driver-row-toggle-caret {
             color: var(--muted);
             transition: transform 0.2s ease;
@@ -8212,6 +8225,7 @@
             ecPointsOnData(); // saved points list and pins follow the data
             if (settingsOpen) {
                 refreshSettingsListIfDriversChanged();
+                ecUpdateSettingsBatteries();
                 return;
             }
             // (the hidden Settings list is not rebuilt here: openSettings builds it fresh)
@@ -12468,6 +12482,7 @@
               <button type="button" class="driver-row-toggle" onclick="toggleDriverRow('${ecAttrJs(id)}', this)">
                 <span class="driver-row-toggle-dot" style="background:${ecEsc(drv.color || '#f7c948')}"></span>
                 <span class="driver-row-toggle-name">${ecEsc(drv.name || 'Driver')}</span>
+                <span class="driver-row-toggle-batt" data-id="${ecEsc(id)}">${ecSettingsBattHtml(drv)}</span>
                 <span class="driver-row-toggle-caret">▾</span>
               </button>
               <div class="driver-row-fields" id="driverRowFields-${id}" style="display:none;">
@@ -12486,6 +12501,33 @@
             `;
                 container.appendChild(row);
             }
+        }
+
+        // GPS battery shown on each driver's Settings button, right of the name. FleetHunt trucks don't
+        // report a battery, so they show a dash. Colours match the driver window (green > 50, yellow > 20, red).
+        function ecSettingsBattHtml(drv) {
+            if (ecIsFleetHunt(drv)) {
+                return '<span class="ec-set-batt ec-set-batt-none" title="FleetHunt GPS does not report a battery level"><span class="ec-batt" style="--lvl:0" aria-hidden="true"></span>—</span>';
+            }
+            const val = ecBatteryValue(drv);
+            if (val === null) {
+                return '<span class="ec-set-batt ec-set-batt-none" title="No battery level reported yet"><span class="ec-batt" style="--lvl:0" aria-hidden="true"></span>—</span>';
+            }
+            const pct = Math.max(0, Math.round(val));
+            const cls = pct > 50 ? 'battery-high' : (pct > 20 ? 'battery-mid' : 'battery-low');
+            return `<span class="ec-set-batt ${cls}" title="GPS battery ${pct}%"><span class="ec-batt" style="--lvl:${Math.min(100, pct) / 100}" aria-hidden="true"></span>${pct}%</span>`;
+        }
+
+        // Keeps the battery on the open Settings buttons current as new GPS data comes in
+        function ecUpdateSettingsBatteries() {
+            const list = document.getElementById('driverSettingsList');
+            if (!list) return;
+            list.querySelectorAll('.driver-row-toggle-batt[data-id]').forEach(el => {
+                const drv = drivers[el.getAttribute('data-id')];
+                if (!drv) return;
+                const html = ecSettingsBattHtml(drv);
+                if (el._ecBattHtml !== html) { el.innerHTML = html; el._ecBattHtml = html; }
+            });
         }
 
         function toggleDriverRow(id, btn) {
