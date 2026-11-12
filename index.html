@@ -5830,6 +5830,69 @@
         }
         @media (prefers-reduced-motion: reduce) { .ec-points-panel { animation: none; } }
 
+        /* ----- Saved point editor (name + circle size): same sheet / card as the list, which it replaces while open ----- */
+        body.ec-point-editing #ecPointsPanel { display: none; }
+        .ec-points-panel.ecp-editor { overflow-y: auto; overscroll-behavior: contain; }
+        .ec-points-panel .ecp-ed-sub { margin: -6px 0 10px; font-size: 12.5px; color: #9aa0b0; }
+        .ec-points-panel .ecp-ed-name {
+            width: 100%;
+            box-sizing: border-box;
+            height: 46px;
+            padding: 0 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: #0b0b14;
+            color: #f3f4f6;
+            font-family: inherit;
+            font-size: 16px; /* 16px: no zoom-in on iPhone when tapped */
+            font-weight: 600;
+            outline: none;
+        }
+        .ec-points-panel .ecp-ed-name:focus { border-color: #f7c948; box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.18); }
+        .ec-points-panel .ecp-ed-size { display: flex; align-items: baseline; justify-content: space-between; margin: 14px 2px 4px; font-size: 13px; font-weight: 600; color: #c9cdd8; }
+        .ec-points-panel .ecp-ed-size b { font-size: 17px; font-weight: 800; color: #f7c948; }
+        .ec-points-panel .ecp-ed-slider { width: 100%; height: 32px; margin: 0; accent-color: #f7c948; cursor: pointer; }
+        .ec-points-panel .ecp-ed-scale { display: flex; justify-content: space-between; margin: -2px 2px 0; font-size: 11px; color: #7d8394; }
+        .ec-points-panel .ecp-ed-hint { margin: 8px 2px 0; font-size: 12px; line-height: 1.35; color: #9aa0b0; }
+        .ec-points-panel .ecp-ed-actions { display: flex; gap: 10px; margin-top: 14px; }
+        .ec-points-panel .ecp-ed-actions button { flex: 1; height: 48px; border-radius: 12px; font-size: 16px; font-weight: 800; }
+        .ec-points-panel .ecp-ed-save { border: 2px solid #f7c948 !important; background: #f7c948 !important; color: #111 !important; }
+        .ec-points-panel .ecp-ed-cancel { border: 1px solid rgba(255, 255, 255, 0.18) !important; background: transparent !important; color: inherit !important; }
+        /* the list: circle size after the name, and an edit (pencil) button */
+        .ec-points-panel .ecp-go .ecp-size { flex: none; margin-left: auto; font-style: normal; font-size: 12px; font-weight: 600; color: #9aa0b0; }
+        .ec-points-panel .ecp-edit {
+            flex: none;
+            width: 40px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none !important;
+            background: transparent !important;
+            color: #c9cdd8 !important;
+        }
+        .ec-points-panel .ecp-edit svg { width: 18px; height: 18px; }
+        body.light-mode .ec-points-panel .ecp-ed-sub,
+        body.light-mode .ec-points-panel .ecp-ed-hint,
+        body.light-mode .ec-points-panel .ecp-ed-scale,
+        body.light-mode .ec-points-panel .ecp-go .ecp-size { color: #5b6170; }
+        body.light-mode .ec-points-panel .ecp-ed-size { color: #333; }
+        body.light-mode .ec-points-panel .ecp-ed-size b { color: #8a6200; }
+        body.light-mode .ec-points-panel .ecp-ed-name { background: #fff; color: #111; border-color: rgba(0, 0, 0, 0.18); }
+        body.light-mode .ec-points-panel .ecp-ed-slider { accent-color: #d9a800; }
+        body.light-mode .ec-points-panel .ecp-ed-cancel { border-color: rgba(0, 0, 0, 0.18) !important; }
+        body.light-mode .ec-points-panel .ecp-edit { color: #444 !important; }
+        @media (max-width: 760px) {
+            /* phone: a compact sheet so most of the map (and the circle) stays in view */
+            .ec-points-panel.ecp-editor { padding-top: 6px; }
+            .ec-points-panel.ecp-editor .ecp-head { margin-bottom: 8px; }
+            .ec-points-panel.ecp-editor .ecp-ed-hint { display: none; }
+            .ec-points-panel.ecp-editor .ecp-ed-size { margin-top: 10px; }
+            .ec-points-panel.ecp-editor .ecp-ed-actions { margin-top: 10px; }
+            body.ec-point-editing .ec-voice-btn,
+            body.ec-point-editing .ec-voice-caption { display: none; }
+        }
+
 
         /* ================= VEHICLE SPEED (PAJ km/h) =================
            Moving vans show their speed: a tag under the van on the map, the bottom button (in place of
@@ -6023,6 +6086,25 @@
             <div class="ecp-list" id="ecPointsList"></div>
             <div class="ecp-msg" id="ecPointsMsg" role="status"></div>
         </div>
+        <!-- New point / Edit point: name + circle size. Sits beside the map (not over it) so the circle can be dragged. -->
+        <div id="ecPointEditor" class="ec-points-panel ecp-editor" role="dialog" aria-label="Saved point" hidden>
+            <div class="ecp-grab" aria-hidden="true"></div>
+            <div class="ecp-head">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C7.9 2 4.5 5.3 4.5 9.4c0 5.3 6.3 11.6 7 12.3.3.3.7.3 1 0 .7-.7 7-7 7-12.3C19.5 5.3 16.1 2 12 2zm0 10.2a2.9 2.9 0 1 1 0-5.8 2.9 2.9 0 0 1 0 5.8z"/></svg>
+                <h3 id="ecpEdTitle">New point</h3>
+                <button type="button" class="ecp-close" onclick="ecPointsEditCancel()" aria-label="Cancel" title="Cancel">✕</button>
+            </div>
+            <div class="ecp-ed-sub" id="ecpEdSub"></div>
+            <input type="text" id="ecpEdName" class="ecp-ed-name" maxlength="32" placeholder="Name this point" autocomplete="off" aria-label="Point name" onkeydown="ecPointsEditKeydown(event)">
+            <div class="ecp-ed-size"><span>Circle size</span><b id="ecpEdRadius">200 m</b></div>
+            <input type="range" id="ecpEdSlider" class="ecp-ed-slider" min="0" max="1000" step="1" aria-label="Circle size" oninput="ecPointsEditSlide(this.value)">
+            <div class="ecp-ed-scale" aria-hidden="true"><span>50 m</span><span>1 km</span><span>Town · 25 km</span></div>
+            <div class="ecp-ed-hint">Or drag the white dots on the circle's edge. Drag the middle dot to move the point.</div>
+            <div class="ecp-ed-actions">
+                <button type="button" class="ecp-ed-save" onclick="ecPointsEditSave()">Save</button>
+                <button type="button" class="ecp-ed-cancel" onclick="ecPointsEditCancel()">Cancel</button>
+            </div>
+        </div>
         <div id="ecPointsBanner" class="ec-points-banner" role="status" hidden>
             <div>
                 <div class="ecp-b-title">Tap the map where the point goes</div>
@@ -6210,19 +6292,6 @@
                 <button type="button" class="nick-save" onclick="saveDriverNickname()">Save</button>
                 <button type="button" class="nick-remove" onclick="removeDriverNickname()">Remove</button>
                 <button type="button" class="nick-cancel" onclick="closeNicknameModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Saved point name (opened from the main map: New point) -->
-    <div class="nickname-modal" id="startPointNameModal">
-        <div class="nickname-card">
-            <h3>Name this point</h3>
-            <div class="nickname-sub" id="startPointNameLabel"></div>
-            <input type="text" id="startPointNameInput" maxlength="32" placeholder="Enter a name" autocomplete="off" onkeydown="startPointNameKeydown(event)">
-            <div class="nickname-actions">
-                <button type="button" class="nick-save" onclick="saveStartPointName()">Save</button>
-                <button type="button" class="nick-cancel" onclick="ecPointsCancelName()">Cancel</button>
             </div>
         </div>
     </div>
@@ -7804,15 +7873,29 @@
         }
         const TRACK_FILTER_DISTANCE = 10;
         const STOP_DETECTION_THRESHOLD = 30;
-        const START_POINT_RADIUS_M = 200;
+        const START_POINT_RADIUS_M = 200;       // a saved point's circle when none was set (points made before sizes)
+        const EC_POINT_MIN_R = 50;              // smallest and largest circle a saved point can have
+        const EC_POINT_MAX_R = 25000;           // (25 km: a whole town and then some)
+        // A saved point's circle size in metres (a startPoints entry, or a number); missing = START_POINT_RADIUS_M
+        function ecPointRadius(v) {
+            const r = Number(v && typeof v === 'object' ? v.radius : v);
+            if (!isFinite(r) || r <= 0) return START_POINT_RADIUS_M;
+            return Math.round(Math.min(EC_POINT_MAX_R, Math.max(EC_POINT_MIN_R, r)));
+        }
+        // "200 m", "850 m", "1.2 km", "12 km"
+        function ecRadiusText(m) {
+            const r = Math.round(Number(m) || 0);
+            if (r < 1000) return r + ' m';
+            const km = r / 1000;
+            return (km < 10 ? km.toFixed(1).replace(/\.0$/, '') : String(Math.round(km))) + ' km';
+        }
         // Time-on-route tuning constants
         const ROUTE_SPIKE_FAR_M = 500;          // a spike point is at least this far from both neighbors
         const ROUTE_SPIKE_NEIGHBOR_M = 100;     // ...while its two neighbors are within this distance of each other
         const EXIT_CONFIRM_POINTS = 3;          // away this many points in a row = really left (round trips)
         const EXIT_CONFIRM_MS = 2 * 60 * 1000;  // ...or away for at least this long
-        let startPointPending = null;
         // Saved points on the main map (SAVED POINTS section)
-        const ecPoints = { open: false, adding: false, listener: null, layers: [], temp: [], selected: null, sig: null, msgTimer: null };
+        const ecPoints = { open: false, adding: false, listener: null, layers: [], temp: [], selected: null, sig: null, msgTimer: null, edit: null };
 
         let deviceStatuses = {};
         const lastDeviceKeyForDriver = {}; // driverId -> device id last seen, so stale statuses can be dropped
@@ -10297,6 +10380,7 @@
                     marker._target = pos;
                     marker.addListener('click', function() {
                         if (ecPoints.adding) { ecPointsPickVan(id); return; } // New point: use where this van is
+                        if (ecPoints.edit) return; // sizing a point: the van stays put under the circle
                         openDriverModal(id);
                     });
                     driverMarkers[id] = marker;
@@ -10894,7 +10978,7 @@
                 points.forEach(function(sp) {
                     const name = String(sp.name || 'Point');
                     addOption(name, function() {
-                        ecEtaRun(driverId, { kind: 'point', name: name, lat: Number(sp.lat), lng: Number(sp.lng) });
+                        ecEtaRun(driverId, { kind: 'point', name: name, lat: Number(sp.lat), lng: Number(sp.lng), radius: sp.radius });
                     });
                 });
                 const divider = document.createElement('div');
@@ -11051,7 +11135,7 @@
                     dest = { lat: target.lat, lng: target.lng };
                 }
                 let text;
-                if (haversineDistance(oLat, oLng, dest.lat, dest.lng) <= START_POINT_RADIUS_M) {
+                if (haversineDistance(oLat, oLng, dest.lat, dest.lng) <= ecPointRadius(target.radius)) {
                     text = target.kind === 'current' ? 'At Your Location' : 'At ' + target.name;
                 } else {
                     const res = await ecEtaComputeRoute({ lat: oLat, lng: oLng }, dest);
@@ -11550,17 +11634,18 @@
         }
 
         // From when they left the start until they first arrived at the end, inside the window.
-        // start / end: { name, lat, lng }; each is a circle of START_POINT_RADIUS_M.
+        // start / end: { name, lat, lng, radius }; each is a circle of its own radius (missing = START_POINT_RADIUS_M).
         // points: [{ lat, lng, timestamp(ms) }]
         // status: no_data | never_at_start | still_at_start | on_way | not_arrived | done
         function computeTimeBetween(points, start, end, windowStartMs, windowEndMs, nowMs) {
-            const R = START_POINT_RADIUS_M;
+            const Rs = ecPointRadius(start.radius);
+            const Re = ecPointRadius(end.radius);
             const res = { status: 'no_data', leaveMs: null, arriveMs: null, durationMs: 0, startName: start.name, endName: end.name };
             const pts = ecRouteCleanPoints(points, windowStartMs, windowEndMs);
             if (pts.length === 0) return res;
-            const inS = pts.map(p => haversineDistance(p.lat, p.lng, start.lat, start.lng) <= R);
-            const inE = pts.map(p => haversineDistance(p.lat, p.lng, end.lat, end.lng) <= R);
-            const overlap = haversineDistance(start.lat, start.lng, end.lat, end.lng) < 2 * R;
+            const inS = pts.map(p => haversineDistance(p.lat, p.lng, start.lat, start.lng) <= Rs);
+            const inE = pts.map(p => haversineDistance(p.lat, p.lng, end.lat, end.lng) <= Re);
+            const overlap = haversineDistance(start.lat, start.lng, end.lat, end.lng) < Rs + Re;
             let seenStart = false;
             let leaveIdx = -1;
             let arriveIdx = -1;
@@ -11610,7 +11695,7 @@
         // (so a parked van's GPS wobble at the edge doesn't count as leaving).
         // status: no_data | never_at_start | never_left (at the start the whole time) | back_at_start | away_now | away_at_end
         function computeTimeSinceLeft(points, start, windowStartMs, windowEndMs, nowMs) {
-            const R = START_POINT_RADIUS_M;
+            const R = ecPointRadius(start.radius);
             const res = { status: 'no_data', leaveMs: null, backMs: null, durationMs: 0, startName: start.name, endName: 'Current location' };
             const pts = ecRouteCleanPoints(points, windowStartMs, windowEndMs);
             if (pts.length === 0) return res;
@@ -11745,8 +11830,8 @@
 
         // ===== TIME ON ROUTE: press the button, then pick a start and an end =====
         // A start or end is a saved point (the yellow pins; one list shared by every van), picked from the buttons under
-        // Time on route or by tapping its pin, or any spot tapped on the driver map; a tap within START_POINT_RADIUS_M of
-        // a saved point counts as that point. The end can also be "Current location": time since they last left the
+        // Time on route or by tapping its pin, or any spot tapped on the driver map; a tap inside a saved point's circle
+        // counts as that point (the smallest circle wins, so a shop inside a town-sized point can still be picked). The end can also be "Current location": time since they last left the
         // start, counting up. While picking, the map gets a crosshair cursor, an outline and a banner saying what to tap.
         // GPS history is fetched only when the button is used, once per From/To window (a Show Track for the same window
         // is reused, so it costs nothing); while To is still ahead, a copy older than EC_RT_FRESH_MS is fetched again.
@@ -11779,7 +11864,7 @@
 
         function ecRtPickPoint(id) {
             const sp = ecAllStartPoints().find(function(p) { return p.id === id; });
-            if (sp) ecRtPick({ name: String(sp.name || 'Saved point'), lat: Number(sp.lat), lng: Number(sp.lng) });
+            if (sp) ecRtPick({ name: String(sp.name || 'Saved point'), lat: Number(sp.lat), lng: Number(sp.lng), radius: sp.radius });
         }
 
         function ecRtPickNow() {
@@ -11804,7 +11889,7 @@
                 const win = getRouteTimeWindow();
                 const drv = drivers[id];
                 const loc = drv && drv.lastLocation;
-                if (ecServerNow() >= win.endMs || (loc && haversineDistance(loc.lat, loc.lng, ecRt.start.lat, ecRt.start.lng) <= START_POINT_RADIUS_M)) {
+                if (ecServerNow() >= win.endMs || (loc && haversineDistance(loc.lat, loc.lng, ecRt.start.lat, ecRt.start.lng) <= ecPointRadius(ecRt.start.radius))) {
                     ecRtStopTick();
                     ecRtCompute();
                     return;
@@ -11875,16 +11960,11 @@
             setRouteTimeDisplay('--:--', 'Press Time on route, then pick a start and an end (or Current location)', false);
         }
 
-        // A tap on the map: a saved point when it's inside one's circle (closest wins), otherwise that spot
+        // A tap on the map: a saved point when it's inside one's circle (ecPointAt), otherwise that spot (a 200 m circle)
         function ecRtPickAt(lat, lng) {
-            let best = null;
-            let bestD = Infinity;
-            ecAllStartPoints().forEach(function(sp) {
-                const d = haversineDistance(lat, lng, sp.lat, sp.lng);
-                if (d <= START_POINT_RADIUS_M && d < bestD) { bestD = d; best = sp; }
-            });
-            if (best) ecRtPick({ name: String(best.name || 'Saved point'), lat: Number(best.lat), lng: Number(best.lng) });
-            else ecRtPick({ name: 'the ' + (ecRt.mode === 'start' ? 'start' : 'end') + ' pin', lat: lat, lng: lng, pin: true });
+            const best = ecPointAt(lat, lng);
+            if (best) ecRtPick({ name: String(best.name || 'Saved point'), lat: Number(best.lat), lng: Number(best.lng), radius: best.radius });
+            else ecRtPick({ name: 'the ' + (ecRt.mode === 'start' ? 'start' : 'end') + ' pin', lat: lat, lng: lng, radius: START_POINT_RADIUS_M, pin: true });
         }
 
         function ecRtPick(pt) {
@@ -11892,7 +11972,7 @@
             const isStart = ecRt.mode === 'start';
             const color = isStart ? '#2ecc71' : '#e74c3c';
             ecRt.layers.push(new google.maps.Circle({
-                center: { lat: pt.lat, lng: pt.lng }, radius: START_POINT_RADIUS_M, clickable: false,
+                center: { lat: pt.lat, lng: pt.lng }, radius: ecPointRadius(pt.radius), clickable: false,
                 fillColor: color, fillOpacity: 0.15, strokeColor: color, strokeOpacity: 0.9, strokeWeight: 2, map: driverModalMap
             }));
             ecRt.layers.push(new google.maps.Marker({
@@ -12160,8 +12240,11 @@
         // computer), and "New point" places one by tapping the map or a van.
         // Storage did not change: each point is still kept under a vehicle (drivers/<id>/startPoints/<key>), where
         // points always were, so the database and its rules are untouched and older points keep working.
-        // ecAllStartPoints() joins them into the one list. The same name saved within START_POINT_RADIUS_M on more
-        // than one vehicle shows once; `copies` lists every stored copy so deleting removes them all.
+        // ecAllStartPoints() joins them into the one list. The same name saved on more than one vehicle, inside the
+        // bigger of the two circles, shows once; `copies` lists every stored copy so deleting or editing changes them all.
+        // Each point has its own circle size (`radius` in metres, set by dragging the circle when it's made or edited;
+        // points saved before sizes existed have none and use START_POINT_RADIUS_M). Time on route, the ETA menu and
+        // the voice answers all use that circle.
         const EC_POINT_COLOR = '#f7c948';
 
         function ecAllStartPoints() {
@@ -12173,7 +12256,7 @@
                 Object.keys(sps).forEach(function(key) {
                     const sp = sps[key];
                     if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
-                    all.push({ id: driverId + '/' + key, key: key, driverId: driverId, name: String(sp.name || 'Point'), lat: Number(sp.lat), lng: Number(sp.lng) });
+                    all.push({ id: driverId + '/' + key, key: key, driverId: driverId, name: String(sp.name || 'Point'), lat: Number(sp.lat), lng: Number(sp.lng), radius: ecPointRadius(sp) });
                 });
             });
             all.sort(function(a, b) { return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; }); // oldest first (push keys sort by time)
@@ -12182,13 +12265,27 @@
                 const nameKey = sp.name.trim().toLowerCase();
                 const same = out.find(function(o) {
                     return o.name.trim().toLowerCase() === nameKey &&
-                        haversineDistance(o.lat, o.lng, sp.lat, sp.lng) <= START_POINT_RADIUS_M;
+                        haversineDistance(o.lat, o.lng, sp.lat, sp.lng) <= Math.max(o.radius, sp.radius);
                 });
                 const copy = { driverId: sp.driverId, key: sp.key };
                 if (same) same.copies.push(copy);
                 else out.push(Object.assign({}, sp, { copies: [copy] }));
             });
             return out;
+        }
+
+        // The saved point whose circle holds this spot: the smallest circle wins (a shop inside a town-sized point),
+        // then the closest. null when it's in none.
+        function ecPointAt(lat, lng) {
+            let best = null;
+            let bestR = Infinity;
+            let bestD = Infinity;
+            ecAllStartPoints().forEach(function(sp) {
+                const d = haversineDistance(lat, lng, sp.lat, sp.lng);
+                if (d > sp.radius) return;
+                if (sp.radius < bestR || (sp.radius === bestR && d < bestD)) { best = sp; bestR = sp.radius; bestD = d; }
+            });
+            return best;
         }
 
         // Yellow pin with the name under it (the tip of the pin is the saved spot)
@@ -12244,7 +12341,7 @@
             const top = Math.round(Math.max(r.top + 12, cr && cr.height ? cr.bottom + 10 : 0));
             document.documentElement.style.setProperty('--ec-points-top', top + 'px');
         }
-        window.addEventListener('resize', function() { if (ecPoints.open || ecPoints.adding) ecPointsPlace(); });
+        window.addEventListener('resize', function() { if (ecPoints.open || ecPoints.adding || ecPoints.edit) ecPointsPlace(); });
 
         function ecPointsToggle() {
             if (ecPoints.open) ecPointsClose();
@@ -12266,7 +12363,7 @@
 
         function ecPointsClose() {
             ecPointsCancelAdd();
-            ecPointsCancelName();
+            ecPointsEditCancel();
             ecPoints.open = false;
             ecPoints.selected = null;
             document.body.classList.remove('ec-points-open');
@@ -12290,11 +12387,13 @@
         function ecPointsDraw() {
             ecPointsClearLayers();
             if (!ecPoints.open || !map || !window.google || !google.maps) return;
+            const editing = ecPoints.edit && ecPoints.edit.id;
             ecAllStartPoints().forEach(function(sp) {
+                if (sp.id === editing) return; // shown by the editor's own circle while it's being changed
                 const sel = ecPoints.selected === sp.id;
                 const pos = { lat: sp.lat, lng: sp.lng };
                 ecPoints.layers.push(new google.maps.Circle({
-                    map: map, center: pos, radius: START_POINT_RADIUS_M, clickable: false,
+                    map: map, center: pos, radius: sp.radius, clickable: false,
                     fillColor: EC_POINT_COLOR, fillOpacity: sel ? 0.24 : 0.14,
                     strokeColor: EC_POINT_COLOR, strokeOpacity: sel ? 1 : 0.7, strokeWeight: sel ? 2 : 1
                 }));
@@ -12304,7 +12403,7 @@
                     icon: ecPointPinIcon(sp.name, { selected: sel })
                 });
                 marker.addListener('click', function() {
-                    if (ecPoints.adding) return;
+                    if (ecPoints.adding || ecPoints.edit) return;
                     ecPointsSelect(sp.id, false);
                 });
                 ecPoints.layers.push(marker);
@@ -12336,7 +12435,18 @@
                 const name = document.createElement('span');
                 name.textContent = sp.name;
                 go.appendChild(name);
+                const size = document.createElement('em');
+                size.className = 'ecp-size';
+                size.textContent = ecRadiusText(sp.radius);
+                go.appendChild(size);
                 go.addEventListener('click', function() { ecPointsSelect(sp.id, true); });
+                const edit = document.createElement('button');
+                edit.type = 'button';
+                edit.className = 'ecp-edit';
+                edit.title = 'Change the name or circle size';
+                edit.setAttribute('aria-label', 'Edit ' + sp.name);
+                edit.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 6.5l4 4" stroke="currentColor" stroke-width="2"/></svg>';
+                edit.addEventListener('click', function() { ecPointsEditExisting(sp.id); });
                 const del = document.createElement('button');
                 del.type = 'button';
                 del.className = 'ecp-del';
@@ -12345,6 +12455,7 @@
                 del.setAttribute('aria-label', 'Delete ' + sp.name);
                 del.addEventListener('click', function() { ecPointsDelete(sp); });
                 row.appendChild(go);
+                row.appendChild(edit);
                 row.appendChild(del);
                 list.appendChild(row);
             });
@@ -12360,7 +12471,7 @@
 
         // New driver data: redraw only when the saved points themselves changed
         function ecPointsOnData() {
-            const sig = JSON.stringify(ecAllStartPoints().map(function(sp) { return [sp.id, sp.name, sp.lat, sp.lng, sp.copies.length]; }));
+            const sig = JSON.stringify(ecAllStartPoints().map(function(sp) { return [sp.id, sp.name, sp.lat, sp.lng, sp.radius, sp.copies.length]; }));
             if (sig === ecPoints.sig) return;
             ecPoints.sig = sig;
             ecPointsRender();
@@ -12373,14 +12484,19 @@
             ecPointsRender();
             if (!pan) return;
             const sp = ecAllStartPoints().find(function(p) { return p.id === id; });
-            if (sp) ecPointsPanTo(sp.lat, sp.lng);
+            if (sp) ecPointsPanTo(sp.lat, sp.lng, sp.radius);
         }
 
         // Bring a point into view. On a phone the list covers the bottom of the map, so the point is centred
         // in the part of the map that is still showing.
-        function ecPointsPanTo(lat, lng) {
+        function ecPointsPanTo(lat, lng, radius) {
             if (!map) return;
-            if ((map.getZoom() || 0) < 14) map.setZoom(15);
+            // zoom so the whole circle shows (a town-sized point zooms out), but never past street level
+            const box = document.getElementById('dispatch-map');
+            const px = box ? Math.max(200, Math.min(box.clientWidth, box.clientHeight)) : 400;
+            const fitZoom = Math.floor(Math.log2(156543.03392 * Math.cos(lat * Math.PI / 180) * px / (2.6 * (radius || START_POINT_RADIUS_M))));
+            const want = Math.max(8, Math.min(15, fitZoom));
+            if ((map.getZoom() || 0) < 14 || (map.getZoom() || 0) > want) map.setZoom(want);
             let target = { lat: lat, lng: lng };
             const panel = document.getElementById('ecPointsPanel');
             const mapEl = document.getElementById('dispatch-map');
@@ -12444,17 +12560,7 @@
         }
 
         function ecPointsPicked(lat, lng, vanId) {
-            ecPointsStopAdd();
-            ecPointsClearTemp();
-            const pos = { lat: lat, lng: lng };
-            ecPoints.temp.push(new google.maps.Circle({
-                map: map, center: pos, radius: START_POINT_RADIUS_M, clickable: false,
-                fillColor: EC_POINT_COLOR, fillOpacity: 0.22, strokeColor: EC_POINT_COLOR, strokeOpacity: 0.9, strokeWeight: 2
-            }));
-            ecPoints.temp.push(new google.maps.Marker({
-                map: map, position: pos, clickable: false, zIndex: 50, icon: ecPointPinIcon('', { isNew: true })
-            }));
-            openStartPointNameModal(lat, lng, vanId);
+            ecPointsEditOpen({ id: null, copies: null, name: getNextStartPointName(), lat: lat, lng: lng, radius: START_POINT_RADIUS_M, vanId: vanId || null });
         }
 
         function getNextStartPointName() {
@@ -12465,51 +12571,160 @@
             return 'Point ' + n;
         }
 
-        function openStartPointNameModal(lat, lng, vanId) {
-            if (!isFinite(lat) || !isFinite(lng)) return;
-            startPointPending = { lat: lat, lng: lng, vanId: vanId || null };
-            const label = document.getElementById('startPointNameLabel');
-            if (label) {
-                let text = 'Everyone on the dispatch map will see it.';
-                const drv = vanId ? drivers[vanId] : null;
-                if (drv) {
-                    const loc = drv.lastLocation || {};
-                    const stale = !loc.updatedAt || (ecServerNow() - loc.updatedAt) > STANDBY_THRESHOLD;
-                    const van = getDriverDisplayName(vanId, drv);
-                    text = (stale
-                        ? 'At the last GPS spot of ' + van + (loc.updatedAt ? ' (' + ecAgoText(loc.updatedAt) + ')' : '') + '. '
-                        : 'Where ' + van + ' is now. ') + text;
-                }
-                label.textContent = text;
+        // ----- The point editor: name + circle size, for a new point or one already saved -----
+        // The circle on the map is editable: drag a white dot on its edge to make it bigger or smaller (up to
+        // EC_POINT_MAX_R, a whole town), or the middle dot to move the point. The slider does the same thing, which is
+        // easier on a phone or for a big town (it zooms the map out to keep the whole circle in view).
+        // The slider is on a log scale so small sizes (50 m to 1 km) get as much room as town sizes (1 to 25 km).
+        const EC_POINT_SLIDER_MAX = 1000;
+        function ecPointSliderToRadius(v) {
+            const r = EC_POINT_MIN_R * Math.pow(EC_POINT_MAX_R / EC_POINT_MIN_R, Math.max(0, Math.min(EC_POINT_SLIDER_MAX, v)) / EC_POINT_SLIDER_MAX);
+            // round to steps that read well: 10 m under 1 km, 50 m under 5 km, 250 m above
+            const step = r < 1000 ? 10 : r < 5000 ? 50 : 250;
+            return ecPointRadius(Math.round(r / step) * step);
+        }
+        function ecPointRadiusToSlider(r) {
+            return Math.round(EC_POINT_SLIDER_MAX * Math.log(ecPointRadius(r) / EC_POINT_MIN_R) / Math.log(EC_POINT_MAX_R / EC_POINT_MIN_R));
+        }
+
+        function ecPointsEditExisting(id) {
+            const sp = ecAllStartPoints().find(function(p) { return p.id === id; });
+            if (!sp) return;
+            ecPoints.selected = id;
+            ecPointsEditOpen({ id: sp.id, copies: sp.copies.slice(), name: sp.name, lat: sp.lat, lng: sp.lng, radius: sp.radius, vanId: null });
+        }
+
+        function ecPointsEditOpen(o) {
+            if (!map || !window.google || !google.maps) return;
+            ecPointsStopAdd();
+            ecPointsEditClose();
+            const ed = Object.assign({ listeners: [] }, o);
+            ecPoints.edit = ed;
+            const pos = { lat: ed.lat, lng: ed.lng };
+            ed.circle = new google.maps.Circle({
+                map: map, center: pos, radius: ed.radius, editable: true, draggable: false, zIndex: 20,
+                fillColor: EC_POINT_COLOR, fillOpacity: 0.2, strokeColor: EC_POINT_COLOR, strokeOpacity: 1, strokeWeight: 2.5
+            });
+            ed.marker = new google.maps.Marker({
+                map: map, position: pos, clickable: false, zIndex: 50, icon: ecPointPinIcon('', { isNew: !ed.id })
+            });
+            ecPoints.temp.push(ed.circle, ed.marker);
+            ed.listeners.push(ed.circle.addListener('radius_changed', function() {
+                const r = ed.circle.getRadius();
+                const clamped = ecPointRadius(r);
+                if (Math.abs(clamped - r) > 0.5) { ed.circle.setRadius(clamped); return; } // past the smallest/largest
+                ed.radius = clamped;
+                ecPointsEditShowRadius(true);
+            }));
+            ed.listeners.push(ed.circle.addListener('center_changed', function() {
+                const c = ed.circle.getCenter();
+                ed.lat = c.lat();
+                ed.lng = c.lng();
+                ed.marker.setPosition(c);
+            }));
+            document.body.classList.add('ec-point-editing');
+            const panel = document.getElementById('ecPointEditor');
+            if (panel) panel.hidden = false;
+            const title = document.getElementById('ecpEdTitle');
+            if (title) title.textContent = ed.id ? 'Edit point' : 'New point';
+            const sub = document.getElementById('ecpEdSub');
+            if (sub) sub.textContent = ecPointsEditSubText(ed);
+            const input = document.getElementById('ecpEdName');
+            if (input) input.value = ed.name;
+            ecPointsEditShowRadius(true);
+            ecPointsPlace();
+            ecPointsDraw(); // hides the saved pin of the point being edited
+            ecPointsEditKeepInView(false);
+            // On a computer the name is ready to type over; on a phone the keyboard would cover the circle
+            const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+            if (input && !touch) setTimeout(function() { input.focus(); input.select(); }, 60);
+        }
+
+        function ecPointsEditSubText(ed) {
+            let text = ed.id ? 'Changes show for every van.' : 'Everyone on the dispatch map will see it.';
+            const drv = ed.vanId ? drivers[ed.vanId] : null;
+            if (drv) {
+                const loc = drv.lastLocation || {};
+                const stale = !loc.updatedAt || (ecServerNow() - loc.updatedAt) > STANDBY_THRESHOLD;
+                const van = getDriverDisplayName(ed.vanId, drv);
+                text = (stale
+                    ? 'At the last GPS spot of ' + van + (loc.updatedAt ? ' (' + ecAgoText(loc.updatedAt) + ')' : '') + '. '
+                    : 'Where ' + van + ' is now. ') + text;
             }
-            const input = document.getElementById('startPointNameInput');
-            if (input) input.value = getNextStartPointName();
-            const modal = document.getElementById('startPointNameModal');
-            if (modal) modal.style.display = 'flex';
-            setTimeout(function() { if (input) { input.focus(); input.select(); } }, 60);
+            return text;
         }
 
-        function closeStartPointNameModal() {
-            const modal = document.getElementById('startPointNameModal');
-            if (modal) modal.style.display = 'none';
-            startPointPending = null;
+        // Size text + slider follow the circle (moveSlider false while the slider itself is being dragged)
+        function ecPointsEditShowRadius(moveSlider) {
+            const ed = ecPoints.edit;
+            if (!ed) return;
+            const out = document.getElementById('ecpEdRadius');
+            if (out) out.textContent = ecRadiusText(ed.radius) + (ed.radius >= 2000 ? ' · ' + ecRadiusText(ed.radius * 2) + ' across' : '');
+            const slider = document.getElementById('ecpEdSlider');
+            if (slider && moveSlider) slider.value = String(ecPointRadiusToSlider(ed.radius));
         }
 
-        // Cancel in the name box: nothing is saved and the pin just placed comes off the map
-        function ecPointsCancelName() {
-            closeStartPointNameModal();
+        function ecPointsEditSlide(v) {
+            const ed = ecPoints.edit;
+            if (!ed) return;
+            const r = ecPointSliderToRadius(Number(v));
+            ed.radius = r;
+            ed.circle.setRadius(r); // (radius_changed updates the text)
+            ecPointsEditShowRadius(false);
+            ecPointsEditKeepInView(true);
+        }
+
+        // Zoom so the whole circle shows above / beside the editor. growOnly: only zoom out (while sliding bigger).
+        function ecPointsEditKeepInView(growOnly) {
+            const ed = ecPoints.edit;
+            if (!ed || !map) return;
+            const b = ed.circle.getBounds();
+            const view = map.getBounds();
+            if (!b) return;
+            if (growOnly && view && view.contains(b.getNorthEast()) && view.contains(b.getSouthWest())) return;
+            const mapEl = document.getElementById('dispatch-map');
+            const panel = document.getElementById('ecPointEditor');
+            const pad = { top: 70, right: 30, bottom: 30, left: 30 };
+            if (mapEl && panel && !panel.hidden) {
+                const mr = mapEl.getBoundingClientRect();
+                const pr = panel.getBoundingClientRect();
+                if (pr.width >= mr.width - 2) pad.bottom = Math.max(30, Math.round(mr.bottom - pr.top) + 20); // phone sheet
+                else pad.right = Math.max(30, Math.round(mr.right - pr.left) + 20); // computer card
+                if (pad.top + pad.bottom > mr.height - 80) pad.bottom = Math.max(20, mr.height - 80 - pad.top);
+            }
+            if (growOnly || !view || !view.contains(b.getNorthEast()) || !view.contains(b.getSouthWest()) || map.getZoom() < 12) {
+                map.fitBounds(b, pad);
+                if (!growOnly) google.maps.event.addListenerOnce(map, 'idle', function() { if (map.getZoom() > 17) map.setZoom(17); });
+            }
+        }
+
+        function ecPointsEditClose() {
+            const ed = ecPoints.edit;
+            if (!ed) return;
+            ed.listeners.forEach(function(l) { google.maps.event.removeListener(l); });
+            ecPoints.edit = null;
             ecPointsClearTemp();
+            document.body.classList.remove('ec-point-editing');
+            const panel = document.getElementById('ecPointEditor');
+            if (panel) panel.hidden = true;
+            if (document.activeElement && document.activeElement.id === 'ecpEdName') document.activeElement.blur();
+            ecPointsDraw();
         }
 
-        function startPointNameKeydown(e) {
+        // Cancel: nothing is saved (a new point's pin comes off the map; an edited one goes back as it was)
+        function ecPointsEditCancel() {
+            ecPointsEditClose();
+        }
+
+        function ecPointsEditKeydown(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-                saveStartPointName();
+                ecPointsEditSave();
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopPropagation();
-                ecPointsCancelName();
+                ecPointsEditCancel();
             }
         }
 
@@ -12528,19 +12743,28 @@
             return best;
         }
 
-        function saveStartPointName() {
-            if (!startPointPending) { closeStartPointNameModal(); return; }
-            const pending = startPointPending;
-            const input = document.getElementById('startPointNameInput');
+        function ecPointsEditSave() {
+            const ed = ecPoints.edit;
+            if (!ed) return;
+            const input = document.getElementById('ecpEdName');
             let name = input ? input.value.trim().slice(0, 32) : '';
-            if (!name) name = getNextStartPointName();
-            closeStartPointNameModal();
-            ecPointsClearTemp();
-            const home = ecPointsHomeDriverId(pending.vanId);
-            if (!home) { ecShowNotice('Add a vehicle in Settings first. Saved points are kept with the vehicles.'); return; }
-            const saved = getDriversRef().child(home).child('startPoints').push({ name: name, lat: pending.lat, lng: pending.lng });
-            if (saved && saved.key) ecPoints.selected = home + '/' + saved.key; // the new point is highlighted in the list
-            ecPointsMsg('Saved "' + name + '".');
+            if (!name) name = ed.id ? ed.name : getNextStartPointName();
+            const data = { name: name, lat: ed.lat, lng: ed.lng, radius: ecPointRadius(ed.radius) };
+            ecPointsEditClose();
+            let saved;
+            if (ed.id) {
+                // every stored copy of this point gets the same name, spot and size
+                saved = Promise.all((ed.copies || []).map(function(c) {
+                    return getDriversRef().child(c.driverId).child('startPoints').child(c.key).update(data);
+                }));
+                ecPoints.selected = ed.id;
+            } else {
+                const home = ecPointsHomeDriverId(ed.vanId);
+                if (!home) { ecShowNotice('Add a vehicle in Settings first. Saved points are kept with the vehicles.'); return; }
+                saved = getDriversRef().child(home).child('startPoints').push(data);
+                if (saved && saved.key) ecPoints.selected = home + '/' + saved.key; // the new point is highlighted in the list
+            }
+            ecPointsMsg('Saved "' + name + '" (' + ecRadiusText(data.radius) + ' circle).');
             Promise.resolve(saved).catch(function(err) {
                 ecPointsMsg('');
                 ecSaveError('the saved point')(err);
@@ -12574,7 +12798,7 @@
             ecAllStartPoints().forEach(function(sp) {
                 const pos = { lat: sp.lat, lng: sp.lng };
                 container._startCircles.push(new google.maps.Circle({
-                    center: pos, radius: START_POINT_RADIUS_M, clickable: false, map: driverModalMap,
+                    center: pos, radius: sp.radius, clickable: false, map: driverModalMap,
                     fillColor: EC_POINT_COLOR, fillOpacity: 0.12, strokeColor: EC_POINT_COLOR, strokeOpacity: 0.6, strokeWeight: 1
                 }));
                 // not clickable: the tap goes through to the map, which picks the point for Time on route
@@ -13165,6 +13389,7 @@
                 const nothingElseOpen = modal.style.display !== 'flex' && !historicalOverlayOpen &&
                     !(drawerEl && drawerEl.classList.contains('open')) && !(settingsEl && settingsEl.style.display === 'flex');
                 if (nothingElseOpen && ecPoints.adding) { ecPointsCancelAdd(); e.preventDefault(); return; }
+                if (nothingElseOpen && ecPoints.edit) { ecPointsEditCancel(); e.preventDefault(); return; }
                 if (nothingElseOpen && ecPoints.open) { ecPointsClose(); e.preventDefault(); return; }
                 if (modal.style.display === 'flex') {
                     closeDriverModal();
@@ -13580,7 +13805,7 @@
                 Object.values(sps).forEach(sp => {
                     if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng)) || !sp.name) return;
                     const s = ecVoicePhraseScore(words, ecVoiceNorm(sp.name).filter(x => !EC_VOICE_STOP.has(x)));
-                    if (s >= 0.8 && (!best || s > best.score)) best = { score: s, name: String(sp.name), lat: Number(sp.lat), lng: Number(sp.lng) };
+                    if (s >= 0.8 && (!best || s > best.score)) best = { score: s, name: String(sp.name), lat: Number(sp.lat), lng: Number(sp.lng), radius: ecPointRadius(sp) };
                 });
             });
             return best;
@@ -13672,8 +13897,10 @@
                 if (!sps || typeof sps !== 'object') return;
                 Object.values(sps).forEach(sp => {
                     if (!sp || !sp.name || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
+                    // inside its circle; the smallest circle wins (a shop inside a town-sized point), then the closest
                     const d = haversineDistance(loc.lat, loc.lng, Number(sp.lat), Number(sp.lng));
-                    if (d <= START_POINT_RADIUS_M && (!best || d < best.d)) best = { d: d, name: String(sp.name) };
+                    const r = ecPointRadius(sp);
+                    if (d <= r && (!best || r < best.r || (r === best.r && d < best.d))) best = { d: d, r: r, name: String(sp.name) };
                 });
             });
             return best ? 'at ' + best.name : '';
@@ -13857,7 +14084,7 @@
                 }
                 const straight = haversineDistance(loc.lat, loc.lng, dest.lat, dest.lng);
                 const age = ecVoiceStatus(id) === 'online' ? '' : ' (' + ecVoiceAgo(loc.at) + ')';
-                if (straight <= START_POINT_RADIUS_M) return { text: label + ' is at ' + (destName === 'you' ? 'your location' : destName) + age + '.' };
+                if (straight <= ecPointRadius(dest.radius)) return { text: label + ' is at ' + (destName === 'you' ? 'your location' : destName) + age + '.' };
                 if (intent === 'far') {
                     return { text: label + ' is ' + ecVoiceDist(straight) + ' ' + ecVoiceDir(dest, loc) + ' of ' + destName + ' in a straight line' + age + '.',
                         choices: [{ label: 'Drive time', q: 'how long until ' + ecVoiceNorm(label).join(' ') + ' gets to ' + (key === 'me' ? 'me' : destName), id: id, intent: 'eta' }] };
@@ -13932,7 +14159,7 @@
             if (!ranked.length) return { text: 'No online vehicles to compare.' };
             ecVoice.lastId = ranked[0].id;
             const at = destName === 'you' ? 'at your location' : 'at ' + destName;
-            const howFar = r => r.d <= START_POINT_RADIUS_M ? at : ecVoiceDist(r.d) + ' away';
+            const howFar = r => r.d <= ecPointRadius(dest.radius) ? at : ecVoiceDist(r.d) + ' away';
             let text = 'Closest to ' + destName + ' is ' + ecVoiceLabel(ranked[0].id) + ', ' + howFar(ranked[0]) + '.';
             if (ranked[1]) text += ' Next: ' + ranked.slice(1, 3).map(r => ecVoiceLabel(r.id) + ', ' + howFar(r)).join('; ') + '. Distances are in a straight line.';
             return { text: text, choices: [{ label: 'Where is ' + ecVoiceLabel(ranked[0].id) + '?', q: 'where is', id: ranked[0].id, intent: 'where' }] };
