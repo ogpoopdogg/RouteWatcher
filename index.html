@@ -2399,6 +2399,69 @@
             animation: ecRtBlink 1s ease-in-out infinite;
         }
         @keyframes ecRtBlink { 50% { opacity: 0.25; } }
+        /* Saved points as buttons while picking the start / end (Current location first for the end) */
+        .route-time-box .rt-choices {
+            flex: 1 1 100%;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-top: 8px;
+            margin-top: 4px;
+            border-top: 1px solid var(--border);
+        }
+        .route-time-box .rt-choices[hidden] { display: none; }
+        .route-time-box .rt-choices-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+        .route-time-box .rt-choices-label b { color: var(--rt-pick, var(--accent)); }
+        .route-time-box .rt-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .route-time-box .rt-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 18px;
+            border: 1.5px solid var(--border);
+            background: var(--card2);
+            color: var(--text);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: border-color 0.15s ease, transform 0.15s ease;
+        }
+        @media (hover: hover) { .route-time-box .rt-chip:hover { border-color: var(--rt-pick, var(--accent)); } }
+        .route-time-box .rt-chip:active { transform: scale(0.97); }
+        .route-time-box .rt-chip .rt-chip-pin {
+            flex-shrink: 0;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #f7c948;
+        }
+        .route-time-box .rt-chip.rt-chip-now {
+            border-color: #3b9eff;
+            background: rgba(59, 158, 255, 0.14);
+            color: var(--text);
+            font-weight: 700;
+        }
+        .route-time-box .rt-chip.rt-chip-now svg { flex-shrink: 0; }
+        .route-time-box .rt-chip-none { font-size: 12px; color: var(--muted); white-space: normal; }
+        /* Phone: one row that swipes sideways, so a long list doesn't push the map down */
+        @media (max-width: 760px) {
+            .route-time-box .rt-chip-row {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                scrollbar-width: none;
+                padding-bottom: 2px;
+            }
+            .route-time-box .rt-chip-row::-webkit-scrollbar { display: none; }
+            .route-time-box .rt-chip { flex-shrink: 0; min-height: 38px; }
+        }
 
         /* ===== Driver list beside From/To (E&C Time Clock) ===== */
         .tc-shift-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
@@ -6004,12 +6067,17 @@
                 </div>
                 <div class="route-time-box" id="routeTimeBox">
                     <div class="rt-main">
-                        <button type="button" class="rt-btn" id="routeTimeBtn" onclick="ecRtStart()" title="Pick a start and an end, then see how long the drive took">Time on route</button>
+                        <button type="button" class="rt-btn" id="routeTimeBtn" onclick="ecRtStart()" title="Pick a start, then an end (a saved point or Current location), to see how long they've been on route">Time on route</button>
                         <span class="rt-value" id="routeTimeValue">--:--</span>
                     </div>
                     <div class="rt-meta">
                         <span class="rt-sub" id="routeTimeSub"></span>
                         <span class="rt-window" id="routeTimeWindow"></span>
+                    </div>
+                    <!-- While picking: the saved points as buttons (and Current location for the end) -->
+                    <div class="rt-choices" id="rtChoices" hidden>
+                        <span class="rt-choices-label" id="rtChoicesLabel"></span>
+                        <div class="rt-chip-row" id="rtChipRow"></div>
                     </div>
                 </div>
             </div>
@@ -11537,6 +11605,41 @@
             return res;
         }
 
+        // End = "Current location": how long since they last left the start (still counting while From/To includes now).
+        // The last time they were inside the start circle, then away for EXIT_CONFIRM_POINTS points or EXIT_CONFIRM_MS
+        // (so a parked van's GPS wobble at the edge doesn't count as leaving).
+        // status: no_data | never_at_start | never_left (at the start the whole time) | back_at_start | away_now | away_at_end
+        function computeTimeSinceLeft(points, start, windowStartMs, windowEndMs, nowMs) {
+            const R = START_POINT_RADIUS_M;
+            const res = { status: 'no_data', leaveMs: null, backMs: null, durationMs: 0, startName: start.name, endName: 'Current location' };
+            const pts = ecRouteCleanPoints(points, windowStartMs, windowEndMs);
+            if (pts.length === 0) return res;
+            const inS = pts.map(p => haversineDistance(p.lat, p.lng, start.lat, start.lng) <= R);
+            let lastS = -1;
+            for (let i = pts.length - 1; i >= 0; i--) { if (inS[i]) { lastS = i; break; } }
+            if (lastS === -1) { res.status = 'never_at_start'; return res; }
+            const awayCount = pts.length - 1 - lastS;
+            const awaySpan = awayCount > 0 ? pts[pts.length - 1].timestamp - pts[lastS + 1].timestamp : 0;
+            if (awayCount === 0 || (awayCount < EXIT_CONFIRM_POINTS && awaySpan < EXIT_CONFIRM_MS)) {
+                // At the start now: since when (the start of this last visit)
+                let firstIn = lastS;
+                while (firstIn > 0 && inS[firstIn - 1]) firstIn--;
+                const hadTrip = pts.slice(0, firstIn).length > 0;
+                res.status = hadTrip ? 'back_at_start' : 'never_left';
+                res.backMs = pts[firstIn].timestamp;
+                return res;
+            }
+            res.leaveMs = pts[lastS + 1].timestamp;
+            if (nowMs < windowEndMs) {
+                res.status = 'away_now';
+                res.durationMs = Math.max(0, nowMs - res.leaveMs);
+            } else {
+                res.status = 'away_at_end';
+                res.durationMs = Math.max(0, windowEndMs - res.leaveMs);
+            }
+            return res;
+        }
+
         function formatRouteDuration(ms) {
             const totalMin = Math.floor(Math.max(0, ms) / 60000);
             const h = Math.floor(totalMin / 60);
@@ -11604,6 +11707,26 @@
             }
         }
 
+        function renderTimeSinceLeft(res, win) {
+            if (!res) return;
+            const t = formatTimestampTo12h;
+            const s = res.startName || 'the start';
+            const live = ecServerNow() < win.endMs;
+            if (res.status === 'no_data') {
+                setRouteTimeDisplay('--:--', 'No GPS data in this From/To window', false);
+            } else if (res.status === 'never_at_start') {
+                setRouteTimeDisplay('--:--', 'Wasn\'t at ' + s + ' during this From/To window', false);
+            } else if (res.status === 'never_left') {
+                setRouteTimeDisplay('--:--', live ? 'At ' + s + ' now, hasn\'t left yet' : 'Didn\'t leave ' + s, false);
+            } else if (res.status === 'back_at_start') {
+                setRouteTimeDisplay('--:--', (live ? 'Back at ' : 'Was back at ') + s + ' since ' + t(res.backMs), false);
+            } else if (res.status === 'away_now') {
+                setRouteTimeDisplay(formatRouteDuration(ecServerNow() - res.leaveMs), 'Left ' + s + ' ' + t(res.leaveMs) + ' · on route now (as of ' + t(ecServerNow()) + ')', true);
+            } else if (res.status === 'away_at_end') {
+                setRouteTimeDisplay(formatRouteDuration(res.durationMs), 'Left ' + s + ' ' + t(res.leaveMs) + ' · still away at ' + t(win.endMs) + ' (the To time)', false);
+            }
+        }
+
         // Fetch raw points for a window using the same endpoints/auth as loadHistoricalTrack (no shared state touched)
         async function fetchRouteTimePoints(drv, fromUnix, toUnix) {
             const isFleetHuntDrv = drv.provider === 'fleethunt';
@@ -11621,11 +11744,74 @@
         }
 
         // ===== TIME ON ROUTE: press the button, then pick a start and an end =====
-        // A start or end is a saved point (the yellow pins; one list shared by every van) or any spot tapped on the driver
-        // map; a tap within START_POINT_RADIUS_M of a saved point counts as that point. While picking, the map gets a
-        // crosshair cursor, an outline and a banner saying what to tap. GPS history is fetched only when the button is
-        // used, once per From/To window (a Show Track for the same window is reused, so it costs nothing).
-        const ecRt = { mode: null, driverId: null, start: null, end: null, listener: null, layers: [], seq: 0, cache: { key: null, points: null } };
+        // A start or end is a saved point (the yellow pins; one list shared by every van), picked from the buttons under
+        // Time on route or by tapping its pin, or any spot tapped on the driver map; a tap within START_POINT_RADIUS_M of
+        // a saved point counts as that point. The end can also be "Current location": time since they last left the
+        // start, counting up. While picking, the map gets a crosshair cursor, an outline and a banner saying what to tap.
+        // GPS history is fetched only when the button is used, once per From/To window (a Show Track for the same window
+        // is reused, so it costs nothing); while To is still ahead, a copy older than EC_RT_FRESH_MS is fetched again.
+        const EC_RT_FRESH_MS = 60 * 1000;
+        const EC_RT_TICK_MS = 30 * 1000;
+        const ecRt = { mode: null, driverId: null, start: null, end: null, listener: null, layers: [], seq: 0, cache: { key: null, points: null, at: 0 }, result: null, tick: null };
+        const EC_RT_NOW_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="#3b9eff" stroke-width="2.5"/><circle cx="12" cy="12" r="3.5" fill="#3b9eff"/></svg>';
+
+        // The buttons under Time on route while picking: saved points (A to Z); for the end, Current location first
+        function ecRtRenderChoices() {
+            const box = document.getElementById('rtChoices');
+            const row = document.getElementById('rtChipRow');
+            const label = document.getElementById('rtChoicesLabel');
+            if (!box || !row || !label) return;
+            if (!ecRt.mode) { box.hidden = true; row.innerHTML = ''; return; }
+            const isStart = ecRt.mode === 'start';
+            box.style.setProperty('--rt-pick', isStart ? '#2ecc71' : '#e74c3c');
+            label.innerHTML = isStart ? 'Pick the <b>start</b>:' : 'Pick the <b>end</b>:';
+            let html = '';
+            if (!isStart) html += '<button type="button" class="rt-chip rt-chip-now" onclick="ecRtPickNow()" title="Time since they left the start, still counting">' + EC_RT_NOW_ICON + 'Current location</button>';
+            const pts = ecPointsSorted();
+            pts.forEach(function(sp) {
+                html += '<button type="button" class="rt-chip" data-id="' + ecEsc(sp.id) + '" onclick="ecRtPickPoint(this.dataset.id)" title="' + ecEsc(sp.name) + '"><span class="rt-chip-pin"></span>' + ecEsc(sp.name) + '</button>';
+            });
+            if (!pts.length) html += '<span class="rt-chip-none">No saved points yet. Tap the map, or add points with the yellow pin button on the main map.</span>';
+            row.innerHTML = html;
+            row.scrollLeft = 0; // phone: the end list starts at Current location, not where the start list was swiped to
+            box.hidden = false;
+        }
+
+        function ecRtPickPoint(id) {
+            const sp = ecAllStartPoints().find(function(p) { return p.id === id; });
+            if (sp) ecRtPick({ name: String(sp.name || 'Saved point'), lat: Number(sp.lat), lng: Number(sp.lng) });
+        }
+
+        function ecRtPickNow() {
+            if (ecRt.mode !== 'end' || !ecRt.start || activeModalDriverId !== ecRt.driverId) return;
+            ecRt.end = { name: 'Current location', now: true };
+            ecRtStopPicking();
+            ecRtCompute();
+        }
+
+        function ecRtStopTick() {
+            if (ecRt.tick) { clearInterval(ecRt.tick); ecRt.tick = null; }
+        }
+
+        // Current location, still on route: the clock counts up; when the van's live spot is back in the start circle,
+        // look again (fetches fresh history, so it shows "Back at ... since ...")
+        function ecRtStartTick() {
+            ecRtStopTick();
+            ecRt.tick = setInterval(function() {
+                const id = ecRt.driverId;
+                const res = ecRt.result;
+                if (!id || id !== activeModalDriverId || !res || res.status !== 'away_now' || !ecRt.end || !ecRt.end.now) { ecRtStopTick(); return; }
+                const win = getRouteTimeWindow();
+                const drv = drivers[id];
+                const loc = drv && drv.lastLocation;
+                if (ecServerNow() >= win.endMs || (loc && haversineDistance(loc.lat, loc.lng, ecRt.start.lat, ecRt.start.lng) <= START_POINT_RADIUS_M)) {
+                    ecRtStopTick();
+                    ecRtCompute();
+                    return;
+                }
+                renderTimeSinceLeft(res, win);
+            }, EC_RT_TICK_MS);
+        }
 
         function ecRtSetPickUi(text, color) {
             const banner = document.getElementById('rtPickBanner');
@@ -11652,6 +11838,8 @@
             if (!driverId || !driverModalMap) return;
             if (ecRt.mode) { ecRtCancel(); return; } // pressed again while picking
             ecRt.seq++; // a calculation still loading is now stale
+            ecRtStopTick();
+            ecRt.result = null;
             ecRtClearLayers();
             ecRt.driverId = driverId;
             ecRt.start = null;
@@ -11661,7 +11849,8 @@
                 if (e && e.latLng) ecRtPickAt(e.latLng.lat(), e.latLng.lng());
             });
             document.addEventListener('keydown', ecRtKey, true);
-            ecRtSetPickUi('Pick the START: tap a yellow pin or any spot on the map', '#2ecc71');
+            ecRtSetPickUi('Pick the START: a saved point below, a yellow pin, or any spot on the map', '#2ecc71');
+            ecRtRenderChoices();
             setRouteTimeDisplay('--:--', 'Picking the start…', false);
         }
 
@@ -11674,6 +11863,7 @@
             document.removeEventListener('keydown', ecRtKey, true);
             ecRt.mode = null;
             ecRtSetPickUi('');
+            ecRtRenderChoices();
         }
 
         function ecRtCancel() {
@@ -11682,7 +11872,7 @@
             ecRtClearLayers();
             ecRt.start = null;
             ecRt.end = null;
-            setRouteTimeDisplay('--:--', 'Press Time on route, then pick a start and an end', false);
+            setRouteTimeDisplay('--:--', 'Press Time on route, then pick a start and an end (or Current location)', false);
         }
 
         // A tap on the map: a saved point when it's inside one's circle (closest wins), otherwise that spot
@@ -11714,7 +11904,8 @@
             if (isStart) {
                 ecRt.start = pt;
                 ecRt.mode = 'end';
-                ecRtSetPickUi('Now pick the END: tap a yellow pin or any spot on the map', '#e74c3c');
+                ecRtSetPickUi('Now pick the END: Current location, a saved point, or any spot on the map', '#e74c3c');
+                ecRtRenderChoices();
                 setRouteTimeDisplay('--:--', 'Start: ' + pt.name + ' · picking the end…', false);
                 return;
             }
@@ -11733,7 +11924,11 @@
             if (!drv || !drv.deviceId) { setRouteTimeDisplay('--:--', 'No device ID for this driver', false); return; }
             const key = driverId + '|' + win.key;
             const seq = ++ecRt.seq;
+            ecRtStopTick();
+            ecRt.result = null;
             let points = ecRt.cache.key === key ? ecRt.cache.points : null;
+            // To is still ahead: GPS history from more than a minute ago is missing the latest driving
+            if (points && win.endMs > ecServerNow() && Date.now() - (ecRt.cache.at || 0) > EC_RT_FRESH_MS) points = null;
             if (!points) {
                 setRouteTimeDisplay(null, 'Loading GPS history…', false);
                 try {
@@ -11744,29 +11939,38 @@
                     return;
                 }
                 if (seq !== ecRt.seq || activeModalDriverId !== driverId) return;
-                ecRt.cache = { key: key, points: points };
+                ecRt.cache = { key: key, points: points, at: Date.now() };
             }
-            renderTimeBetween(computeTimeBetween(points, ecRt.start, ecRt.end, win.startMs, win.endMs, Date.now()), win);
+            if (ecRt.end.now) {
+                const res = computeTimeSinceLeft(points, ecRt.start, win.startMs, win.endMs, ecServerNow());
+                ecRt.result = res;
+                renderTimeSinceLeft(res, win);
+                if (res.status === 'away_now') ecRtStartTick();
+                return;
+            }
+            renderTimeBetween(computeTimeBetween(points, ecRt.start, ecRt.end, win.startMs, win.endMs, ecServerNow()), win);
         }
 
         // Called from loadHistoricalTrack with the track it already fetched: Time on route reuses it for free
         function ecRtCacheTrack(driverId, rawTrack) {
             if (!driverId || driverId !== activeModalDriverId) return;
             const win = getRouteTimeWindow();
-            ecRt.cache = { key: driverId + '|' + win.key, points: (rawTrack || []).map(p => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp })) };
+            ecRt.cache = { key: driverId + '|' + win.key, points: (rawTrack || []).map(p => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp })), at: Date.now() };
             if (!ecRt.mode && ecRt.start && ecRt.end && ecRt.driverId === driverId) ecRtCompute();
         }
 
         // The driver window opened or closed
         function ecRtReset() {
             ecRtStopPicking();
+            ecRtStopTick();
             ecRtClearLayers();
             ecRt.seq++;
             ecRt.driverId = null;
             ecRt.start = null;
             ecRt.end = null;
-            ecRt.cache = { key: null, points: null };
-            setRouteTimeDisplay('--:--', activeModalDriverId ? 'Press Time on route, then pick a start and an end' : '', false);
+            ecRt.result = null;
+            ecRt.cache = { key: null, points: null, at: 0 };
+            setRouteTimeDisplay('--:--', activeModalDriverId ? 'Press Time on route, then pick a start and an end (or Current location)' : '', false);
             renderRouteTimeWindowLabel(activeModalDriverId ? getRouteTimeWindow() : null);
         }
 
@@ -11934,6 +12138,8 @@
             if (!ecRt.mode && ecRt.start && ecRt.end && ecRt.driverId === activeModalDriverId) {
                 // Time on route only loads GPS history when its button is pressed
                 ecRt.seq++;
+                ecRtStopTick();
+                ecRt.result = null;
                 ecRtClearLayers();
                 ecRt.start = null;
                 ecRt.end = null;
@@ -12159,6 +12365,7 @@
             ecPoints.sig = sig;
             ecPointsRender();
             if (activeModalDriverId && driverModalMap) drawStartPointCircles();
+            if (ecRt.mode) ecRtRenderChoices();
         }
 
         function ecPointsSelect(id, pan) {
