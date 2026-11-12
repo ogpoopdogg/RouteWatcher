@@ -927,6 +927,19 @@
         #driverSettingsList .driver-row-toggle .driver-row-toggle-name {
             flex: 1;
         }
+        #driverSettingsList .driver-row-toggle .driver-row-toggle-batt {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        #driverSettingsList .ec-set-batt { display: inline-flex; align-items: center; }
+        #driverSettingsList .ec-set-batt-none { color: var(--muted); font-weight: 600; }
+        body.light-mode #driverSettingsList .ec-set-batt .ec-batt { color: inherit !important; }
+        body.light-mode #driverSettingsList .ec-set-batt-none { color: #6b7280 !important; }
         #driverSettingsList .driver-row-toggle .driver-row-toggle-caret {
             color: var(--muted);
             transition: transform 0.2s ease;
@@ -2362,6 +2375,21 @@
             line-height: 1.3;
         }
         .rt-pick-banner[hidden] { display: none; }
+        .rt-pick-banner .rt-pick-cancel {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            color: #fff;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.5;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+        }
+        .rt-pick-banner .rt-pick-cancel:hover { border-color: var(--accent); }
+        .rt-pick-banner .rt-pick-cancel:active { transform: scale(0.97); }
         .rt-pick-banner .rt-pick-dot {
             flex-shrink: 0;
             width: 12px;
@@ -2371,8 +2399,6 @@
             animation: ecRtBlink 1s ease-in-out infinite;
         }
         @keyframes ecRtBlink { 50% { opacity: 0.25; } }
-        .start-points-list.rt-pickable .sp-chip { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-        .start-points-list.rt-pickable .sp-chip .sp-name { color: var(--accent); }
 
         /* ===== Driver list beside From/To (E&C Time Clock) ===== */
         .tc-shift-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
@@ -2856,108 +2882,6 @@
         .route-time-box .rt-window {
             font-size: 11px;
             color: var(--muted);
-        }
-        .start-points-bar {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 6px;
-        }
-        .start-points-bar .sp-title {
-            font-size: 12px;
-            color: var(--muted);
-            white-space: nowrap;
-        }
-        .sp-btn {
-            background: var(--card2);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 20px;
-            padding: 4px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            line-height: 1.5;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.2s ease, border-color 0.2s ease;
-        }
-        .sp-btn:hover,
-        .sp-btn.sp-active {
-            border-color: var(--accent);
-        }
-        .sp-btn.sp-active {
-            color: var(--accent);
-        }
-        .sp-hint {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: var(--accent);
-        }
-        .sp-msg {
-            font-size: 12px;
-            color: var(--muted);
-        }
-        .start-points-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        .start-points-list .sp-empty {
-            font-size: 12px;
-            color: var(--muted);
-        }
-        .sp-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            background: var(--card2);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 2px 4px 2px 10px;
-            font-size: 12px;
-        }
-        .sp-chip .sp-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .sp-chip .sp-name {
-            background: transparent;
-            border: none;
-            color: var(--text);
-            font: inherit;
-            font-weight: 600;
-            cursor: pointer;
-            padding: 0;
-        }
-        .sp-chip .sp-name:hover {
-            color: var(--accent);
-        }
-        .sp-chip .sp-del {
-            background: transparent;
-            border: none;
-            color: #e74c3c;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            padding: 0 4px;
-            line-height: 1;
-        }
-        body.light-mode .sp-btn,
-        body.light-mode .sp-chip {
-            background: #f5f5f5;
-            border-color: #ddd;
-            color: #000;
-        }
-        body.light-mode .sp-chip .sp-name {
-            color: #000;
-        }
-        body.light-mode .sp-btn.sp-active {
-            border-color: var(--accent);
-            color: var(--accent);
         }
 
         /* ===== Settings modal stability ===== */
@@ -4246,7 +4170,6 @@
         .group-drawer .create-section button,
         .group-drawer .show-all-btn,
         .group-drawer .group-item .group-actions button,
-        .sp-btn,
         .nickname-btn,
         .settings-collapsible-toggle,
         #driverSettingsList .driver-row-toggle {
@@ -4256,7 +4179,6 @@
         .nickname-modal .nickname-actions button:active,
         .group-drawer .create-section button:active,
         .group-drawer .show-all-btn:active,
-        .sp-btn:active,
         .settings-collapsible-toggle:active { transform: scale(0.97); }
         body:not(.light-mode) .settings-actions .save-btn:hover,
         body:not(.light-mode) .nickname-modal .nickname-actions .nick-save:hover,
@@ -4270,13 +4192,10 @@
             border: 1px solid var(--ec-line-strong);
         }
         body:not(.light-mode) .settings-actions .close-btn:hover { border-color: var(--accent); }
-        body:not(.light-mode) .sp-btn,
         body:not(.light-mode) .nickname-btn {
             background: rgba(255, 255, 255, 0.04);
             border-color: var(--ec-line-strong);
         }
-        body:not(.light-mode) .sp-btn:hover,
-        body:not(.light-mode) .sp-btn.sp-active { background: rgba(247, 201, 72, 0.08); }
 
         /* Inputs (dark) */
         body:not(.light-mode) .settings-card .field input,
@@ -4673,19 +4592,6 @@
             #historyQuery .route-plan-msg { font-size: 12px; line-height: 1.35; }
             #historyQuery .ec-route-pick:not([hidden]) { display: grid; grid-template-columns: auto minmax(0, 1fr); }
             #historyQuery .ec-route-pick .ec-route-select { width: 100%; height: 40px; font-size: 13px !important; }
-
-            /* Saved points: title, then two equal buttons, chips under */
-            #startPointsArea { gap: 8px !important; }
-            .driver-modal .start-points-bar {
-                display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-                gap: 6px 8px;
-            }
-            .driver-modal .start-points-bar .sp-title { grid-column: 1 / -1; }
-            .driver-modal .start-points-bar > .sp-btn { height: 38px; font-size: 13px; border-radius: 12px; }
-            .driver-modal .start-points-bar .sp-hint,
-            .driver-modal .start-points-bar .sp-msg { grid-column: 1 / -1; }
-            .driver-modal .start-points-bar .sp-msg:empty { display: none; }
 
             /* The map: most of the screen, edge to edge */
             .driver-modal .modal-map-row { margin-top: 0 !important; gap: 10px !important; }
@@ -5631,13 +5537,235 @@
             .driver-modal .modal-side .tc-driver-msg:empty { display: none; }
             .driver-modal .modal-side .route-time-box { display: grid; grid-template-columns: 1fr; gap: 4px; }
             .driver-modal .modal-side .route-time-box .rt-main { justify-content: space-between; align-items: center; }
-            .driver-modal .modal-side .start-points-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 8px; }
-            .driver-modal .modal-side .start-points-bar .sp-title,
-            .driver-modal .modal-side .start-points-bar .sp-hint,
-            .driver-modal .modal-side .start-points-bar .sp-msg { grid-column: 1 / -1; }
-            .driver-modal .modal-side .start-points-bar .sp-msg:empty { display: none; }
-            .driver-modal .modal-side .start-points-bar > .sp-btn { height: 38px; }
         }
+
+        /* ==================== SAVED POINTS (main map) ====================
+           The pin button beside Fit, the list (a sheet from the bottom on a phone, a card on the right on a
+           computer), the "tap the map" banner and the yellow outline while a new point is being placed. */
+        #dispatch-map .ec-main-fit-ctl { display: flex; align-items: center; gap: 6px; }
+        #dispatch-map .ec-points-btn,
+        body.light-mode #dispatch-map .ec-points-btn {
+            width: 40px;
+            height: 40px;
+            margin: 0;
+            padding: 0;
+            border: none !important;
+            border-radius: 8px;
+            background: transparent !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #dispatch-map .ec-points-btn svg {
+            width: 30px;
+            height: 30px;
+            fill: none;
+            stroke: #f7c948;
+            stroke-width: 2.2;
+            filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.75)); /* keeps the yellow lines readable over busy map areas */
+        }
+        body.light-mode #dispatch-map .ec-points-btn svg { stroke: #b07a00; filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)); }
+        #dispatch-map .ec-points-btn:active { transform: scale(0.92); }
+        #dispatch-map .ec-points-btn.is-on,
+        body.light-mode #dispatch-map .ec-points-btn.is-on { background: rgba(247, 201, 72, 0.2) !important; }
+        #dispatch-map .ec-points-btn.is-on svg,
+        body.light-mode #dispatch-map .ec-points-btn.is-on svg { fill: #f7c948; stroke: #111; stroke-width: 1.4; }
+        #dispatch-map .ec-points-btn.is-on svg circle { fill: #111; stroke: none; }
+        #dispatch-map .ec-points-btn:focus-visible { outline: 2px solid #f7c948; outline-offset: 2px; }
+
+        .ec-points-panel {
+            position: fixed;
+            z-index: 900; /* over the map and driver buttons, under the driver window and Settings */
+            left: 0;
+            right: 0;
+            bottom: 0;
+            max-height: min(58vh, 520px);
+            display: flex;
+            flex-direction: column;
+            padding: 8px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+            border: 1px solid rgba(247, 201, 72, 0.45);
+            border-bottom: 0;
+            border-radius: 18px 18px 0 0;
+            background: rgba(15, 17, 25, 0.97);
+            color: #f3f4f6;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+            animation: ecPointsUp 0.2s ease-out both;
+        }
+        .ec-points-panel[hidden], .ec-points-banner[hidden] { display: none; }
+        @keyframes ecPointsUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        .ec-points-panel .ecp-grab { flex: none; width: 40px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.25); margin: 0 auto 10px; }
+        .ec-points-panel .ecp-head { flex: none; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .ec-points-panel .ecp-head svg { flex: none; width: 22px; height: 22px; fill: #f7c948; }
+        .ec-points-panel .ecp-head h3 { flex: 1; margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.01em; color: inherit; }
+        .ec-points-panel .ecp-head h3 span { margin-left: 6px; font-size: 14px; font-weight: 600; color: #9aa0b0; }
+        .ec-points-panel button { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .ec-points-panel .ecp-close {
+            flex: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #fff !important;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .ec-points-panel .ecp-new {
+            flex: none;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 12px;
+            border: 2px solid #f7c948 !important;
+            background: #f7c948 !important;
+            color: #111 !important;
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .ec-points-panel .ecp-new span { font-size: 22px; line-height: 1; margin-top: -2px; }
+        .ec-points-panel .ecp-new:active { transform: scale(0.98); }
+        .ec-points-panel .ecp-new.is-on { background: transparent !important; color: #f7c948 !important; }
+        .ec-points-panel .ecp-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 4px; scrollbar-width: thin; }
+        .ec-points-panel .ecp-row {
+            display: flex;
+            align-items: center;
+            margin-top: 6px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.035);
+        }
+        .ec-points-panel .ecp-row.is-sel { border-color: #f7c948; background: rgba(247, 201, 72, 0.10); }
+        .ec-points-panel .ecp-go {
+            flex: 1;
+            min-width: 0;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 6px 0 10px;
+            border: none !important;
+            background: transparent !important;
+            color: inherit !important;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: left;
+        }
+        .ec-points-panel .ecp-go svg { flex: none; width: 18px; height: 18px; fill: #f7c948; }
+        .ec-points-panel .ecp-go span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ec-points-panel .ecp-del {
+            flex: none;
+            width: 44px;
+            height: 48px;
+            border: none !important;
+            background: transparent !important;
+            color: #ff6b6b !important;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .ec-points-panel .ecp-empty { padding: 14px 4px 6px; font-size: 14px; color: #9aa0b0; text-align: center; }
+        .ec-points-panel .ecp-msg { flex: none; min-height: 16px; margin-top: 8px; font-size: 12px; color: #9aa0b0; text-align: center; }
+        .ec-points-panel :is(button):focus-visible { outline: 2px solid #f7c948; outline-offset: -2px; }
+
+        body.light-mode .ec-points-panel { background: rgba(255, 255, 255, 0.98); color: #111; border-color: #d9a800; box-shadow: 0 -10px 34px rgba(0, 0, 0, 0.22); }
+        body.light-mode .ec-points-panel .ecp-grab { background: rgba(0, 0, 0, 0.2); }
+        body.light-mode .ec-points-panel .ecp-head svg,
+        body.light-mode .ec-points-panel .ecp-go svg { fill: #d9a800; }
+        body.light-mode .ec-points-panel .ecp-head h3 span,
+        body.light-mode .ec-points-panel .ecp-empty,
+        body.light-mode .ec-points-panel .ecp-msg { color: #5b6170; }
+        body.light-mode .ec-points-panel .ecp-close { background: rgba(0, 0, 0, 0.07) !important; color: #111 !important; }
+        body.light-mode .ec-points-panel .ecp-new.is-on { color: #8a6200 !important; }
+        body.light-mode .ec-points-panel .ecp-row { border-color: rgba(0, 0, 0, 0.12); background: #f6f6f7; }
+        body.light-mode .ec-points-panel .ecp-row.is-sel { border-color: #d9a800; background: #fff6d6; }
+        body.light-mode .ec-points-panel .ecp-del { color: #d92d20 !important; }
+
+        /* "Tap the map" banner + a yellow outline round the map while a new point is being placed */
+        .ec-points-banner {
+            position: fixed;
+            z-index: 900;
+            top: var(--ec-points-top, 130px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: max-content;
+            max-width: calc(100vw - 20px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 10px 10px 14px;
+            border-radius: 14px;
+            border: 1.5px solid #f7c948;
+            background: rgba(15, 17, 25, 0.97);
+            color: #fff;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+        }
+        /* (dark in light mode too, like the van name labels: it has to stand out over the map) */
+        .ec-points-banner .ecp-b-title { font-size: 15px; font-weight: 800; color: #fff !important; }
+        .ec-points-banner .ecp-b-sub { margin-top: 2px; font-size: 12px; font-weight: 500; color: #c9cdd8 !important; }
+        .ec-points-banner button,
+        body.light-mode .ec-points-banner button {
+            flex: none;
+            height: 40px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: none !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+            color: #fff !important;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        body.ec-points-adding #mainMapWrapper::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 6;
+            border: 2px solid #f7c948;
+            border-radius: inherit;
+            box-shadow: inset 0 0 24px rgba(247, 201, 72, 0.25);
+            pointer-events: none;
+        }
+        body.modal-open .ec-points-banner { display: none; }
+
+        /* Phone: the sheet covers the mic, and steps aside while the map is being tapped for a new point */
+        @media (max-width: 760px) {
+            body.ec-points-open .ec-voice-btn,
+            body.ec-points-open .ec-voice-caption { display: none; }
+            body.ec-points-adding .ec-points-panel { display: none; }
+        }
+        /* Wider screens: a card in the top right corner of the map, under the row of name chips */
+        @media (min-width: 761px) {
+            .ec-points-panel,
+            body.light-mode .ec-points-panel {
+                left: auto;
+                right: 14px;
+                bottom: auto;
+                top: var(--ec-points-top, 130px);
+                width: 330px;
+                max-height: calc(100vh - var(--ec-points-top, 130px) - var(--ec-bottom-bar, 50px) - 66px); /* stops above the mic */
+                padding: 14px 14px 10px;
+                border-bottom: 1px solid rgba(247, 201, 72, 0.45);
+                border-radius: 16px;
+                box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+            }
+            body.light-mode .ec-points-panel { border-bottom-color: #d9a800; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2); }
+            .ec-points-panel .ecp-grab { display: none; }
+        }
+        /* Computer layout (driver buttons float over the map): the mic is in the bottom corner */
+        @media (min-width: 1200px) and (min-height: 560px) {
+            .ec-points-panel { max-height: calc(100vh - var(--ec-points-top, 130px) - 84px); }
+        }
+        /* A phone on its side: too short for the card and the mic, so the card runs to the bottom and the mic waits */
+        @media (min-width: 761px) and (max-height: 559px) {
+            .ec-points-panel { max-height: calc(100vh - var(--ec-points-top, 130px) - 8px); }
+            body.ec-points-open .ec-voice-btn,
+            body.ec-points-open .ec-voice-caption { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) { .ec-points-panel { animation: none; } }
 
     </style>
 </head>
@@ -5774,6 +5902,26 @@
             <div class="ec-voice-choices" id="ecVoiceChoices"></div>
         </div>
 
+        <!-- Saved points: opened by the pin button beside Fit on the main map (script: SAVED POINTS) -->
+        <div id="ecPointsPanel" class="ec-points-panel" role="dialog" aria-label="Saved points" hidden>
+            <div class="ecp-grab" aria-hidden="true"></div>
+            <div class="ecp-head">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C7.9 2 4.5 5.3 4.5 9.4c0 5.3 6.3 11.6 7 12.3.3.3.7.3 1 0 .7-.7 7-7 7-12.3C19.5 5.3 16.1 2 12 2zm0 10.2a2.9 2.9 0 1 1 0-5.8 2.9 2.9 0 0 1 0 5.8z"/></svg>
+                <h3>Saved points <span id="ecPointsCount"></span></h3>
+                <button type="button" class="ecp-close" onclick="ecPointsClose()" aria-label="Close saved points" title="Close">✕</button>
+            </div>
+            <button type="button" class="ecp-new" id="ecPointsNewBtn" onclick="ecPointsStartAdd()"><span aria-hidden="true">+</span> New point</button>
+            <div class="ecp-list" id="ecPointsList"></div>
+            <div class="ecp-msg" id="ecPointsMsg" role="status"></div>
+        </div>
+        <div id="ecPointsBanner" class="ec-points-banner" role="status" hidden>
+            <div>
+                <div class="ecp-b-title">Tap the map where the point goes</div>
+                <div class="ecp-b-sub">Or tap a van to use where it is now</div>
+            </div>
+            <button type="button" onclick="ecPointsCancelAdd()">Cancel</button>
+        </div>
+
         <div class="app-grid">
             <div class="map-wrapper" id="mainMapWrapper">
                 <div id="dispatch-map"></div>
@@ -5868,22 +6016,11 @@
                 </span>
                 <span class="route-plan-msg" id="routePlanMsg" role="status"></span>
             </div>
-            <!-- Start points -->
-            <div id="startPointsArea" style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
-                <div class="start-points-bar">
-                    <span class="sp-title">Saved points:</span>
-                    <button type="button" class="sp-btn" onclick="startPointUseCurrentLocation()">Use Current Location</button>
-                    <button type="button" class="sp-btn" id="startPointPinBtn" onclick="startPointTogglePinMode()">Drop Pin</button>
-                    <span class="sp-hint" id="startPointPinHint" style="display:none;">Tap the map to place the start point <button type="button" class="sp-btn" onclick="cancelStartPointPinMode()">Cancel</button></span>
-                    <span class="sp-msg" id="startPointMsg"></span>
-                </div>
-                <div class="start-points-list" id="startPointsList"></div>
-            </div>
             </div><!-- /.modal-side -->
             <!-- Row for map and manifest -->
             <div class="modal-map-row">
                 <div class="modal-map" id="driverMapBox"><div id="driver-map"></div>
-                    <div class="rt-pick-banner" id="rtPickBanner" role="status" hidden><span class="rt-pick-dot" id="rtPickDot"></span><span id="rtPickText"></span><button type="button" class="sp-btn" onclick="ecRtCancel()">Cancel</button></div></div>
+                    <div class="rt-pick-banner" id="rtPickBanner" role="status" hidden><span class="rt-pick-dot" id="rtPickDot"></span><span id="rtPickText"></span><button type="button" class="rt-pick-cancel" onclick="ecRtCancel()">Cancel</button></div></div>
                 <div class="modal-stops-container">
                     <div id="historicalStopList" class="ec-contact-list"></div>
                 </div>
@@ -5963,15 +6100,15 @@
         </div>
     </div>
 
-    <!-- Start Point Name Modal -->
+    <!-- Saved point name (opened from the main map: New point) -->
     <div class="nickname-modal" id="startPointNameModal">
         <div class="nickname-card">
-            <h3>Start Point Name</h3>
+            <h3>Name this point</h3>
             <div class="nickname-sub" id="startPointNameLabel"></div>
             <input type="text" id="startPointNameInput" maxlength="32" placeholder="Enter a name" autocomplete="off" onkeydown="startPointNameKeydown(event)">
             <div class="nickname-actions">
                 <button type="button" class="nick-save" onclick="saveStartPointName()">Save</button>
-                <button type="button" class="nick-cancel" onclick="closeStartPointNameModal()">Cancel</button>
+                <button type="button" class="nick-cancel" onclick="ecPointsCancelName()">Cancel</button>
             </div>
         </div>
     </div>
@@ -7526,8 +7663,9 @@
         const ROUTE_SPIKE_NEIGHBOR_M = 100;     // ...while its two neighbors are within this distance of each other
         const EXIT_CONFIRM_POINTS = 3;          // away this many points in a row = really left (round trips)
         const EXIT_CONFIRM_MS = 2 * 60 * 1000;  // ...or away for at least this long
-        let startPointPinListener = null;
         let startPointPending = null;
+        // Saved points on the main map (SAVED POINTS section)
+        const ecPoints = { open: false, adding: false, listener: null, layers: [], temp: [], selected: null, sig: null, msgTimer: null };
 
         let deviceStatuses = {};
         const lastDeviceKeyForDriver = {}; // driverId -> device id last seen, so stale statuses can be dropped
@@ -8084,8 +8222,10 @@
         function ecApplyDriverSnapshot() {
             drivers = ecGateDriverLocations(ecRawDrivers);
             ecIngestDriverPositions(); // new positions from the server pollers -> tracks + auto-complete
+            ecPointsOnData(); // saved points list and pins follow the data
             if (settingsOpen) {
                 refreshSettingsListIfDriversChanged();
+                ecUpdateSettingsBatteries();
                 return;
             }
             // (the hidden Settings list is not rebuilt here: openSettings builds it fresh)
@@ -9779,6 +9919,21 @@
                 e.stopPropagation();
                 fitMainMapToStopsAndDrivers();
             });
+            // Saved points: the pin beside Fit shows every saved point on the map with a list (SAVED POINTS)
+            const pointsButton = document.createElement('button');
+            pointsButton.type = 'button';
+            pointsButton.id = 'ecPointsBtn';
+            pointsButton.className = 'ec-points-btn';
+            pointsButton.title = 'Saved points';
+            pointsButton.setAttribute('aria-label', 'Saved points');
+            pointsButton.setAttribute('aria-pressed', 'false');
+            pointsButton.innerHTML = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21.5s-7-6.6-7-12a7 7 0 0 1 14 0c0 5.4-7 12-7 12z"/><circle cx="12" cy="9.5" r="2.6"/></svg>';
+            pointsButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                ecPointsToggle();
+            });
+            fitControlDiv.appendChild(pointsButton);
+            ecPointsSyncButton();
             fitControlDiv.className = 'ec-main-fit-ctl';
             map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(fitControlDiv);
 
@@ -9885,6 +10040,7 @@
                     marker._iconKey = iconKey;
                     marker._target = pos;
                     marker.addListener('click', function() {
+                        if (ecPoints.adding) { ecPointsPickVan(id); return; } // New point: use where this van is
                         openDriverModal(id);
                     });
                     driverMarkers[id] = marker;
@@ -10292,7 +10448,7 @@
         }
 
         // ===== DRIVER ETA (long-press a driver in the map driver list) =====
-        // Hold a driver row for 0.5 s -> pick one of that driver's saved points or your current location ->
+        // Hold a driver row for 0.5 s -> pick a saved point or your current location ->
         // the road ETA from the driver's last GPS position shows beside the status dot for 15 minutes.
         // Each driver can be checked once every 15 minutes (kept in this browser's localStorage).
         const EC_ETA_HOLD_MS = 500;
@@ -10465,14 +10621,11 @@
                 });
                 menu.appendChild(btn);
             }
-            const sps = (drv && drv.startPoints && typeof drv.startPoints === 'object') ? drv.startPoints : null;
-            const points = sps ? Object.keys(sps).map(function(key) { return sps[key]; }).filter(function(sp) {
-                return sp && isFinite(Number(sp.lat)) && isFinite(Number(sp.lng));
-            }) : [];
+            const points = ecAllStartPoints();
             if (points.length === 0) {
                 const note = document.createElement('div');
                 note.className = 'ec-eta-note';
-                note.textContent = 'No points saved for this driver.';
+                note.textContent = 'No points saved yet.';
                 menu.appendChild(note);
             } else {
                 points.forEach(function(sp) {
@@ -10889,6 +11042,7 @@
         }
 
         function openDriverModal(driverId) {
+            ecPointsCancelAdd(); // not placing a saved point any more
             updateDriverModalHeaderOffset();
             document.getElementById('driverModal').style.display = 'flex';
             document.body.classList.add('modal-open');
@@ -11010,10 +11164,8 @@
 
                 // Saved points + time on route (nothing is fetched until Time on route is pressed)
                 if (activeModalDriverId === driverId) {
-                    cancelStartPointPinMode();
                     ecRtReset();
-                    renderStartPoints(driverId);
-                    drawStartPointCircles(driverId);
+                    drawStartPointCircles();
                 }
 
             }, 200);
@@ -11240,7 +11392,7 @@
         }
 
         // ===== TIME ON ROUTE: press the button, then pick a start and an end =====
-        // A start or end is one of this GPS's saved points (tap its chip under the map) or any spot tapped on the driver
+        // A start or end is a saved point (the yellow pins; one list shared by every van) or any spot tapped on the driver
         // map; a tap within START_POINT_RADIUS_M of a saved point counts as that point. While picking, the map gets a
         // crosshair cursor, an outline and a banner saying what to tap. GPS history is fetched only when the button is
         // used, once per From/To window (a Show Track for the same window is reused, so it costs nothing).
@@ -11249,7 +11401,6 @@
         function ecRtSetPickUi(text, color) {
             const banner = document.getElementById('rtPickBanner');
             const box = document.getElementById('driverMapBox');
-            const list = document.getElementById('startPointsList');
             const btn = document.getElementById('routeTimeBtn');
             const on = !!text;
             if (banner) banner.hidden = !on;
@@ -11258,7 +11409,6 @@
             const dot = document.getElementById('rtPickDot');
             if (dot) dot.style.background = color || 'transparent';
             if (box) box.classList.toggle('rt-picking', on);
-            if (list) list.classList.toggle('rt-pickable', on);
             if (btn) btn.classList.toggle('active', on);
             if (driverModalMap) driverModalMap.setOptions({ draggableCursor: on ? 'crosshair' : null });
         }
@@ -11272,7 +11422,6 @@
             const driverId = activeModalDriverId;
             if (!driverId || !driverModalMap) return;
             if (ecRt.mode) { ecRtCancel(); return; } // pressed again while picking
-            cancelStartPointPinMode();
             ecRt.seq++; // a calculation still loading is now stale
             ecRtClearLayers();
             ecRt.driverId = driverId;
@@ -11283,7 +11432,7 @@
                 if (e && e.latLng) ecRtPickAt(e.latLng.lat(), e.latLng.lng());
             });
             document.addEventListener('keydown', ecRtKey, true);
-            ecRtSetPickUi('Pick the START: tap a saved point below the map, or tap the map', '#2ecc71');
+            ecRtSetPickUi('Pick the START: tap a yellow pin or any spot on the map', '#2ecc71');
             setRouteTimeDisplay('--:--', 'Picking the start…', false);
         }
 
@@ -11309,23 +11458,14 @@
 
         // A tap on the map: a saved point when it's inside one's circle (closest wins), otherwise that spot
         function ecRtPickAt(lat, lng) {
-            const drv = drivers[ecRt.driverId];
-            const sps = drv && drv.startPoints ? Object.values(drv.startPoints) : [];
             let best = null;
             let bestD = Infinity;
-            sps.forEach(function(sp) {
-                if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
-                const d = haversineDistance(lat, lng, Number(sp.lat), Number(sp.lng));
+            ecAllStartPoints().forEach(function(sp) {
+                const d = haversineDistance(lat, lng, sp.lat, sp.lng);
                 if (d <= START_POINT_RADIUS_M && d < bestD) { bestD = d; best = sp; }
             });
             if (best) ecRtPick({ name: String(best.name || 'Saved point'), lat: Number(best.lat), lng: Number(best.lng) });
             else ecRtPick({ name: 'the ' + (ecRt.mode === 'start' ? 'start' : 'end') + ' pin', lat: lat, lng: lng, pin: true });
-        }
-
-        // A tap on a saved point's chip while picking
-        function ecRtPickSaved(sp) {
-            if (!ecRt.mode || !sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
-            ecRtPick({ name: String(sp.name || 'Saved point'), lat: Number(sp.lat), lng: Number(sp.lng) });
         }
 
         function ecRtPick(pt) {
@@ -11345,7 +11485,7 @@
             if (isStart) {
                 ecRt.start = pt;
                 ecRt.mode = 'end';
-                ecRtSetPickUi('Now pick the END: tap a saved point below the map, or tap the map', '#e74c3c');
+                ecRtSetPickUi('Now pick the END: tap a yellow pin or any spot on the map', '#e74c3c');
                 setRouteTimeDisplay('--:--', 'Start: ' + pt.name + ' · picking the end…', false);
                 return;
             }
@@ -11574,131 +11714,355 @@
 
         function cleanupRouteTimeOnClose() {
             ecRtReset();
-            cancelStartPointPinMode();
-            closeStartPointNameModal();
             clearStartPointCircles();
             setRouteTimeDisplay('--:--', '', false);
             renderRouteTimeWindowLabel(null);
-            const msg = document.getElementById('startPointMsg');
-            if (msg) msg.textContent = '';
         }
 
-        // ===== START POINTS: UI =====
-        function setStartPointMessage(text) {
-            const el = document.getElementById('startPointMsg');
-            if (el) el.textContent = text || '';
-        }
+        // ===== SAVED POINTS =====
+        // One list of saved places shared by every van. It lives on the main map: the pin button beside Fit shows
+        // every point as a yellow pin plus a list (a sheet from the bottom on a phone, a card on the right on a
+        // computer), and "New point" places one by tapping the map or a van.
+        // Storage did not change: each point is still kept under a vehicle (drivers/<id>/startPoints/<key>), where
+        // points always were, so the database and its rules are untouched and older points keep working.
+        // ecAllStartPoints() joins them into the one list. The same name saved within START_POINT_RADIUS_M on more
+        // than one vehicle shows once; `copies` lists every stored copy so deleting removes them all.
+        const EC_POINT_COLOR = '#f7c948';
 
-        function clearStartPointCircles() {
-            const container = document.getElementById('driver-map');
-            if (!container) return;
-            if (container._startCircles) container._startCircles.forEach(c => c.setMap(null));
-            container._startCircles = [];
-        }
-
-        function drawStartPointCircles(driverId) {
-            clearStartPointCircles();
-            const container = document.getElementById('driver-map');
-            if (!container || !driverModalMap || !driverId) return;
-            const drv = drivers[driverId];
-            const sps = drv && drv.startPoints ? drv.startPoints : null;
-            if (!sps) return;
-            const color = (drv && drv.color) || '#f7c948';
-            Object.values(sps).forEach(sp => {
-                if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
-                const circle = new google.maps.Circle({
-                    center: { lat: Number(sp.lat), lng: Number(sp.lng) },
-                    radius: START_POINT_RADIUS_M,
-                    fillColor: color,
-                    fillOpacity: 0.12,
-                    strokeColor: color,
-                    strokeOpacity: 0.5,
-                    strokeWeight: 1,
-                    clickable: false,
-                    map: driverModalMap
+        function ecAllStartPoints() {
+            const all = [];
+            Object.keys(drivers || {}).forEach(function(driverId) {
+                const drv = drivers[driverId];
+                const sps = (drv && drv.startPoints && typeof drv.startPoints === 'object') ? drv.startPoints : null;
+                if (!sps) return;
+                Object.keys(sps).forEach(function(key) {
+                    const sp = sps[key];
+                    if (!sp || !isFinite(Number(sp.lat)) || !isFinite(Number(sp.lng))) return;
+                    all.push({ id: driverId + '/' + key, key: key, driverId: driverId, name: String(sp.name || 'Point'), lat: Number(sp.lat), lng: Number(sp.lng) });
                 });
-                container._startCircles.push(circle);
+            });
+            all.sort(function(a, b) { return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; }); // oldest first (push keys sort by time)
+            const out = [];
+            all.forEach(function(sp) {
+                const nameKey = sp.name.trim().toLowerCase();
+                const same = out.find(function(o) {
+                    return o.name.trim().toLowerCase() === nameKey &&
+                        haversineDistance(o.lat, o.lng, sp.lat, sp.lng) <= START_POINT_RADIUS_M;
+                });
+                const copy = { driverId: sp.driverId, key: sp.key };
+                if (same) same.copies.push(copy);
+                else out.push(Object.assign({}, sp, { copies: [copy] }));
+            });
+            return out;
+        }
+
+        // Yellow pin with the name under it (the tip of the pin is the saved spot)
+        function ecPointPinIcon(name, opts) {
+            const o = opts || {};
+            const text = String(name == null ? '' : name);
+            const safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+            const w = text ? Math.max(44, Math.min(240, Math.round(text.length * 7.2 + 20))) : 44;
+            const h = w / 2;
+            const edge = o.selected ? '#ffffff' : '#111111';
+            const mark = o.isNew
+                ? `<path d="M${h - 4} 13h8M${h} 9v8" stroke="#111" stroke-width="2.2" stroke-linecap="round"/>`
+                : `<circle cx="${h}" cy="13" r="3.4" fill="#111"/>`;
+            const label = text
+                ? `<rect x="1" y="34" width="${w - 2}" height="19" rx="6" fill="rgba(12,13,20,0.92)" stroke="${o.selected ? '#ffffff' : EC_POINT_COLOR}" stroke-opacity="${o.selected ? 1 : 0.7}"/><text x="${h}" y="47.5" text-anchor="middle" fill="${EC_POINT_COLOR}" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700">${safe}</text>`
+                : '';
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="54" viewBox="0 0 ${w} 54"><path d="M${h} 30c-1-1-9.5-9.6-9.5-17a9.5 9.5 0 0 1 19 0c0 7.4-8.5 16-9.5 17z" fill="${EC_POINT_COLOR}" stroke="${edge}" stroke-width="${o.selected ? 2.2 : 1.6}"/>${mark}${label}</svg>`;
+            return {
+                url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+                anchor: new google.maps.Point(h, 30),
+                scaledSize: new google.maps.Size(w, 54)
+            };
+        }
+
+        function ecPointsSorted() {
+            return ecAllStartPoints().sort(function(a, b) {
+                return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
             });
         }
 
-        function renderStartPoints(driverId) {
-            const list = document.getElementById('startPointsList');
+        function ecPointsMsg(text) {
+            const el = document.getElementById('ecPointsMsg');
+            if (!el) return;
+            el.textContent = text || '';
+            if (ecPoints.msgTimer) clearTimeout(ecPoints.msgTimer);
+            ecPoints.msgTimer = text ? setTimeout(function() { el.textContent = ''; }, 5000) : null;
+        }
+
+        function ecPointsSyncButton() {
+            const btn = document.getElementById('ecPointsBtn');
+            if (!btn) return;
+            btn.classList.toggle('is-on', ecPoints.open);
+            btn.setAttribute('aria-pressed', ecPoints.open ? 'true' : 'false');
+        }
+
+        // The card (computer) and the "tap the map" banner sit just under the row of name chips at the top of the map
+        function ecPointsPlace() {
+            const wrap = document.getElementById('mainMapWrapper');
+            if (!wrap) return;
+            const r = wrap.getBoundingClientRect();
+            const chips = document.getElementById('mapDriverControl');
+            const cr = chips ? chips.getBoundingClientRect() : null;
+            const top = Math.round(Math.max(r.top + 12, cr && cr.height ? cr.bottom + 10 : 0));
+            document.documentElement.style.setProperty('--ec-points-top', top + 'px');
+        }
+        window.addEventListener('resize', function() { if (ecPoints.open || ecPoints.adding) ecPointsPlace(); });
+
+        function ecPointsToggle() {
+            if (ecPoints.open) ecPointsClose();
+            else ecPointsOpen();
+        }
+
+        function ecPointsOpen() {
+            if (ecPoints.open) return;
+            ecPoints.open = true;
+            ecPoints.selected = null;
+            document.body.classList.add('ec-points-open');
+            const panel = document.getElementById('ecPointsPanel');
+            if (panel) panel.hidden = false;
+            ecPointsPlace();
+            ecPointsMsg('');
+            ecPointsSyncButton();
+            ecPointsRender();
+        }
+
+        function ecPointsClose() {
+            ecPointsCancelAdd();
+            ecPointsCancelName();
+            ecPoints.open = false;
+            ecPoints.selected = null;
+            document.body.classList.remove('ec-points-open');
+            const panel = document.getElementById('ecPointsPanel');
+            if (panel) panel.hidden = true;
+            ecPointsClearLayers();
+            ecPointsSyncButton();
+        }
+
+        function ecPointsClearLayers() {
+            ecPoints.layers.forEach(function(l) { l.setMap(null); });
+            ecPoints.layers = [];
+        }
+
+        function ecPointsClearTemp() {
+            ecPoints.temp.forEach(function(l) { l.setMap(null); });
+            ecPoints.temp = [];
+        }
+
+        // The pins and their circles on the main map (only while the list is open, so the map stays clean otherwise)
+        function ecPointsDraw() {
+            ecPointsClearLayers();
+            if (!ecPoints.open || !map || !window.google || !google.maps) return;
+            ecAllStartPoints().forEach(function(sp) {
+                const sel = ecPoints.selected === sp.id;
+                const pos = { lat: sp.lat, lng: sp.lng };
+                ecPoints.layers.push(new google.maps.Circle({
+                    map: map, center: pos, radius: START_POINT_RADIUS_M, clickable: false,
+                    fillColor: EC_POINT_COLOR, fillOpacity: sel ? 0.24 : 0.14,
+                    strokeColor: EC_POINT_COLOR, strokeOpacity: sel ? 1 : 0.7, strokeWeight: sel ? 2 : 1
+                }));
+                const marker = new google.maps.Marker({
+                    map: map, position: pos, title: sp.name,
+                    zIndex: sel ? 9 : 8, // under the vans, which stay the main thing on the map
+                    icon: ecPointPinIcon(sp.name, { selected: sel })
+                });
+                marker.addListener('click', function() {
+                    if (ecPoints.adding) return;
+                    ecPointsSelect(sp.id, false);
+                });
+                ecPoints.layers.push(marker);
+            });
+        }
+
+        function ecPointsRenderList() {
+            const list = document.getElementById('ecPointsList');
+            const count = document.getElementById('ecPointsCount');
             if (!list) return;
+            const pts = ecPointsSorted();
+            if (count) count.textContent = pts.length ? String(pts.length) : '';
             list.innerHTML = '';
-            const drv = drivers[driverId];
-            const sps = drv && drv.startPoints ? drv.startPoints : null;
-            const entries = sps ? Object.entries(sps).filter(([k, sp]) => sp) : [];
-            if (entries.length === 0) {
-                const empty = document.createElement('span');
-                empty.className = 'sp-empty';
-                empty.textContent = 'No points saved for this driver yet. Add one with Use Current Location or Drop Pin.';
+            if (!pts.length) {
+                const empty = document.createElement('div');
+                empty.className = 'ecp-empty';
+                empty.textContent = 'No saved points yet. Press New point to make the first one.';
                 list.appendChild(empty);
                 return;
             }
-            const color = (drv && drv.color) || '#f7c948';
-            entries.forEach(([key, sp]) => {
-                const chip = document.createElement('span');
-                chip.className = 'sp-chip';
-                const dot = document.createElement('span');
-                dot.className = 'sp-dot';
-                dot.style.background = color;
-                const nameBtn = document.createElement('button');
-                nameBtn.type = 'button';
-                nameBtn.className = 'sp-name';
-                nameBtn.textContent = sp.name || 'Start';
-                nameBtn.title = 'Show on map (while picking for Time on route: use this point)';
-                nameBtn.addEventListener('click', function() {
-                    if (ecRt.mode) { ecRtPickSaved(sp); return; }
-                    if (driverModalMap && isFinite(Number(sp.lat)) && isFinite(Number(sp.lng))) {
-                        driverModalMap.panTo({ lat: Number(sp.lat), lng: Number(sp.lng) });
-                    }
-                });
-                const delBtn = document.createElement('button');
-                delBtn.type = 'button';
-                delBtn.className = 'sp-del';
-                delBtn.textContent = '✕';
-                delBtn.title = 'Delete start point';
-                delBtn.addEventListener('click', function() {
-                    deleteStartPoint(driverId, key);
-                });
-                chip.appendChild(dot);
-                chip.appendChild(nameBtn);
-                chip.appendChild(delBtn);
-                list.appendChild(chip);
+            pts.forEach(function(sp) {
+                const row = document.createElement('div');
+                row.className = 'ecp-row' + (ecPoints.selected === sp.id ? ' is-sel' : '');
+                const go = document.createElement('button');
+                go.type = 'button';
+                go.className = 'ecp-go';
+                go.title = 'Show on the map';
+                go.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C7.9 2 4.5 5.3 4.5 9.4c0 5.3 6.3 11.6 7 12.3.3.3.7.3 1 0 .7-.7 7-7 7-12.3C19.5 5.3 16.1 2 12 2zm0 10.2a2.9 2.9 0 1 1 0-5.8 2.9 2.9 0 0 1 0 5.8z"/></svg>';
+                const name = document.createElement('span');
+                name.textContent = sp.name;
+                go.appendChild(name);
+                go.addEventListener('click', function() { ecPointsSelect(sp.id, true); });
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'ecp-del';
+                del.textContent = '✕';
+                del.title = 'Delete this point';
+                del.setAttribute('aria-label', 'Delete ' + sp.name);
+                del.addEventListener('click', function() { ecPointsDelete(sp); });
+                row.appendChild(go);
+                row.appendChild(del);
+                list.appendChild(row);
+            });
+            const sel = list.querySelector('.ecp-row.is-sel');
+            if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'nearest' });
+        }
+
+        function ecPointsRender() {
+            if (!ecPoints.open) return;
+            ecPointsRenderList();
+            ecPointsDraw();
+        }
+
+        // New driver data: redraw only when the saved points themselves changed
+        function ecPointsOnData() {
+            const sig = JSON.stringify(ecAllStartPoints().map(function(sp) { return [sp.id, sp.name, sp.lat, sp.lng, sp.copies.length]; }));
+            if (sig === ecPoints.sig) return;
+            ecPoints.sig = sig;
+            ecPointsRender();
+            if (activeModalDriverId && driverModalMap) drawStartPointCircles();
+        }
+
+        function ecPointsSelect(id, pan) {
+            ecPoints.selected = id;
+            ecPointsRender();
+            if (!pan) return;
+            const sp = ecAllStartPoints().find(function(p) { return p.id === id; });
+            if (sp) ecPointsPanTo(sp.lat, sp.lng);
+        }
+
+        // Bring a point into view. On a phone the list covers the bottom of the map, so the point is centred
+        // in the part of the map that is still showing.
+        function ecPointsPanTo(lat, lng) {
+            if (!map) return;
+            if ((map.getZoom() || 0) < 14) map.setZoom(15);
+            let target = { lat: lat, lng: lng };
+            const panel = document.getElementById('ecPointsPanel');
+            const mapEl = document.getElementById('dispatch-map');
+            if (panel && mapEl && !panel.hidden) {
+                const pr = panel.getBoundingClientRect();
+                const mr = mapEl.getBoundingClientRect();
+                const cover = pr.width >= mr.width - 2 ? Math.max(0, mr.bottom - Math.max(pr.top, mr.top)) : 0;
+                if (cover > 0 && cover < mr.height) {
+                    const metresPerPx = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, map.getZoom());
+                    target = { lat: lat - (cover / 2) * metresPerPx / 111320, lng: lng };
+                }
+            }
+            map.panTo(target);
+        }
+
+        // ----- New point: tap the map, or tap a van to use where it is now -----
+        function ecPointsStartAdd() {
+            if (!map) return;
+            if (ecPoints.adding) { ecPointsCancelAdd(); return; } // pressed again: stop
+            if (!Object.keys(drivers || {}).length) {
+                ecShowNotice('Add a vehicle in Settings first. Saved points are kept with the vehicles.');
+                return;
+            }
+            ecPoints.adding = true;
+            ecPointsClearTemp();
+            document.body.classList.add('ec-points-adding');
+            ecPointsPlace();
+            const banner = document.getElementById('ecPointsBanner');
+            if (banner) banner.hidden = false;
+            const btn = document.getElementById('ecPointsNewBtn');
+            if (btn) btn.classList.add('is-on');
+            map.setOptions({ draggableCursor: 'crosshair' });
+            ecPoints.listener = map.addListener('click', function(e) {
+                if (!e || !e.latLng) return;
+                if (e.placeId && e.stop) e.stop(); // a tap on a shop or landmark: no Google info bubble
+                ecPointsPicked(e.latLng.lat(), e.latLng.lng(), null);
             });
         }
 
-        function afterStartPointsChanged(driverId) {
-            if (activeModalDriverId !== driverId) return;
-            renderStartPoints(driverId);
-            drawStartPointCircles(driverId);
+        function ecPointsStopAdd() {
+            ecPoints.adding = false;
+            if (ecPoints.listener) { google.maps.event.removeListener(ecPoints.listener); ecPoints.listener = null; }
+            document.body.classList.remove('ec-points-adding');
+            const banner = document.getElementById('ecPointsBanner');
+            if (banner) banner.hidden = true;
+            const btn = document.getElementById('ecPointsNewBtn');
+            if (btn) btn.classList.remove('is-on');
+            if (map) map.setOptions({ draggableCursor: null });
         }
 
-        function getNextStartPointName(driverId) {
+        function ecPointsCancelAdd() {
+            if (ecPoints.adding) ecPointsStopAdd();
+        }
+
+        // A van was tapped while placing a point: use the spot where it shows on the map
+        function ecPointsPickVan(driverId) {
             const drv = drivers[driverId];
-            const sps = drv && drv.startPoints ? Object.values(drv.startPoints) : [];
-            const names = new Set(sps.map(sp => (sp && sp.name ? String(sp.name) : '')));
-            let n = sps.length + 1;
-            while (names.has('Start ' + n)) n++;
-            return 'Start ' + n;
+            const loc = drv && drv.lastLocation ? drv.lastLocation : null;
+            if (!loc || !isFinite(Number(loc.lat)) || !isFinite(Number(loc.lng))) return;
+            ecPointsPicked(Number(loc.lat), Number(loc.lng), driverId);
         }
 
-        function openStartPointNameModal(driverId, lat, lng) {
-            if (!driverId || !isFinite(lat) || !isFinite(lng)) return;
-            startPointPending = { driverId: driverId, lat: lat, lng: lng };
+        function ecPointsPicked(lat, lng, vanId) {
+            ecPointsStopAdd();
+            ecPointsClearTemp();
+            const pos = { lat: lat, lng: lng };
+            ecPoints.temp.push(new google.maps.Circle({
+                map: map, center: pos, radius: START_POINT_RADIUS_M, clickable: false,
+                fillColor: EC_POINT_COLOR, fillOpacity: 0.22, strokeColor: EC_POINT_COLOR, strokeOpacity: 0.9, strokeWeight: 2
+            }));
+            ecPoints.temp.push(new google.maps.Marker({
+                map: map, position: pos, clickable: false, zIndex: 50, icon: ecPointPinIcon('', { isNew: true })
+            }));
+            openStartPointNameModal(lat, lng, vanId);
+        }
+
+        function getNextStartPointName() {
+            const sps = ecAllStartPoints();
+            const names = new Set(sps.map(function(sp) { return sp.name; }));
+            let n = sps.length + 1;
+            while (names.has('Point ' + n)) n++;
+            return 'Point ' + n;
+        }
+
+        function openStartPointNameModal(lat, lng, vanId) {
+            if (!isFinite(lat) || !isFinite(lng)) return;
+            startPointPending = { lat: lat, lng: lng, vanId: vanId || null };
             const label = document.getElementById('startPointNameLabel');
-            if (label) label.textContent = 'Location: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+            if (label) {
+                let text = 'Everyone on the dispatch map will see it.';
+                const drv = vanId ? drivers[vanId] : null;
+                if (drv) {
+                    const loc = drv.lastLocation || {};
+                    const stale = !loc.updatedAt || (ecServerNow() - loc.updatedAt) > STANDBY_THRESHOLD;
+                    const van = getDriverDisplayName(vanId, drv);
+                    text = (stale
+                        ? 'At the last GPS spot of ' + van + (loc.updatedAt ? ' (' + ecAgoText(loc.updatedAt) + ')' : '') + '. '
+                        : 'Where ' + van + ' is now. ') + text;
+                }
+                label.textContent = text;
+            }
             const input = document.getElementById('startPointNameInput');
-            if (input) input.value = getNextStartPointName(driverId);
+            if (input) input.value = getNextStartPointName();
             const modal = document.getElementById('startPointNameModal');
             if (modal) modal.style.display = 'flex';
-            setTimeout(() => { if (input) { input.focus(); input.select(); } }, 60);
+            setTimeout(function() { if (input) { input.focus(); input.select(); } }, 60);
         }
 
         function closeStartPointNameModal() {
             const modal = document.getElementById('startPointNameModal');
             if (modal) modal.style.display = 'none';
             startPointPending = null;
+        }
+
+        // Cancel in the name box: nothing is saved and the pin just placed comes off the map
+        function ecPointsCancelName() {
+            closeStartPointNameModal();
+            ecPointsClearTemp();
         }
 
         function startPointNameKeydown(e) {
@@ -11709,8 +12073,23 @@
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopPropagation();
-                closeStartPointNameModal();
+                ecPointsCancelName();
             }
+        }
+
+        // Where a new point is stored: with the van that was tapped, otherwise with the vehicle that already
+        // holds the most points (so they stay together), otherwise the first vehicle.
+        function ecPointsHomeDriverId(vanId) {
+            if (vanId && drivers[vanId]) return vanId;
+            const ids = Object.keys(drivers || {}).sort();
+            let best = ids[0] || null;
+            let bestCount = -1;
+            ids.forEach(function(id) {
+                const sps = drivers[id] && drivers[id].startPoints;
+                const n = (sps && typeof sps === 'object') ? Object.keys(sps).length : 0;
+                if (n > bestCount) { bestCount = n; best = id; }
+            });
+            return best;
         }
 
         function saveStartPointName() {
@@ -11718,89 +12097,55 @@
             const pending = startPointPending;
             const input = document.getElementById('startPointNameInput');
             let name = input ? input.value.trim().slice(0, 32) : '';
-            if (!name) name = getNextStartPointName(pending.driverId);
+            if (!name) name = getNextStartPointName();
             closeStartPointNameModal();
-            setStartPointMessage('Saving...');
-            getDriversRef().child(pending.driverId).child('startPoints').push({ name: name, lat: pending.lat, lng: pending.lng })
-                .then(() => {
-                    if (activeModalDriverId === pending.driverId) setStartPointMessage('Saved "' + name + '".');
-                    afterStartPointsChanged(pending.driverId);
-                })
-                .catch(err => {
-                    console.warn('Start point save failed:', err);
-                    if (activeModalDriverId === pending.driverId) setStartPointMessage('Could not save start point.');
-                });
-        }
-
-        function deleteStartPoint(driverId, key) {
-            const drv = drivers[driverId];
-            const sp = drv && drv.startPoints ? drv.startPoints[key] : null;
-            const name = sp && sp.name ? sp.name : 'this start point';
-            if (!confirm('Delete start point "' + name + '"?')) return;
-            getDriversRef().child(driverId).child('startPoints').child(key).remove()
-                .then(() => {
-                    if (activeModalDriverId === driverId) setStartPointMessage('Deleted "' + name + '".');
-                    afterStartPointsChanged(driverId);
-                })
-                .catch(err => {
-                    console.warn('Start point delete failed:', err);
-                    if (activeModalDriverId === driverId) setStartPointMessage('Could not delete start point.');
-                });
-        }
-
-        function startPointUseCurrentLocation() {
-            const driverId = activeModalDriverId;
-            if (!driverId) return;
-            ecRtCancel();
-            cancelStartPointPinMode();
-            const drv = drivers[driverId];
-            const loc = drv && drv.lastLocation ? drv.lastLocation : null;
-            if (!loc || !isFinite(Number(loc.lat)) || !isFinite(Number(loc.lng))) {
-                setStartPointMessage('No current location for this driver.');
-                return;
-            }
-            if (!loc.updatedAt || (ecServerNow() - loc.updatedAt) > STANDBY_THRESHOLD) {
-                let ageText = 'unknown';
-                if (loc.updatedAt) {
-                    const totalMinutes = Math.floor((ecServerNow() - loc.updatedAt) / 60000);
-                    const h = Math.floor(totalMinutes / 60);
-                    const m = totalMinutes % 60;
-                    ageText = (h > 0 ? h + ' H ' : '') + m + ' Min';
-                }
-                if (!confirm('The last GPS update is ' + ageText + ' old. Use this location as a start point anyway?')) return;
-            }
-            setStartPointMessage('');
-            openStartPointNameModal(driverId, Number(loc.lat), Number(loc.lng));
-        }
-
-        function startPointTogglePinMode() {
-            if (startPointPinListener) { cancelStartPointPinMode(); return; }
-            ecRtCancel(); // not picking for Time on route at the same time
-            const driverId = activeModalDriverId;
-            if (!driverId || !driverModalMap) return;
-            setStartPointMessage('');
-            startPointPinListener = driverModalMap.addListener('click', function(e) {
-                if (!e || !e.latLng) return;
-                const lat = e.latLng.lat();
-                const lng = e.latLng.lng();
-                cancelStartPointPinMode();
-                if (activeModalDriverId === driverId) openStartPointNameModal(driverId, lat, lng);
+            ecPointsClearTemp();
+            const home = ecPointsHomeDriverId(pending.vanId);
+            if (!home) { ecShowNotice('Add a vehicle in Settings first. Saved points are kept with the vehicles.'); return; }
+            const saved = getDriversRef().child(home).child('startPoints').push({ name: name, lat: pending.lat, lng: pending.lng });
+            if (saved && saved.key) ecPoints.selected = home + '/' + saved.key; // the new point is highlighted in the list
+            ecPointsMsg('Saved "' + name + '".');
+            Promise.resolve(saved).catch(function(err) {
+                ecPointsMsg('');
+                ecSaveError('the saved point')(err);
             });
-            const hint = document.getElementById('startPointPinHint');
-            if (hint) hint.style.display = 'inline-flex';
-            const btn = document.getElementById('startPointPinBtn');
-            if (btn) btn.classList.add('sp-active');
+            ecPointsRender(); // (the data listener already redrew; this adds the highlight)
         }
 
-        function cancelStartPointPinMode() {
-            if (startPointPinListener) {
-                google.maps.event.removeListener(startPointPinListener);
-                startPointPinListener = null;
-            }
-            const hint = document.getElementById('startPointPinHint');
-            if (hint) hint.style.display = 'none';
-            const btn = document.getElementById('startPointPinBtn');
-            if (btn) btn.classList.remove('sp-active');
+        function ecPointsDelete(sp) {
+            if (!sp || !sp.copies || !sp.copies.length) return;
+            if (!confirm('Delete the saved point "' + sp.name + '"? It is removed for every van.')) return;
+            if (ecPoints.selected === sp.id) ecPoints.selected = null;
+            Promise.all(sp.copies.map(function(c) {
+                return getDriversRef().child(c.driverId).child('startPoints').child(c.key).remove();
+            })).then(function() {
+                ecPointsMsg('Deleted "' + sp.name + '".');
+            }).catch(ecSaveError('the saved point removal'));
+        }
+
+        // ----- The same points on the driver window's map (Time on route: tap a pin to use that point) -----
+        function clearStartPointCircles() {
+            const container = document.getElementById('driver-map');
+            if (!container) return;
+            if (container._startCircles) container._startCircles.forEach(function(c) { c.setMap(null); });
+            container._startCircles = [];
+        }
+
+        function drawStartPointCircles() {
+            clearStartPointCircles();
+            const container = document.getElementById('driver-map');
+            if (!container || !driverModalMap) return;
+            ecAllStartPoints().forEach(function(sp) {
+                const pos = { lat: sp.lat, lng: sp.lng };
+                container._startCircles.push(new google.maps.Circle({
+                    center: pos, radius: START_POINT_RADIUS_M, clickable: false, map: driverModalMap,
+                    fillColor: EC_POINT_COLOR, fillOpacity: 0.12, strokeColor: EC_POINT_COLOR, strokeOpacity: 0.6, strokeWeight: 1
+                }));
+                // not clickable: the tap goes through to the map, which picks the point for Time on route
+                container._startCircles.push(new google.maps.Marker({
+                    position: pos, map: driverModalMap, clickable: false, zIndex: 8, icon: ecPointPinIcon(sp.name)
+                }));
+            });
         }
 
         // ===== SETTINGS =====
@@ -12137,6 +12482,7 @@
               <button type="button" class="driver-row-toggle" onclick="toggleDriverRow('${ecAttrJs(id)}', this)">
                 <span class="driver-row-toggle-dot" style="background:${ecEsc(drv.color || '#f7c948')}"></span>
                 <span class="driver-row-toggle-name">${ecEsc(drv.name || 'Driver')}</span>
+                <span class="driver-row-toggle-batt" data-id="${ecEsc(id)}">${ecSettingsBattHtml(drv)}</span>
                 <span class="driver-row-toggle-caret">▾</span>
               </button>
               <div class="driver-row-fields" id="driverRowFields-${id}" style="display:none;">
@@ -12155,6 +12501,33 @@
             `;
                 container.appendChild(row);
             }
+        }
+
+        // GPS battery shown on each driver's Settings button, right of the name. FleetHunt trucks don't
+        // report a battery, so they show a dash. Colours match the driver window (green > 50, yellow > 20, red).
+        function ecSettingsBattHtml(drv) {
+            if (ecIsFleetHunt(drv)) {
+                return '<span class="ec-set-batt ec-set-batt-none" title="FleetHunt GPS does not report a battery level"><span class="ec-batt" style="--lvl:0" aria-hidden="true"></span>—</span>';
+            }
+            const val = ecBatteryValue(drv);
+            if (val === null) {
+                return '<span class="ec-set-batt ec-set-batt-none" title="No battery level reported yet"><span class="ec-batt" style="--lvl:0" aria-hidden="true"></span>—</span>';
+            }
+            const pct = Math.max(0, Math.round(val));
+            const cls = pct > 50 ? 'battery-high' : (pct > 20 ? 'battery-mid' : 'battery-low');
+            return `<span class="ec-set-batt ${cls}" title="GPS battery ${pct}%"><span class="ec-batt" style="--lvl:${Math.min(100, pct) / 100}" aria-hidden="true"></span>${pct}%</span>`;
+        }
+
+        // Keeps the battery on the open Settings buttons current as new GPS data comes in
+        function ecUpdateSettingsBatteries() {
+            const list = document.getElementById('driverSettingsList');
+            if (!list) return;
+            list.querySelectorAll('.driver-row-toggle-batt[data-id]').forEach(el => {
+                const drv = drivers[el.getAttribute('data-id')];
+                if (!drv) return;
+                const html = ecSettingsBattHtml(drv);
+                if (el._ecBattHtml !== html) { el.innerHTML = html; el._ecBattHtml = html; }
+            });
         }
 
         function toggleDriverRow(id, btn) {
@@ -12203,7 +12576,15 @@
         }
 
         function removeDriver(id) {
-            if (!confirm('Remove this driver?')) return;
+            // Saved points are one shared list but each is stored with a vehicle: move this one's to another vehicle first
+            const raw = ecRawDrivers && ecRawDrivers[id];
+            const sps = (raw && raw.startPoints && typeof raw.startPoints === 'object') ? raw.startPoints : null;
+            const count = sps ? Object.keys(sps).length : 0;
+            const other = Object.keys(ecRawDrivers || {}).filter(function(k) { return k !== id; }).sort()[0];
+            if (!confirm(count && !other
+                ? 'Remove this driver? The ' + count + ' saved point' + (count === 1 ? '' : 's') + ' kept with it will be deleted too.'
+                : 'Remove this driver?')) return;
+            if (count && other) getDriversRef().child(other).child('startPoints').update(sps).catch(ecSaveError('the saved points'));
             getDriversRef().child(id).remove().catch(ecSaveError('the driver removal'));
             renderDriverBadges();
             updateMapMarkers();
@@ -12343,6 +12724,12 @@
             }
             if (e.key === 'Escape') {
                 const modal = document.getElementById('driverModal');
+                const drawerEl = document.getElementById('groupDrawer');
+                const settingsEl = document.getElementById('settingsModal');
+                const nothingElseOpen = modal.style.display !== 'flex' && !historicalOverlayOpen &&
+                    !(drawerEl && drawerEl.classList.contains('open')) && !(settingsEl && settingsEl.style.display === 'flex');
+                if (nothingElseOpen && ecPoints.adding) { ecPointsCancelAdd(); e.preventDefault(); return; }
+                if (nothingElseOpen && ecPoints.open) { ecPointsClose(); e.preventDefault(); return; }
                 if (modal.style.display === 'flex') {
                     closeDriverModal();
                     e.preventDefault();
