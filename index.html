@@ -5767,6 +5767,52 @@
         }
         @media (prefers-reduced-motion: reduce) { .ec-points-panel { animation: none; } }
 
+
+        /* ================= VEHICLE SPEED (PAJ km/h) =================
+           Moving vans show their speed: a tag under the van on the map, the bottom button (in place of
+           "Now"), the driver window's top line. At EC_FAST_KMH and over it turns red. Show Track colours
+           the line by speed. */
+        #driverBadges .driver-badge .last-update.ec-speed,
+        body:not(.light-mode) #driverBadges .driver-badge .last-update.ec-speed {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: calc(12px * var(--ec-fs, 1));
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        body.light-mode #driverBadges .driver-badge .last-update.ec-speed { color: #111827 !important; }
+        #driverBadges .driver-badge .last-update.ec-speed small { font-size: 0.8em; font-weight: 600; opacity: 0.75; }
+        #driverBadges .driver-badge .last-update.ec-speed.ec-fast,
+        body.light-mode #driverBadges .driver-badge .last-update.ec-speed.ec-fast {
+            color: #ffffff !important;
+            background: #dc2626;
+            padding: 1px calc(6px * var(--ec-fs, 1));
+            border-radius: 8px;
+        }
+        .ec-modal-speed { color: #ffffff; font-weight: 800; font-variant-numeric: tabular-nums; }
+        body.light-mode .ec-modal-speed { color: #111827; }
+        .ec-modal-speed.ec-fast, body.light-mode .ec-modal-speed.ec-fast { color: #ffffff; background: #dc2626; padding: 0 6px; border-radius: 6px; }
+        .ec-modal-speed.ec-stopped { color: var(--muted); font-weight: 700; }
+        /* Show Track: colour key + top speed, on the left of the map */
+        .ec-speed-key {
+            margin: 10px;
+            padding: 7px 10px;
+            border-radius: 10px;
+            background: rgba(12, 13, 20, 0.88);
+            color: #ffffff;
+            font: 600 11px Inter, 'Segoe UI', Arial, sans-serif;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            max-width: calc(100vw - 90px);
+        }
+        body.light-mode .ec-speed-key { background: rgba(255, 255, 255, 0.95); color: #111827; }
+        .ec-speed-key .ec-sk-row { display: flex; flex-wrap: wrap; gap: 4px 9px; align-items: center; }
+        .ec-speed-key .ec-sk-row + .ec-sk-row { margin-top: 6px; }
+        .ec-speed-key i { display: inline-block; width: 14px; height: 5px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+        .ec-speed-key .ec-sk-top { background: #dc2626; color: #ffffff; border-radius: 7px; padding: 2px 7px; font-weight: 700; }
+        .ec-speed-key .ec-sk-top.ec-sk-calm { background: rgba(127, 127, 127, 0.25); color: inherit; }
+        .ec-speed-key .ec-sk-over { opacity: 0.85; }
+        .ec-speed-pop { font: 600 12px Inter, 'Segoe UI', Arial, sans-serif; color: #111827; padding: 2px 4px; }
+        .ec-speed-pop b { display: block; font-size: 16px; font-weight: 800; }
     </style>
 </head>
 <body>
@@ -7048,6 +7094,37 @@
             return t === 'Now' ? 'just now' : t + ' ago';
         }
 
+        // ===== VEHICLE SPEED (PAJ km/h) =====
+        // pollNow saves PAJ's speed for each van as drivers/{id}/speed (km/h, whole number).
+        const EC_FAST_KMH = 100;              // this fast or faster shows red
+        const EC_SPEED_MIN_KMH = 5;           // under this the van counts as stopped (GPS drift while parked)
+        const EC_SPEED_FRESH_MS = 2 * 60 * 1000; // a speed older than this is not shown (van went quiet)
+        // Show Track colours, fastest first
+        const EC_SPEED_BANDS = [
+            { min: 100, color: '#ef4444', label: '100+' },
+            { min: 80, color: '#f97316', label: '80–99' },
+            { min: 50, color: '#facc15', label: '50–79' },
+            { min: 0, color: '#22c55e', label: 'under 50' }
+        ];
+        function ecSpeedNumber(v) {
+            if (v === null || v === undefined || v === '') return null;
+            const n = Number(v);
+            return isFinite(n) && n >= 0 ? n : null;
+        }
+        // The van's speed in km/h while it is moving and the reading is fresh; otherwise null
+        function ecLiveSpeed(drv) {
+            if (!drv || ecIsFleetHunt(drv)) return null;
+            const v = ecSpeedNumber(drv.speed);
+            if (v === null || v < EC_SPEED_MIN_KMH) return null;
+            const at = drv.lastLocation && drv.lastLocation.updatedAt;
+            if (!at || ecServerNow() - at > EC_SPEED_FRESH_MS) return null;
+            return Math.round(v);
+        }
+        function ecSpeedColor(v) {
+            for (const b of EC_SPEED_BANDS) if (v >= b.min) return b.color;
+            return EC_SPEED_BANDS[EC_SPEED_BANDS.length - 1].color;
+        }
+
         // FleetHunt trucks don't report a battery level: always shown as 100% (green)
         function ecIsFleetHunt(drv) {
             return !!drv && /^fleet[\s_-]*hunt$/i.test(String(drv.provider || '').trim());
@@ -7629,6 +7706,8 @@
         let historicalOverlayDriverId = null;
         let historicalPolyline = null;
         let historicalArrowMarkers = [];
+        let historicalSpeedLines = []; // Show Track coloured by speed (overlay map)
+        let historicalSpeedInfo = null;
         let historicalStopMarkers = [];
         let historicalTooltip = null;
         let historicalMapClickHandler = null;
@@ -8583,6 +8662,91 @@
             return douglasPeuckerSimplify(decimated, dpToleranceDeg);
         }
 
+        // ===== SHOW TRACK BY SPEED =====
+        function ecTrackHasSpeed(raw) {
+            return !!raw && raw.length > 1 && raw.some(p => p.speed !== null && p.speed !== undefined);
+        }
+        // Draws the track in pieces coloured by speed (EC_SPEED_BANDS). Tapping the line shows the speed and
+        // time of the nearest GPS point. Returns the Polylines (caller removes them).
+        function ecDrawSpeedTrack(mapObj, raw, infoWindow) {
+            const pts = decimatePoints(raw, TRACK_FILTER_DISTANCE); // same points, minus <10 m jitter
+            const lines = [];
+            const onClick = function(e) {
+                if (!infoWindow || !e.latLng) return;
+                const lat = e.latLng.lat(), lng = e.latLng.lng();
+                let best = null, bestD = Infinity;
+                for (const p of raw) {
+                    if (p.speed === null || p.speed === undefined) continue;
+                    const d = (p.lat - lat) * (p.lat - lat) + (p.lng - lng) * (p.lng - lng);
+                    if (d < bestD) { bestD = d; best = p; }
+                }
+                if (!best) return;
+                infoWindow.setContent(`<div class="ec-speed-pop"><b>${Math.round(best.speed)} km/h</b>${ecFormat(best.timestamp, { hour: 'numeric', minute: '2-digit' })}</div>`);
+                infoWindow.setPosition({ lat: best.lat, lng: best.lng });
+                infoWindow.open(mapObj);
+            };
+            let run = null, runColor = null, lastV = 0;
+            for (let i = 1; i < pts.length; i++) {
+                const a = pts[i - 1], b = pts[i];
+                const va = ecSpeedNumber(a.speed), vb = ecSpeedNumber(b.speed);
+                const v = va !== null && vb !== null ? (va + vb) / 2 : (vb !== null ? vb : (va !== null ? va : lastV));
+                lastV = v;
+                const color = ecSpeedColor(v);
+                if (color !== runColor) {
+                    if (run) lines.push(run);
+                    run = { color: color, path: [{ lat: a.lat, lng: a.lng }] };
+                    runColor = color;
+                }
+                run.path.push({ lat: b.lat, lng: b.lng });
+            }
+            if (run) lines.push(run);
+            return lines.map(r => {
+                const line = new google.maps.Polyline({
+                    path: r.path, geodesic: true, strokeColor: r.color, strokeOpacity: 0.95, strokeWeight: 5,
+                    zIndex: 5, map: mapObj // above Show route's line
+                });
+                line.addListener('click', onClick);
+                return line;
+            });
+        }
+        // Colour key + top speed + time at EC_FAST_KMH or over, as a map control (left, under the top-left buttons)
+        function ecSpeedSummary(raw) {
+            let top = null, overMs = 0;
+            for (let i = 0; i < raw.length; i++) {
+                const v = ecSpeedNumber(raw[i].speed);
+                if (v === null) continue;
+                if (!top || v > top.speed) top = raw[i];
+                if (v >= EC_FAST_KMH && i + 1 < raw.length) overMs += Math.min(60000, Math.max(0, raw[i + 1].timestamp - raw[i].timestamp));
+            }
+            return { top: top, overMs: overMs };
+        }
+        function ecShowSpeedKey(mapObj, raw) {
+            let el = mapObj._ecSpeedKey;
+            if (!el) {
+                el = mapObj._ecSpeedKey = document.createElement('div');
+                el.className = 'ec-speed-key';
+                mapObj.controls[google.maps.ControlPosition.LEFT_TOP].push(el); // under the map's top-left buttons
+            }
+            if (!raw || !ecTrackHasSpeed(raw)) { el.style.display = 'none'; return; }
+            const sum = ecSpeedSummary(raw);
+            const legend = EC_SPEED_BANDS.slice().reverse().map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('');
+            let info = '';
+            if (sum.top) {
+                const topV = Math.round(sum.top.speed);
+                info = `<span class="ec-sk-top${topV >= EC_FAST_KMH ? '' : ' ec-sk-calm'}">Top speed ${topV} km/h · ${ecFormat(sum.top.timestamp, { hour: 'numeric', minute: '2-digit' })}</span>`;
+                if (sum.overMs > 0) {
+                    const mins = Math.round(sum.overMs / 60000);
+                    info += `<span class="ec-sk-over">${EC_FAST_KMH}+ km/h: ${mins < 1 ? 'under 1' : mins} min</span>`;
+                }
+            }
+            el.innerHTML = `<div class="ec-sk-row">${legend}</div>` + (info ? `<div class="ec-sk-row">${info}</div>` : '');
+            el.style.display = '';
+        }
+        function ecClearSpeedLines(list) {
+            (list || []).forEach(l => l.setMap(null));
+            return [];
+        }
+
         // ===== DRIVER MODAL TRACK =====
         function updateDriverModalTrack(driverId) {
             if (!driverModalMap) return;
@@ -8594,6 +8758,8 @@
                 driverModalMap._trackPolyline.setMap(null);
                 driverModalMap._trackPolyline = null;
             }
+            driverModalMap._speedLines = ecClearSpeedLines(driverModalMap._speedLines);
+            ecShowSpeedKey(driverModalMap, null);
             if (driverModalMap._stopMarkers) {
                 driverModalMap._stopMarkers.forEach(m => m.setMap(null));
                 driverModalMap._stopMarkers = [];
@@ -8607,9 +8773,17 @@
 
             if (track.length < 2) return;
 
+            const infoWindow = new google.maps.InfoWindow();
+            driverModalMap._infoWindow = infoWindow;
+            const raw = historicalRawTracks[driverId];
+            const bySpeed = ecTrackHasSpeed(raw);
+            if (bySpeed) {
+                driverModalMap._speedLines = ecDrawSpeedTrack(driverModalMap, raw, infoWindow);
+                ecShowSpeedKey(driverModalMap, raw);
+            }
             const path = (historicalPolylinePoints[driverId] || track).map(p => ({ lat: p.lat, lng: p.lng }));
             const polyColor = '#ff6b35';
-            driverModalMap._trackPolyline = new google.maps.Polyline({
+            if (!bySpeed) driverModalMap._trackPolyline = new google.maps.Polyline({
                 path: path,
                 geodesic: true,
                 strokeColor: polyColor,
@@ -8619,8 +8793,6 @@
                 map: driverModalMap
             });
 
-            const infoWindow = new google.maps.InfoWindow();
-            driverModalMap._infoWindow = infoWindow;
             driverModalMap._stopMarkers = [];
             stops.forEach((event, stopIndex) => {
                 const marker = new google.maps.Marker({
@@ -8718,7 +8890,8 @@
                     lat: p.lat,
                     lng: p.lng,
                     timestamp: p.dateunix ? p.dateunix * 1000 : Date.now(),
-                    heading: p.direction || null
+                    heading: p.direction || null,
+                    speed: isFleetHuntDrv ? null : ecSpeedNumber(p.speed) // km/h from PAJ (FleetHunt's unit is not known)
                 }));
 
                 // ---- STORE THE FULL UNSIMPLIFIED TRACK ----
@@ -9073,6 +9246,7 @@
                     title: ecFormat(pt.timestamp, { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })
                 });
                 arrowMarker.set('timestamp', pt.timestamp);
+                arrowMarker.set('speed', ecSpeedNumber(pt.speed));
                 google.maps.event.addListener(arrowMarker, 'click', function(e) {
                     showArrowTooltip(this, e.latLng);
                 });
@@ -9089,13 +9263,22 @@
             clearHistoricalOverlayMap();
 
             const path = (historicalPolylinePoints[driverId] || track).map(p => ({ lat: p.lat, lng: p.lng }));
+            // With PAJ speeds the line is drawn in speed colours; this line then only carries the arrows
+            const raw = historicalRawTracks[driverId];
+            const bySpeed = ecTrackHasSpeed(raw);
+            if (bySpeed) {
+                if (!historicalSpeedInfo) historicalSpeedInfo = new google.maps.InfoWindow();
+                historicalSpeedLines = ecDrawSpeedTrack(historicalMapInstance, raw, historicalSpeedInfo);
+            }
+            ecShowSpeedKey(historicalMapInstance, bySpeed ? raw : null);
             historicalPolyline = new google.maps.Polyline({
                 path: path,
                 geodesic: true,
                 strokeColor: '#ff6b35',
-                strokeOpacity: 0.8,
+                strokeOpacity: bySpeed ? 0 : 0.8,
                 strokeWeight: 4,
-                zIndex: 5, // above Show route's line
+                clickable: !bySpeed, // taps go to the speed line under it
+                zIndex: bySpeed ? 6 : 5, // above Show route's line (and the arrows over the speed line)
                 icons: [{
                     // direction of travel, spaced in screen pixels so it reads at any zoom
                     icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.6, fillColor: '#ffffff', fillOpacity: 1, strokeColor: '#b8401a', strokeWeight: 1 },
@@ -9271,6 +9454,9 @@
                 historicalPolyline.setMap(null);
                 historicalPolyline = null;
             }
+            historicalSpeedLines = ecClearSpeedLines(historicalSpeedLines);
+            if (historicalSpeedInfo) historicalSpeedInfo.close();
+            if (historicalMapInstance) ecShowSpeedKey(historicalMapInstance, null);
             if (historicalArrowMarkers.length) {
                 historicalArrowMarkers.forEach(m => m.setMap(null));
                 historicalArrowMarkers = [];
@@ -9690,7 +9876,8 @@
             closeArrowTooltip();
             const timestamp = marker.get('timestamp');
             if (!timestamp) return;
-            const timeStr = formatTimestampTo12h(timestamp);
+            const speed = marker.get('speed');
+            const timeStr = formatTimestampTo12h(timestamp) + (speed !== null && speed !== undefined ? ' · ' + Math.round(speed) + ' km/h' : '');
             const tooltip = document.createElement('div');
             tooltip.className = 'arrow-tooltip';
             tooltip.textContent = timeStr;
@@ -10012,7 +10199,8 @@
                 // Same language as the driver buttons: Online = full colour + pulsing ring, Parked = full
                 // colour + blue P and no ring, not in use = faded and no ring
                 const use = ecUseStateFor(id, drv).use;
-                const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading) + '|' + use;
+                const speed = use === 'online' ? ecLiveSpeed(drv) : null; // tag under a moving van
+                const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading) + '|' + use + '|' + speed;
 
                 let marker = driverMarkers[id];
                 let glideFrom = null; // where the van is drawn now, when it has to glide to a new fix
@@ -10025,7 +10213,7 @@
                         if (!glideFrom) marker.setPosition(pos);
                     }
                     if (marker._iconKey !== iconKey) {
-                        marker.setIcon(getDriverIcon(displayName, color, drv.heading, use));
+                        marker.setIcon(getDriverIcon(displayName, color, drv.heading, use, speed));
                         marker.setZIndex(EC_MARKER_Z[use]);
                         marker._iconKey = iconKey;
                     }
@@ -10035,7 +10223,7 @@
                         position: pos,
                         map: map,
                         zIndex: EC_MARKER_Z[use], // vans being driven are drawn over parked and unused ones
-                        icon: getDriverIcon(displayName, color, drv.heading, use)
+                        icon: getDriverIcon(displayName, color, drv.heading, use, speed)
                     });
                     marker._iconKey = iconKey;
                     marker._target = pos;
@@ -10225,20 +10413,27 @@
 
         const EC_MARKER_Z = { online: 30, parked: 20, idle: 10 };
         // use: 'online' (default look), 'parked' (blue P on the van) or 'idle' (faded: not in use)
-        function getDriverIcon(name, color, heading = null, use = 'online') {
+        // speed: km/h to show in a tag under the van (only for a moving Online van), or null
+        function getDriverIcon(name, color, heading = null, use = 'online', speed = null) {
             const rawName = String(name == null ? '' : name);
+            const speedText = (use === 'online' && speed !== null && speed !== undefined) ? Math.round(Number(speed)) + ' km/h' : '';
+            const speedW = speedText ? speedText.length * 7 + 12 : 0;
             const safeName = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
             const safeColor = String(color == null ? '#f7c948' : color).replace(/[^#a-zA-Z0-9(),.% ]/g, '');
             const textColor = ecMarkerTextColor();
             const isLight = document.body.classList.contains('light-mode');
             const pillFill = isLight ? '#ffffff' : 'rgba(12,13,20,0.88)';
-            const width = Math.max(50, Math.min(220, rawName.length * 7 + 16)); // wide enough that long names are not clipped
+            const width = Math.max(50, speedW + 4, Math.min(220, rawName.length * 7 + 16)); // wide enough that long names (and the speed tag) are not clipped
             const half = width / 2;
             const cy = 45; // the van's centre (= the GPS spot); room for the van at any angle below the name
-            const height = 66;
+            const height = speedText ? 88 : 66; // room for the speed tag under the van
             const headingKey = ecHeadingKey(heading);
             const turn = headingKey === 'n' ? 0 : headingKey;
             const idle = use === 'idle';
+            const fast = speedText && Number(speed) >= EC_FAST_KMH;
+            const speedTag = !speedText ? '' :
+                `<g transform="translate(${half} ${cy + 30})"><rect x="${-speedW / 2}" y="-9" width="${speedW}" height="18" rx="9" fill="${fast ? '#dc2626' : (isLight ? '#111827' : '#ffffff')}"/>` +
+                `<text x="0" y="4.2" text-anchor="middle" fill="${fast || isLight ? '#ffffff' : '#0b0d14'}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800">${speedText}</text></g>`;
             const parkedBadge = use !== 'parked' ? '' :
                 `<g transform="translate(${half + 11} ${cy - 13})"><rect x="-7" y="-7" width="14" height="14" rx="4" fill="#3b82f6" stroke="#ffffff" stroke-width="1.2"/>` +
                 `<text x="0" y="3.6" text-anchor="middle" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold">P</text></g>`;
@@ -10248,7 +10443,7 @@
                 `<rect x="1" y="1" width="${width - 2}" height="19" rx="9.5" fill="${pillFill}" stroke="${safeColor}" stroke-width="1.5"/>` +
                 `<text x="${half}" y="14.5" text-anchor="middle" fill="${textColor}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold">${safeName}</text>` +
                 `<g transform="translate(${half} ${cy}) rotate(${turn})">` + ecCargoVanSvg(safeColor, isLight) + `</g>` +
-                `</g>` + parkedBadge +
+                `</g>` + parkedBadge + speedTag +
                 `</svg>`;
             return {
                 url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
@@ -10895,6 +11090,7 @@
         const EC_LOW_BATTERY_PCT = 30; // below this, the driver's bottom button shows a pulsing battery + %
         function renderDriverBadges() {
             renderAttentionStrip();
+            ecUpdateModalSpeed();
             const container = document.getElementById('driverBadges');
             const entries = ecDriverEntriesByStatus(getFilteredDrivers());
             if (entries.length === 0) {
@@ -10929,11 +11125,16 @@
                 const nameText = getDriverNickname(id) || getDriverDisplayName(id, drv);
                 const use = ecUseState(id, drv, status);
                 const parkedHtml = use === 'parked' ? '<span class="ec-parked" aria-hidden="true">P</span>' : '';
+                // Moving: the speed takes the place of "Now" (red at EC_FAST_KMH and over)
+                const speed = use === 'online' ? ecLiveSpeed(drv) : null;
+                const timeHtml = speed !== null
+                    ? `<span class="last-update ec-speed${speed >= EC_FAST_KMH ? ' ec-fast' : ''}">${speed}<small> km/h</small></span>`
+                    : `<span class="last-update${lastUpdateText === 'Now' ? ' ec-now' : ''}">${lastUpdateText}</span>`;
                 badgeRows.push({ id: id, color: color, status: use, tc: ecClockedInOnline(id, use), html: `
-              <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(ecUseTitle({ status: status, use: use }))}, last update ${ecEsc(lastUpdateText)}">
+              <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(ecUseTitle({ status: status, use: use }))}${speed !== null ? ', ' + speed + ' km/h' : ''}, last update ${ecEsc(lastUpdateText)}">
                 <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
-                ${parkedHtml}<span class="last-update${lastUpdateText === 'Now' ? ' ec-now' : ''}">${lastUpdateText}</span>
+                ${parkedHtml}${timeHtml}
                 ${lowBattHtml}
               </div>
             ` });
@@ -11041,6 +11242,27 @@
             if (dispatchHeaderEl) new ResizeObserver(updateDriverModalHeaderOffset).observe(dispatchHeaderEl);
         }
 
+        // Driver window top line: "78 km/h" while moving, "Stopped" while Online and still
+        function ecUpdateModalSpeed() {
+            const el = document.getElementById('ecModalSpeed');
+            if (!el) return;
+            const drv = activeModalDriverId ? drivers[activeModalDriverId] : null;
+            const use = drv ? ecUseStateFor(activeModalDriverId, drv).use : null;
+            const speed = use === 'online' ? ecLiveSpeed(drv) : null;
+            let text = '', cls = 'ec-modal-speed';
+            if (speed !== null) {
+                text = speed + ' km/h';
+                if (speed >= EC_FAST_KMH) cls += ' ec-fast';
+            } else if (use === 'online' && !ecIsFleetHunt(drv) && ecSpeedNumber(drv.speed) !== null) {
+                text = 'Stopped';
+                cls += ' ec-stopped';
+            }
+            el.hidden = !text;
+            el.className = cls;
+            el.textContent = text;
+            if (text) el.append(' · ');
+        }
+
         function openDriverModal(driverId) {
             ecPointsCancelAdd(); // not placing a saved point any more
             updateDriverModalHeaderOffset();
@@ -11068,7 +11290,14 @@
             const devId = drv?.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
             const status = getGPSStatus(drv?.lastLocation?.updatedAt, devId);
             const lastUp = drv?.lastLocation?.updatedAt ? ecAgoText(drv.lastLocation.updatedAt) : '—';
-            statusHeader.textContent = `${status.label} · Updated ${lastUp}`;
+            // "● Online · 78 km/h · Updated just now": the speed part is kept live by ecUpdateModalSpeed
+            statusHeader.textContent = '';
+            statusHeader.append(status.label + ' · ');
+            const speedSpan = document.createElement('span');
+            speedSpan.id = 'ecModalSpeed';
+            speedSpan.hidden = true;
+            statusHeader.append(speedSpan, 'Updated ' + lastUp);
+            ecUpdateModalSpeed();
 
             if (drv) {
                 let batteryVal = ecIsFleetHunt(drv) ? 100 : ecBatteryValue(drv);

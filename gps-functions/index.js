@@ -386,6 +386,8 @@ exports.fleetHuntHistory = onRequest(
 // 3. PAJ poll (called by pollNow)
 // ---------------------------------------------------------------------------
 
+let pajPointFieldsLogged = false;
+
 /** One PAJ poll: same parsing the dispatch page used in fetchAllDevicePositions. */
 async function pollPajOnce() {
   const db = admin.database();
@@ -449,6 +451,16 @@ async function pollPajOnce() {
         const battery = lastPoint.battery ?? lastPoint.battery_level ?? null;
         next.battery = battery === null ? null : Number(battery);
         next.heading = lastPoint.direction ?? null;
+        // Speed in km/h (PAJ track points carry a whole-number "speed"). Only saved when PAJ sends it.
+        const speed = Number(lastPoint.speed);
+        if (lastPoint.speed !== undefined && lastPoint.speed !== null && lastPoint.speed !== '' && Number.isFinite(speed)) {
+          next.speed = Math.max(0, Math.round(speed));
+        }
+      }
+      // Once per server start: which fields PAJ's lastPoint has (shows in the logs whether speed is there)
+      if (!pajPointFieldsLogged) {
+        pajPointFieldsLogged = true;
+        logger.info(`pollPaj: lastPoint fields: ${Object.keys(lastPoint).join(', ')}`);
       }
     }
 
