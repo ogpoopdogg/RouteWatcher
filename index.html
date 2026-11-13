@@ -5071,7 +5071,7 @@
             max-width: 150px;
         }
         #mapDriverControl .driver-status-dot { display: none; }
-        /* Same as the bottom buttons: Online glows softly in the driver's color, not in use is dimmed, Parked looks normal */
+        /* Same as the bottom buttons: Online glows softly in the driver's color; Parked and not in use look normal (no glow) */
         #mapDriverControl .driver-entry.ec-st-online,
         body:not(.light-mode) #mapDriverControl .driver-entry.ec-st-online,
         body.light-mode #mapDriverControl .driver-entry.ec-st-online {
@@ -5079,21 +5079,6 @@
             box-shadow: 0 0 10px -1px color-mix(in srgb, var(--drv, #f7c948) 55%, transparent),
                 inset 0 0 8px -2px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent);
         }
-        /* (the chip's background stays solid so map labels don't show through; the name and border dim) */
-        #mapDriverControl .driver-entry.ec-st-idle,
-        #mapDriverControl .driver-entry.ec-st-idle {
-            box-shadow: none;
-            border-color: rgba(255, 255, 255, 0.07);
-        }
-        body.light-mode #mapDriverControl .driver-entry.ec-st-idle,
-        body.light-mode #mapDriverControl .driver-entry.ec-st-idle { border-color: #e2e2e2; }
-        #mapDriverControl .driver-entry.ec-st-idle .driver-name,
-        #mapDriverControl .driver-entry.ec-st-idle .driver-name {
-            opacity: 0.45;
-            filter: saturate(0.5);
-        }
-        #mapDriverControl .driver-entry.ec-st-idle:hover .driver-name,
-        #mapDriverControl .driver-entry.ec-st-idle:hover .driver-name { opacity: 0.8; }
         #mapDriverControl .driver-eta-label { max-width: 150px; }
         body.light-mode #mapDriverControl .driver-entry {
             background: rgba(255, 255, 255, 0.92);
@@ -5136,7 +5121,7 @@
         #dispatch-map .ec-main-fit-ctl .map-fit-btn:active { transform: scale(0.92); }
 
         /* Driver buttons at the bottom: compact chips in rows, name in the driver's color + time since
-           the last GPS fix. Online glows softly; Standby and Offline are dimmed like they're not in use. */
+           the last GPS fix. Online glows softly; every other vehicle has the plain normal look. */
         /* Two buttons on every line, all exactly the same size; a lone last button stays on the left.
            Long text gets smaller to fit (ecFitBadgeText) instead of the button getting bigger. */
         #driverBadges {
@@ -5236,29 +5221,6 @@
             opacity: 1;
             filter: none;
         }
-        /* Not in use (not Online and nobody punched in): dimmed (an alarm and a low battery still show at full strength). The name, time and
-           border fade rather than the whole button, so the low-battery warning stays bright. */
-        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
-        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
-        body.light-mode #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
-        body.light-mode #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) {
-            border-color: color-mix(in srgb, var(--drv, #f7c948) 18%, transparent) !important;
-            box-shadow: none;
-        }
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)),
-        body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) {
-            background: color-mix(in srgb, var(--drv, #f7c948) 4%, rgba(17, 18, 27, 0.92));
-        }
-        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) :is(.name, .last-update),
-        #driverBadges .driver-badge.ec-st-idle:not(:has(.alarm-badge)) :is(.name, .last-update) {
-            opacity: 0.45;
-            filter: saturate(0.5);
-            transition: opacity 0.2s ease;
-        }
-        #driverBadges .driver-badge.ec-st-idle:hover :is(.name, .last-update),
-        #driverBadges .driver-badge.ec-st-idle:hover :is(.name, .last-update) { opacity: 0.75; }
 
         /* Parked (someone punched in, GPS not Online): small "P" before the time; the button keeps its normal look */
         #driverBadges .ec-parked {
@@ -5939,6 +5901,50 @@
         .ec-speed-key .ec-sk-over { opacity: 0.85; }
         .ec-speed-pop { font: 600 12px Inter, 'Segoe UI', Arial, sans-serif; color: #111827; padding: 2px 4px; }
         .ec-speed-pop b { display: block; font-size: 16px; font-weight: 800; }
+        /* ===== Computer: the driver buttons panel can be dragged wider (2026-11) =====
+           Drag the handle on its right edge: the wider it is, the more buttons fit on each line (each button at
+           least EC_DOCK_MIN_BTN wide), up to all on one line. The script sets --ec-dock-w (panel width) and
+           --ec-badge-cols (buttons per line); the width is saved per user (users/{uid}/dispatch_dashboard/dock_width).
+           Phones are not affected. */
+        .ec-dock-grip { display: none; }
+        @media (min-width: 1200px) and (min-height: 560px) {
+            #driverBadges { width: var(--ec-dock-w, 580px); }
+            #driverBadges .driver-badge,
+            body:not(.light-mode) #driverBadges .driver-badge,
+            body.light-mode #driverBadges .driver-badge {
+                --ec-badge-w: calc((100% - (var(--ec-badge-cols, 2) - 1) * var(--ec-badge-gap) - 0.5px) / var(--ec-badge-cols, 2));
+            }
+            .ec-dock-grip {
+                display: block;
+                position: absolute;
+                z-index: 31;
+                width: 16px;
+                margin-left: -8px;
+                cursor: ew-resize;
+                touch-action: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .ec-dock-grip::before {
+                content: '';
+                position: absolute;
+                left: 6px;
+                top: 50%;
+                width: 4px;
+                height: 30px;
+                max-height: calc(100% - 12px);
+                transform: translateY(-50%);
+                border-radius: 2px;
+                background: rgba(255, 255, 255, 0.38);
+                box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+                transition: background 0.15s ease, height 0.15s ease;
+            }
+            body.light-mode .ec-dock-grip::before { background: rgba(0, 0, 0, 0.3); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7); }
+            .ec-dock-grip:hover::before,
+            .ec-dock-grip.is-dragging::before,
+            .ec-dock-grip:focus-visible::before { background: #f7c948; height: 44px; }
+            .ec-dock-grip:focus-visible { outline: none; }
+            body.ec-dock-dragging, body.ec-dock-dragging * { cursor: ew-resize !important; user-select: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -10348,7 +10354,7 @@
                 const color = drv.color || '#f7c948';
                 const displayName = getDriverDisplayName(id, drv);
                 // Same language as the driver buttons: Online = full colour + pulsing ring, Parked = full
-                // colour + blue P and no ring, not in use = faded and no ring
+                // colour + blue P and no ring, not in use = full colour, no ring (no longer faded, 2026-11)
                 const use = ecUseStateFor(id, drv).use;
                 const speed = use === 'online' ? ecLiveSpeed(drv) : null; // tag under a moving van
                 const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading) + '|' + use + '|' + speed;
@@ -10564,7 +10570,7 @@
         }
 
         const EC_MARKER_Z = { online: 30, parked: 20, idle: 10 };
-        // use: 'online' (default look), 'parked' (blue P on the van) or 'idle' (faded: not in use)
+        // use: 'online' (default look), 'parked' (blue P on the van) or 'idle' (not in use: same normal look, no P)
         // speed: km/h to show in a tag under the van (only for a moving Online van), or null
         function getDriverIcon(name, color, heading = null, use = 'online', speed = null) {
             const rawName = String(name == null ? '' : name);
@@ -10581,7 +10587,6 @@
             const height = speedText ? 88 : 66; // room for the speed tag under the van
             const headingKey = ecHeadingKey(heading);
             const turn = headingKey === 'n' ? 0 : headingKey;
-            const idle = use === 'idle';
             const fast = speedText && Number(speed) >= EC_FAST_KMH;
             const speedTag = !speedText ? '' :
                 `<g transform="translate(${half} ${cy + 30})"><rect x="${-speedW / 2}" y="-9" width="${speedW}" height="18" rx="9" fill="${fast ? '#dc2626' : (isLight ? '#111827' : '#ffffff')}"/>` +
@@ -10591,7 +10596,7 @@
                 `<text x="0" y="3.6" text-anchor="middle" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold">P</text></g>`;
             const svg =
                 `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
-                `<g opacity="${idle ? 0.5 : 1}">` +
+                `<g>` +
                 `<rect x="1" y="1" width="${width - 2}" height="19" rx="9.5" fill="${pillFill}" stroke="${safeColor}" stroke-width="1.5"/>` +
                 `<text x="${half}" y="14.5" text-anchor="middle" fill="${textColor}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold">${safeName}</text>` +
                 `<g transform="translate(${half} ${cy}) rotate(${turn})">` + ecCargoVanSvg(safeColor, isLight) + `</g>` +
@@ -10650,7 +10655,7 @@
         // Standby alone doesn't mean a van is free: a driver parked at a stop or on lunch is still working.
         //   online: GPS Online -> glows (whether or not anyone is punched in)
         //   parked: not Online, but someone is punched in on it (timeclock/vehicle_claims/{gps id}) -> normal look + "P"
-        //   idle:   not Online and nobody punched in on it -> dimmed
+        //   idle:   not Online and nobody punched in on it -> normal look, no glow (no longer dimmed, 2026-11)
         // Claims are read live (a punch in / punch out shows right away). Accounts that can't read the Time Clock
         // (only its admins and Gil can) fall back to time: not Online for less than EC_PARKED_DIM_MS = parked.
         const EC_PARKED_DIM_MS = 45 * 60 * 1000;
@@ -10729,7 +10734,7 @@
                 const devId = drv.deviceId ? parseInt(String(drv.deviceId).trim(), 10) : null;
                 const status = getGPSStatus(drv.lastLocation?.updatedAt, devId);
                 const color = drv.color || '#f7c948';
-                // Name only; the status shows like the bottom buttons: Online glows, Standby / Offline are dimmed
+                // Name only; the status shows like the bottom buttons: Online glows, the rest look normal
                 const use = ecUseState(id, drv, status);
                 const statusTitle = ecUseTitle({ status: status, use: use });
                 const nameHtml = ecEsc(getDriverNickname(id) || getDriverDisplayName(id, drv));
@@ -11272,7 +11277,7 @@
                 }
 
                 // Only the name (in the driver's color) and the time since the last GPS fix. The status shows in
-                // the button itself: Online glows, Standby and Offline are dimmed (see FULL-SCREEN HOME LAYOUT)
+                // the button itself: Online glows, Parked shows a P, the rest look normal (see FULL-SCREEN HOME LAYOUT)
                 const color = drv.color || '#f7c948';
                 const nameText = getDriverNickname(id) || getDriverDisplayName(id, drv);
                 const use = ecUseState(id, drv, status);
@@ -11316,6 +11321,7 @@
                     });
                     container.appendChild(badge);
                 });
+                if (typeof ecApplyDock === 'function') ecApplyDock(); // buttons per line depends on how many there are
                 ecFitBadgeText(container);
             }
             updateMapDriverControl();
@@ -11342,14 +11348,18 @@
                 // full width of everything in the line (name at its natural width) vs the room in the button;
                 // measured exactly, because the browser rounds scrollWidth and a name over by a fraction of a
                 // pixel would still get "…"
+                // (the name is measured with shrinking turned off for a moment: once it is cut with "…" the
+                // browser reports the cut width, which made very narrow buttons keep "T…" instead of shrinking)
                 const tooBig = function() {
+                    name.style.flexShrink = '0';
                     const items = row.children;
                     let need = 0, n = 0;
                     for (let i = 0; i < items.length; i++) {
-                        const w = items[i] === name ? ecTextWidth(name) : items[i].getBoundingClientRect().width;
+                        const w = items[i] === name ? Math.max(ecTextWidth(name), name.getBoundingClientRect().width) : items[i].getBoundingClientRect().width;
                         if (w > 0) { need += w; n++; }
                     }
                     need += Math.max(0, n - 1) * (parseFloat(getComputedStyle(row).columnGap) || 0);
+                    name.style.flexShrink = '';
                     return need > row.getBoundingClientRect().width - 1;
                 };
                 let fs = 1;
@@ -11375,7 +11385,161 @@
             }).observe(ecBadgeBarEl);
             // the app's font can arrive after the first buttons are drawn and change how wide the text is
             if (document.fonts && document.fonts.ready) document.fonts.ready.then(function() { ecFitBadgeText(ecBadgeBarEl); });
+            // (ready can resolve before the font has even started to load; this catches it arriving later)
+            if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', function() { ecFitBadgeText(ecBadgeBarEl); });
         }
+
+        // ===== COMPUTER: DRAG THE DRIVER BUTTONS PANEL WIDER =====
+        // On a computer screen the driver buttons float over the bottom left of the map. A handle on the panel's
+        // right edge drags it wider or narrower; more buttons fit on each line as it gets wider, up to all on one
+        // line. The width is saved for the signed-in user (users/{uid}/dispatch_dashboard/dock_width, which the
+        // user may already write: the map view is saved next to it) and on this device for a fast start.
+        // Saved value: a number of pixels, or 'full' = as wide as the window allows (dragged all the way).
+        const EC_DOCK_DEFAULT_W = 580;  // the panel's width before anyone drags it (two buttons per line)
+        const EC_DOCK_MIN_W = 240;      // narrowest: one button per line
+        const EC_DOCK_MIN_BTN = 190;    // a button is never narrower than this (keeps the default at 2 per line)
+        const EC_DOCK_MAX_BTN = 320;    // nor wider than this (the panel stops growing once all fit on one line)
+        const EC_DOCK_FULL_MIN_BTN = 120; // dragged all the way: every button on one line if each still gets this much
+        const EC_DOCK_RIGHT_ROOM = 76;  // room kept on the right for the mic button
+        const EC_DOCK_KEY = 'ec_dock_w';
+        const ecDockMq = window.matchMedia('(min-width: 1200px) and (min-height: 560px)');
+        let ecDockPref = null;          // null = default, a number of px, or 'full'
+        try {
+            const saved = JSON.parse(localStorage.getItem(EC_DOCK_KEY) || 'null');
+            if (saved && (saved.w === 'full' || isFinite(Number(saved.w)))) ecDockPref = saved.w === 'full' ? 'full' : Number(saved.w);
+        } catch (e) {}
+
+        function ecDockMaxW() {
+            const grid = document.querySelector('#app .app-grid');
+            const gw = grid ? grid.clientWidth : window.innerWidth;
+            return Math.max(EC_DOCK_MIN_W, gw - 12 - EC_DOCK_RIGHT_ROOM);
+        }
+        // Width in px -> width that is really used + buttons per line
+        function ecDockLayout(want) {
+            const dock = document.getElementById('driverBadges');
+            const count = dock ? dock.querySelectorAll('.driver-badge').length : 0;
+            const gap = 6, chrome = 2 * 8 + 2; // gap between buttons; padding + border of the panel
+            const maxW = ecDockMaxW();
+            let w = want === 'full' ? maxW : Math.round(Number(want) || EC_DOCK_DEFAULT_W);
+            w = Math.min(maxW, Math.max(EC_DOCK_MIN_W, w));
+            let cols = Math.max(1, Math.floor((w - chrome + gap) / (EC_DOCK_MIN_BTN + gap)));
+            // all the way to the right: squeeze every button onto one line when they still fit (text shrinks to fit)
+            if (w >= maxW - 4 && count > cols && (w - chrome - (count - 1) * gap) / count >= EC_DOCK_FULL_MIN_BTN) cols = count;
+            if (count > 0 && cols >= count) {
+                // every button fits on one line: no empty space at the end, and no button wider than EC_DOCK_MAX_BTN
+                cols = count;
+                w = Math.min(w, chrome + count * EC_DOCK_MAX_BTN + (count - 1) * gap);
+            }
+            return { w: w, cols: cols, maxW: maxW };
+        }
+        function ecApplyDock(want) {
+            const dock = document.getElementById('driverBadges');
+            if (!dock) return null;
+            const lay = ecDockLayout(want === undefined ? ecDockPref : want);
+            dock.style.setProperty('--ec-dock-w', lay.w + 'px');
+            dock.style.setProperty('--ec-badge-cols', String(lay.cols));
+            ecPlaceDockGrip();
+            return lay;
+        }
+        function ecPlaceDockGrip() {
+            const grip = document.getElementById('ecDockGrip');
+            const dock = document.getElementById('driverBadges');
+            const grid = document.querySelector('#app .app-grid');
+            if (!grip || !dock || !grid) return;
+            if (!ecDockMq.matches || getComputedStyle(dock).position !== 'absolute') { grip.style.height = '0px'; return; }
+            const g = grid.getBoundingClientRect(), d = dock.getBoundingClientRect();
+            grip.style.left = Math.round(d.right - g.left) + 'px';
+            grip.style.top = Math.round(d.top - g.top) + 'px';
+            grip.style.height = Math.round(d.height) + 'px';
+        }
+        function ecSaveDockPref() {
+            try {
+                if (ecDockPref === null) localStorage.removeItem(EC_DOCK_KEY);
+                else localStorage.setItem(EC_DOCK_KEY, JSON.stringify({ uid: currentUserId, w: ecDockPref }));
+            } catch (e) {}
+            if (!currentUserId) return;
+            db.ref('users/' + currentUserId + '/dispatch_dashboard/dock_width').set(ecDockPref)
+                .catch(err => console.warn('Driver buttons width save failed:', err));
+        }
+        // After sign in: this user's saved width (another person may have used this computer before)
+        function ecLoadDockPref() {
+            if (!currentUserId) return;
+            const uid = currentUserId;
+            db.ref('users/' + uid + '/dispatch_dashboard/dock_width').once('value').then(snap => {
+                if (uid !== currentUserId) return;
+                const v = snap.val();
+                ecDockPref = v === 'full' ? 'full' : (isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : null);
+                try {
+                    if (ecDockPref === null) localStorage.removeItem(EC_DOCK_KEY);
+                    else localStorage.setItem(EC_DOCK_KEY, JSON.stringify({ uid: uid, w: ecDockPref }));
+                } catch (e) {}
+                ecApplyDock();
+            }).catch(err => console.warn('Driver buttons width load failed:', err));
+        }
+        (function ecSetupDockGrip() {
+            const dock = document.getElementById('driverBadges');
+            const grid = document.querySelector('#app .app-grid');
+            if (!dock || !grid) return;
+            const grip = document.createElement('div');
+            grip.id = 'ecDockGrip';
+            grip.className = 'ec-dock-grip';
+            grip.title = 'Drag to make the driver buttons wider or narrower (double-click: back to normal)';
+            grip.setAttribute('role', 'separator');
+            grip.setAttribute('aria-orientation', 'vertical');
+            grip.setAttribute('aria-label', 'Driver buttons width');
+            grip.tabIndex = 0;
+            grid.appendChild(grip);
+
+            let drag = null;
+            grip.addEventListener('pointerdown', function(e) {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                drag = { x: e.clientX, w: dock.getBoundingClientRect().width, last: null };
+                grip.setPointerCapture(e.pointerId);
+                grip.classList.add('is-dragging');
+                document.body.classList.add('ec-dock-dragging');
+            });
+            grip.addEventListener('pointermove', function(e) {
+                if (!drag) return;
+                const want = drag.w + (e.clientX - drag.x);
+                const lay = ecApplyDock(want);
+                drag.last = (lay && want >= lay.maxW - 4) ? 'full' : Math.round(Math.max(EC_DOCK_MIN_W, Math.min(want, lay ? lay.maxW : want)));
+            });
+            const endDrag = function(e) {
+                if (!drag) return;
+                const last = drag.last;
+                drag = null;
+                grip.classList.remove('is-dragging');
+                document.body.classList.remove('ec-dock-dragging');
+                try { grip.releasePointerCapture(e.pointerId); } catch (err) {}
+                if (last === null) return; // a click, not a drag
+                ecDockPref = last;
+                ecApplyDock();
+                ecSaveDockPref();
+            };
+            grip.addEventListener('pointerup', endDrag);
+            grip.addEventListener('pointercancel', endDrag);
+            grip.addEventListener('dblclick', function() {
+                ecDockPref = null;
+                ecApplyDock();
+                ecSaveDockPref();
+            });
+            // keyboard: left / right arrows make it 40px narrower / wider
+            grip.addEventListener('keydown', function(e) {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                e.preventDefault();
+                const want = dock.getBoundingClientRect().width + (e.key === 'ArrowRight' ? 40 : -40);
+                const lay = ecApplyDock(want);
+                ecDockPref = (lay && want >= lay.maxW - 4) ? 'full' : Math.round(Math.max(EC_DOCK_MIN_W, Math.min(want, lay ? lay.maxW : want)));
+                ecApplyDock();
+                ecSaveDockPref();
+            });
+
+            if (typeof ResizeObserver !== 'undefined') new ResizeObserver(ecPlaceDockGrip).observe(dock);
+            window.addEventListener('resize', function() { if (!drag) ecApplyDock(); });
+            if (ecDockMq.addEventListener) ecDockMq.addEventListener('change', function() { ecApplyDock(); });
+            ecApplyDock();
+        })();
 
         // ===== DRIVER MODAL =====
         let ecHeaderBottomPx = null;
@@ -13312,6 +13476,8 @@
             listenGroups();
             listenNicknames();
             listenContactList();
+
+            ecLoadDockPref(); // this user's driver buttons width (computer screens)
 
             getDriversRef().off('value');
             getDriversRef().on('value', snap => {
