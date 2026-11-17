@@ -7500,11 +7500,23 @@
             }).observe(el, { childList: true, characterData: true, subtree: true });
         })();
 
-        // ===== ACCESS CONTROL: allowed users + one device per user =====
+        // ===== ACCESS CONTROL: allowed users + one device per user (more for accounts in EC_MAX_SEATS) =====
         const EC_ADMIN_EMAIL = 'justin@ec.com'; // always allowed, so the admin can never be locked out by the list
         const EC_DEFAULT_ALLOWED_USERS = { gil: 'gil@ec.com', desirae: 'desirae@ec.com', justin: 'justin@ec.com' };
         // Accounts offered "sign out the other device and continue here?" when already signed in elsewhere
         const EC_TAKEOVER_EMAILS = ['justin@ec.com', 'gil@ec.com', 'desirae@ec.com'];
+        // Accounts that may be open on more than one device at once (seats). Everyone else keeps the
+        // one-device lock at active_sessions/{uid}. A seated account's devices are kept at
+        // active_seats/{uid}/{device id}; a seat is freed when that device closes the app or loses
+        // connection, so a browser whose data was cleared never keeps one. A device past the limit is
+        // asked, then signs out the device used longest ago.
+        const EC_MAX_SEATS = { 'gil@ec.com': 3 };
+        const EC_SEAT_USED_EVERY_MS = 60 * 1000;          // "last used" is saved at most this often
+        const EC_SEAT_KICK_KEEP_MS = 24 * 60 * 60 * 1000; // a "signed out by another device" note is dropped after a day
+        function ecMaxSeats(email) {
+            const n = Number(EC_MAX_SEATS[String(email || '').trim().toLowerCase()]);
+            return n > 1 ? Math.floor(n) : 1;
+        }
         const EC_LOGIN_MSG_KEY = 'ec_login_msg';
         const EC_PREV_SESSION_KEY = 'ec_session_id';
         // One id per browser (not per tab) so a second tab on the same device does not kick the first one out
@@ -7517,13 +7529,15 @@
             } catch (e) {}
             return fresh;
         })();
-        let ecSessionRef = null;
+        let ecSessionRef = null;  // one-device lock, or this device's own seat for a seated account
+        let ecSeatMode = false;   // true when ecSessionRef is a seat (account in EC_MAX_SEATS)
         let ecSessionWatching = false;
         let ecSessionKicked = false;
         let ecGateSeq = 0;
 
         function getAllowedUsersRef() { return db.ref('developer/dispatch_dashboard/allowed_users'); }
         function getActiveSessionRef(uid) { return db.ref('developer/dispatch_dashboard/active_sessions/' + uid); }
+        function getSeatsRef(uid) { return db.ref('developer/dispatch_dashboard/active_seats/' + uid); }
 
         // Show a message left by the previous page load (e.g. signed out because of another device)
         (function showPendingLoginMessage() {
@@ -7604,6 +7618,146 @@
             return 'ok';
         }
 
+        // ---- Seats (accounts allowed on several devices at once) ----
+        // A seat is { email, device, startedAt, lastUsed }. A device signed out by another one is left a
+        // note { kicked: <time> } under its id, so it learns why even if it was offline at the time.
+        // Seat times use the server's clock, so a computer whose clock is off can't look newer or older
+        let ecSeatClockOffset = 0;
+        function ecSeatNow() { return Date.now() + ecSeatClockOffset; }
+        let ecSeatClockOn = false;
+        function ecSeatWatchClock() {
+            if (ecSeatClockOn) return;
+            ecSeatClockOn = true;
+            db.ref('.info/serverTimeOffset').on('value', snap => { ecSeatClockOffset = Number(snap.val()) || 0; });
+        }
+        function ecSeatRecord(user, old) {
+            const now = ecSeatNow();
+            return {
+                email: user.email || '',
+                device: String(navigator.userAgent || '').slice(0, 160),
+                startedAt: (old && old.startedAt && !old.kicked) ? old.startedAt : now,
+                lastUsed: now
+            };
+        }
+        function ecSeatIsLive(s) { return !!(s && typeof s === 'object' && !s.kicked && s.startedAt); }
+        function ecSeatUsedAt(s) { return Number(s.lastUsed || s.startedAt) || 0; }
+        // Short name for a device from its browser text, for the "sign out the other device?" question
+        function ecDeviceLabel(ua) {
+            ua = String(ua || '');
+            const browser = /Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' :
+                /Firefox|FxiOS/.test(ua) ? 'Firefox' : /Chrome|CriOS/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : '';
+            const kind = /iPad/.test(ua) ? 'iPad' : /iPhone/.test(ua) ? 'iPhone' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet') :
+                /Windows/.test(ua) ? 'Windows computer' : /Macintosh/.test(ua) ? 'Mac' : /CrOS/.test(ua) ? 'Chromebook' : /Linux/.test(ua) ? 'Linux computer' : 'device';
+            return browser ? kind + ' (' + browser + ')' : kind;
+        }
+        function ecAgoText(ms) {
+            const min = Math.max(0, Math.round((ecSeatNow() - ms) / 60000));
+            if (min < 1) return 'just now';
+            if (min < 60) return min + ' min ago';
+            const h = Math.round(min / 60);
+            return h < 48 ? h + ' h ago' : Math.round(h / 24) + ' days ago';
+        }
+        // The seat a new device would replace: the one used longest ago (never this device's own)
+        function ecOldestSeat(seats) {
+            let id = null, at = Infinity;
+            Object.keys(seats || {}).forEach(k => {
+                if (k === ecSessionId || !ecSeatIsLive(seats[k])) return;
+                const t = ecSeatUsedAt(seats[k]);
+                if (t < at) { at = t; id = k; }
+            });
+            return id;
+        }
+        // Pure update used inside the seats transaction. Returns the new seats, or undefined when every
+        // seat is taken (and force is off). Old "signed out" notes are dropped on the way.
+        function ecSeatsUpdate(current, user, max, force) {
+            const now = ecSeatNow();
+            const seats = {};
+            Object.keys(current || {}).forEach(k => {
+                const s = current[k];
+                if (ecSeatIsLive(s)) seats[k] = s;
+                else if (s && s.kicked && k !== ecSessionId && now - Number(s.kicked) < EC_SEAT_KICK_KEEP_MS) seats[k] = s;
+            });
+            const mine = current && current[ecSessionId];
+            const others = () => Object.keys(seats).filter(k => k !== ecSessionId && ecSeatIsLive(seats[k]));
+            while (others().length >= max) {
+                if (!force) return undefined;
+                const oldest = ecOldestSeat(seats);
+                if (!oldest) break;
+                seats[oldest] = { kicked: now };
+            }
+            seats[ecSessionId] = ecSeatRecord(user, ecSeatIsLive(mine) ? mine : null);
+            return seats;
+        }
+        // Returns 'ok' when this device now holds a seat, 'busy' when all seats are taken
+        let ecSeatBusyInfo = null; // { label, ago } of the device a takeover would sign out
+        async function ecClaimSeat(user, force) {
+            const ref = getSeatsRef(user.uid);
+            const max = ecMaxSeats(user.email);
+            ecSeatWatchClock();
+            let lastSeen = null;
+            const result = await ref.transaction(current => {
+                lastSeen = current;
+                return ecSeatsUpdate(current, user, max, force);
+            });
+            if (!result || !result.committed) {
+                const oldest = ecOldestSeat(lastSeen || {});
+                const s = oldest && lastSeen[oldest];
+                ecSeatBusyInfo = s ? { label: ecDeviceLabel(s.device), ago: ecAgoText(ecSeatUsedAt(s)), max: max } : { max: max };
+                return 'busy';
+            }
+            ref.child(ecSessionId).onDisconnect().remove().catch(err => console.warn('Seat cleanup setup failed:', err));
+            return 'ok';
+        }
+        // The seat went away without a "signed out" note (e.g. the connection dropped for a moment):
+        // take a seat again, or sign out when the other devices have filled them all meanwhile
+        function ecReclaimSeat() {
+            const user = auth.currentUser;
+            if (!ecSessionRef || ecSessionKicked || !user) return;
+            const max = ecMaxSeats(user.email);
+            getSeatsRef(user.uid).transaction(current => {
+                if (current && current[ecSessionId]) return undefined; // already back (or signed out): leave it
+                return ecSeatsUpdate(current, user, max, false);
+            }).then(res => {
+                if (ecSessionKicked || !res) return;
+                const v = res.snapshot && res.snapshot.val();
+                if (!res.committed && !(v && v[ecSessionId])) {
+                    ecKickOut('You were signed out because this account is open on ' + max + ' other devices.');
+                }
+            }).catch(err => console.warn('Seat reclaim failed:', err));
+        }
+        let ecSeatUsedSavedAt = 0;
+        function ecSeatMarkUsed() {
+            if (!ecSeatMode || !ecSessionRef || ecSessionKicked || document.hidden) return;
+            const now = Date.now();
+            if (now - ecSeatUsedSavedAt < EC_SEAT_USED_EVERY_MS) return;
+            ecSeatUsedSavedAt = now;
+            // only while the seat is still ours (never re-creates a seat that was taken away)
+            ecSessionRef.transaction(s => ecSeatIsLive(s) ? Object.assign({}, s, { lastUsed: ecSeatNow() }) : undefined)
+                .catch(err => console.warn('Seat last-used save failed:', err));
+        }
+        function ecWatchSeat(user) {
+            ecSeatMode = true;
+            ecSessionRef = getSeatsRef(user.uid).child(ecSessionId);
+            ecSeatUsedSavedAt = Date.now(); // the claim just saved it
+            db.ref('.info/connected').on('value', snap => {
+                if (snap.val() !== true || ecSessionKicked || !ecSessionRef) return;
+                ecSessionRef.onDisconnect().remove().catch(err => console.warn('Seat cleanup setup failed:', err));
+            });
+            ecSessionRef.on('value', snap => {
+                if (ecSessionKicked) return;
+                const v = snap.val();
+                if (v && v.kicked) {
+                    // the note stays until this device signs in again (or a day passes); it never counts as a seat
+                    ecKickOut('You were signed out because this account was opened on another device (' +
+                        ecMaxSeats(user.email) + ' at a time is the most).');
+                    return;
+                }
+                if (!ecSeatIsLive(v)) ecReclaimSeat();
+            }, err => console.warn('Seat watch error:', err));
+            ['pointerdown', 'keydown'].forEach(type => document.addEventListener(type, ecSeatMarkUsed, { passive: true }));
+            document.addEventListener('visibilitychange', ecSeatMarkUsed);
+        }
+
         function ecReclaimIfFree() {
             const user = auth.currentUser;
             if (!ecSessionRef || ecSessionKicked || !user) return;
@@ -7614,6 +7768,7 @@
         function ecWatchSession(user) {
             if (ecSessionWatching) return;
             ecSessionWatching = true;
+            if (ecMaxSeats(user.email) > 1) { ecWatchSeat(user); return; }
             ecSessionRef = getActiveSessionRef(user.uid);
             db.ref('.info/connected').on('value', snap => {
                 if (snap.val() !== true || ecSessionKicked || !ecSessionRef) return;
@@ -7688,16 +7843,24 @@
             }
             let status;
             let ecClaimWhy = '';
-            try { status = await ecClaimSession(user, false); } catch (e) {
+            const seated = ecMaxSeats(email) > 1;
+            const claim = seated ? ecClaimSeat : ecClaimSession;
+            const lockRef = seated ? getSeatsRef(user.uid) : getActiveSessionRef(user.uid);
+            try { status = await claim(user, false); } catch (e) {
                 console.warn('Session claim failed:', e);
-                ecClaimWhy = 'device lock at ' + getActiveSessionRef(user.uid).toString().split('.com')[1] +
+                ecClaimWhy = 'device lock at ' + lockRef.toString().split('.com')[1] +
                     ' failed: ' + String((e && (e.code || e.message)) || e);
                 status = 'error';
             }
             if (seq !== ecGateSeq) return false;
-            if (status === 'busy' && EC_TAKEOVER_EMAILS.includes(email) &&
-                confirm('This account is already signed in on another device.\n\nSign out the other device and continue here?')) {
-                try { status = await ecClaimSession(user, true); } catch (e) {
+            const busyInfo = ecSeatBusyInfo || { max: ecMaxSeats(email) };
+            const takeoverQuestion = seated
+                ? 'This account is already open on ' + busyInfo.max + ' devices, the most at one time.\n\n' +
+                  'Sign out the one used longest ago' + (busyInfo.label
+                      ? ' (' + busyInfo.label + ', last used ' + busyInfo.ago + ')' : '') + ' and continue here?'
+                : 'This account is already signed in on another device.\n\nSign out the other device and continue here?';
+            if (status === 'busy' && EC_TAKEOVER_EMAILS.includes(email) && confirm(takeoverQuestion)) {
+                try { status = await claim(user, true); } catch (e) {
                     console.warn('Session takeover failed:', e);
                     ecClaimWhy = 'device lock takeover failed: ' + String((e && (e.code || e.message)) || e);
                     status = 'error';
@@ -7717,7 +7880,9 @@
             ecAllowWhy = ecClaimWhy || ('device lock returned "' + status + '"');
             await Promise.race([ecLogRefusal(email), new Promise(r => setTimeout(r, 3000))]);
             await ecDenyLogin(status === 'busy'
-                ? 'This account is already signed in on another device. Close the dashboard there first, then try again.'
+                ? (seated
+                    ? 'This account is already open on ' + ecMaxSeats(email) + ' devices. Close the dashboard on one of them first, then try again.'
+                    : 'This account is already signed in on another device. Close the dashboard there first, then try again.')
                 : 'Could not verify your sign-in. Please try again. (' + ecAllowWhy + ')');
             return false;
         }
@@ -7728,16 +7893,16 @@
         // Per-account paths: the device lock (when a lock is already saved, its claim below doesn't need a
         // second try to learn it), this user's driver groups and saved map view (so the first screen is
         // filtered and placed sooner)
-        const EC_WARM_USER_PATHS = uid => [
-            'developer/dispatch_dashboard/active_sessions/' + uid,
+        const EC_WARM_USER_PATHS = (uid, email) => [
+            'developer/dispatch_dashboard/' + (ecMaxSeats(email) > 1 ? 'active_seats/' : 'active_sessions/') + uid,
             'users/' + uid + '/dispatch_dashboard/groups',
             'users/' + uid + '/dispatch_dashboard/map_view'
         ];
         let ecWarmRefs = [];
         const ecWarmNoop = function() {};
-        function ecWarmStart(uid) {
+        function ecWarmStart(uid, email) {
             if (ecWarmRefs.length) return;
-            ecWarmRefs = EC_WARM_PATHS.concat(uid ? EC_WARM_USER_PATHS(uid) : []).map(path => {
+            ecWarmRefs = EC_WARM_PATHS.concat(uid ? EC_WARM_USER_PATHS(uid, email) : []).map(path => {
                 const ref = db.ref(path);
                 ref.on('value', ecWarmNoop, function() {}); // errors (e.g. no access) are ignored here
                 return ref;
@@ -7773,7 +7938,7 @@
                     auth.signOut();
                     return;
                 }
-                ecWarmStart(user.uid);
+                ecWarmStart(user.uid, email);
                 ecAccessGate(user).then(function(allowed) {
                 if (!allowed) { ecWarmStop(); return; } // refused: ecDenyLogin signs out, which shows the login screen
                 currentUserId = user.uid;
