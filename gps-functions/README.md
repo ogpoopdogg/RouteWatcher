@@ -7,11 +7,11 @@ deployed `pollNow` (downloaded from Cloud Shell on 2026-11-05, unchanged).
 | Function | What RouteWatcher uses it for |
 |---|---|
 | `pollNow` | While a dispatch page is open and awake: polls PAJ (and FleetHunt, every 4.5 minutes) and writes positions to `developer/dispatch_dashboard/drivers`. A shared cooldown in `developer/dispatch_dashboard/poll_state` means several open pages make one upstream call. At most 3 instances. |
-| `pajApi` | `?action=history` for Show Track (31 days at most per call); `?action=devices` (justin@ec.com only). |
+| `pajApi` | `?action=history` for Show Track (31 days at most per call); `?action=devices` (admins only: justin@, desirae@, celeste@ec.com). |
 | `fleetHuntHistory` | Show Track for FleetHunt vans. **Deleted on 2026-11-05** (no van uses FleetHunt any more); the code is still here. |
 
 **Who may call them.** Every call needs a Firebase sign-in token (`Authorization: Bearer`).
-The email must end in @ec.com and be justin@ec.com or on RouteWatcher's allowed list
+The email must end in @ec.com and be one of the admins (justin@, desirae@, celeste@ec.com) or on RouteWatcher's allowed list
 (`developer/dispatch_dashboard/allowed_users`). Anyone else gets 401 or 403. Browsers
 are only allowed from https://app.eandccourier.ca.
 
