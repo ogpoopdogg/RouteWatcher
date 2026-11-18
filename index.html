@@ -7501,10 +7501,13 @@
         })();
 
         // ===== ACCESS CONTROL: allowed users + one device per user (more for accounts in EC_MAX_SEATS) =====
-        const EC_ADMIN_EMAIL = 'justin@ec.com'; // always allowed, so the admin can never be locked out by the list
-        const EC_DEFAULT_ALLOWED_USERS = { gil: 'gil@ec.com', desirae: 'desirae@ec.com', justin: 'justin@ec.com' };
+        // Admins: always allowed (so an admin can never be locked out by the list) and get Settings.
+        // Same people as ADMIN_EMAILS in the time clock's tc-core.js.
+        const EC_ADMIN_EMAILS = ['justin@ec.com', 'desirae@ec.com', 'celeste@ec.com'];
+        function ecIsAdminEmail(email) { return EC_ADMIN_EMAILS.includes(String(email || '').trim().toLowerCase()); }
+        const EC_DEFAULT_ALLOWED_USERS = { gil: 'gil@ec.com', desirae: 'desirae@ec.com', justin: 'justin@ec.com', celeste: 'celeste@ec.com' };
         // Accounts offered "sign out the other device and continue here?" when already signed in elsewhere
-        const EC_TAKEOVER_EMAILS = ['justin@ec.com', 'gil@ec.com', 'desirae@ec.com'];
+        const EC_TAKEOVER_EMAILS = ['justin@ec.com', 'gil@ec.com', 'desirae@ec.com', 'celeste@ec.com'];
         // Accounts that may be open on more than one device at once (seats). Everyone else keeps the
         // one-device lock at active_sessions/{uid}. A seated account's devices are kept at
         // active_seats/{uid}/{device id}; a seat is freed when that device closes the app or loses
@@ -7577,7 +7580,7 @@
             } catch (e) {
                 console.warn('Allowed users check failed:', e);
                 ecAllowWhy = 'the allowed list could not be read: ' + String((e && (e.code || e.message)) || e);
-                return email === EC_ADMIN_EMAIL;
+                return ecIsAdminEmail(email);
             }
             if (list === null) {
                 // First run: create the list in the database (never overwrites an existing list)
@@ -7585,7 +7588,7 @@
                 ref.transaction(current => current === null ? EC_DEFAULT_ALLOWED_USERS : undefined)
                     .catch(err => console.warn('Allowed users seed failed:', err));
             }
-            if (email === EC_ADMIN_EMAIL) return true;
+            if (ecIsAdminEmail(email)) return true;
             const ecListVals = Object.values(list);
             ecAllowWhy = 'looked for ' + email + ' among ' + ecListVals.length + ' list entries' +
                 (ecListVals.some(v => typeof v !== 'string') ? ', some of them not plain text' : '');
@@ -7872,8 +7875,8 @@
                 if (el) el.textContent = '';
                 return true;
             }
-            if (status === 'error' && email === EC_ADMIN_EMAIL) {
-                // Never lock the admin out because of a database error
+            if (status === 'error' && ecIsAdminEmail(email)) {
+                // Never lock an admin out because of a database error
                 if (el) el.textContent = '';
                 return true;
             }
@@ -7942,7 +7945,7 @@
                 ecAccessGate(user).then(function(allowed) {
                 if (!allowed) { ecWarmStop(); return; } // refused: ecDenyLogin signs out, which shows the login screen
                 currentUserId = user.uid;
-                isAdminUser = (email === 'justin@ec.com');
+                isAdminUser = ecIsAdminEmail(email);
                 ecShowApp();
                 // The map will be initialized by the callback from Google Maps script.
                 // But we need to ensure initApp runs after login.

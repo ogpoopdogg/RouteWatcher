@@ -41,12 +41,13 @@ const PAJ_MIN_GAP_MS = 4 * 1000;             // PAJ trackers report every few se
 const FLEETHUNT_MIN_GAP_MS = 4.5 * 60 * 1000; // the FleetHunt device only reports every 5 minutes
 const POLL_STATE_PATH = 'developer/dispatch_dashboard/poll_state';
 
-// Must match the dispatch page (index.html: EC_ADMIN_EMAIL / EC_DEFAULT_ALLOWED_USERS)
-const ADMIN_EMAIL = 'justin@ec.com';
+// Must match the dispatch page (index.html: EC_ADMIN_EMAILS / EC_DEFAULT_ALLOWED_USERS)
+const ADMIN_EMAILS = ['justin@ec.com', 'desirae@ec.com', 'celeste@ec.com'];
 const DEFAULT_ALLOWED_USERS = {
   gil: 'gil@ec.com',
   desirae: 'desirae@ec.com',
-  justin: 'justin@ec.com'
+  justin: 'justin@ec.com',
+  celeste: 'celeste@ec.com'
 };
 
 /**
@@ -119,7 +120,7 @@ async function requireDispatcher(req) {
 
   const email = String(decoded.email || '').trim().toLowerCase();
   if (!email.endsWith('@ec.com')) throw new HttpError(403, 'Not allowed');
-  if (email === ADMIN_EMAIL) return { email, isAdmin: true };
+  if (ADMIN_EMAILS.includes(email)) return { email, isAdmin: true };
 
   const snap = await admin.database().ref(ALLOWED_USERS_PATH).once('value');
   const list = snap.val() || DEFAULT_ALLOWED_USERS;
@@ -623,7 +624,7 @@ exports.pajApi = onRequest(
 
       if (action === 'devices') {
         if (!who.isAdmin) {
-          res.status(403).json({ error: 'Only the admin account can list PAJ devices' });
+          res.status(403).json({ error: 'Only the admin accounts can list PAJ devices' });
           return;
         }
         const r = await pajRequest('/device', { method: 'GET' });
