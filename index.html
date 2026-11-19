@@ -5947,13 +5947,58 @@
         }
         /* ===== WHO DROVE THIS VAN (driver window, from the E&C Time Clock) =====
            One button per stretch someone drove this GPS on the From day. Tapping one lights it up, sets From/To to
-           that stretch, and makes the next button to press (Show route) glow. Tapping anywhere else turns both off. */
+           that stretch, and makes the next button to press (Show Track) glow. Tapping anywhere else turns both off.
+           It's a card with a big title and a day badge: green "Today", or amber "Past day" with an amber card, so it's
+           plain when the list is old punches and not today (Justin). */
         .ec-who { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
         .ec-who[hidden] { display: none !important; }
         .ec-who-head { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted); }
         .ec-who-title { font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
         .ec-who-list { display: flex; flex-direction: column; gap: 6px; }
-        .ec-who-head { align-items: center; flex-wrap: wrap; }
+        .ec-who-head { align-items: center; flex-wrap: wrap; row-gap: 8px; }
+        .ec-who {
+            padding: 12px;
+            border-radius: 16px;
+            border: 1.5px solid var(--border);
+            background: rgba(255, 255, 255, 0.025);
+            gap: 8px;
+            margin-top: 6px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .ec-who-title { font-size: 18px; font-weight: 800; letter-spacing: 0; line-height: 1.2; }
+        .ec-who-day {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            min-height: 28px;
+            padding: 3px 11px 3px 4px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            white-space: nowrap;
+            background: rgba(52, 210, 123, 0.14);
+            color: #5fe39a;
+        }
+        .ec-who-day:empty { display: none; }
+        .ec-who-day-tag {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: #34d27b;
+            color: #06210f;
+        }
+        .ec-who.is-past { border-color: #f7c948; background: rgba(247, 201, 72, 0.07); }
+        .ec-who.is-past .ec-who-day { background: rgba(247, 201, 72, 0.16); color: #f7c948; }
+        .ec-who.is-past .ec-who-day-tag { background: #f7c948; color: #1a1400; }
+        body.light-mode .ec-who { background: #fff; border-color: #d6d9e0; }
+        body.light-mode .ec-who-day { background: #e3f7ea; color: #137a3d; }
+        body.light-mode .ec-who-day-tag { background: #1f9d55; color: #fff; }
+        body.light-mode .ec-who.is-past { border-color: #c99a06; background: #fffaeb; }
+        body.light-mode .ec-who.is-past .ec-who-day { background: #fff0c2; color: #7a5b00; }
+        body.light-mode .ec-who.is-past .ec-who-day-tag { background: #c99a06; color: #fff; }
         #historyQuery .ec-who-past { flex: 1 0 100%; width: 100% !important; max-width: none !important; min-width: 0; height: 36px; font-size: 13px !important; padding: 0 8px !important; }
         #historyQuery .ec-who-past[hidden] { display: none; }
         .ec-who-note { font-size: 12px; color: var(--muted); line-height: 1.35; }
@@ -6005,6 +6050,95 @@
         body.light-mode #historyQuery .ec-btn.ec-who-next { outline-color: #c99a06; }
         @media (prefers-reduced-motion: reduce) {
             #historyQuery .ec-btn.ec-who-next { animation: none; box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.45); }
+        }
+        /* ===== COMPACT DRIVER WINDOW ON PHONES (2026-11-19) =====
+           Justin: less padding, tighter spacing, more professional, map first, buttons still easy to press.
+           Only phones (≤600px). Every button stays at least 36px tall; Show Track / Clear Track / Show route 38px. */
+        @media (max-width: 600px) {
+            .driver-modal .modal-card {
+                padding: calc(6px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) !important;
+                gap: 6px !important;
+            }
+            /* Header: title, Nickname, ✕ on one line; status and Who's driving tight under it */
+            .driver-modal .modal-header { gap: 4px !important; }
+            .driver-modal .modal-header .header-top { gap: 8px !important; min-height: 36px; }
+            .driver-modal .modal-header .header-top h2 { font-size: 19px !important; line-height: 1.15; }
+            .driver-modal .modal-header .header-top .nickname-btn { height: 28px; padding: 0 10px !important; font-size: 12px !important; }
+            .driver-modal .modal-header .header-top .close-modal-btn { width: 36px !important; height: 36px !important; min-width: 36px; font-size: 16px !important; }
+            .driver-modal .modal-header .header-status,
+            .driver-modal .modal-header .header-status span { font-size: 12px !important; line-height: 1.3; }
+            .driver-modal .modal-header .tc-driver-row:not([hidden]) { gap: 2px 8px; margin-top: 0; align-items: center; }
+            .driver-modal .modal-header .tc-driver-row label { font-size: 12px; color: var(--muted); }
+            .driver-modal .modal-header .tc-driver-select { height: 36px; font-size: 14px; padding: 0 8px; }
+
+            /* Time on route: button, help text, time on ONE row */
+            .driver-modal .route-time-box {
+                grid-template-columns: auto minmax(0, 1fr) auto !important;
+                grid-template-areas: "btn meta val" "choices choices choices";
+                align-items: center;
+                gap: 4px 10px !important;
+                padding: 6px 10px !important;
+                margin-top: 2px;
+                border-radius: 12px !important;
+            }
+            .driver-modal .route-time-box .rt-main { display: contents; }
+            .driver-modal .route-time-box .rt-btn { grid-area: btn; height: 36px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
+            .driver-modal .route-time-box .rt-value { grid-area: val; font-size: 20px !important; line-height: 1; }
+            .driver-modal .route-time-box .rt-meta { grid-area: meta; min-width: 0; gap: 0; }
+            .driver-modal .route-time-box .rt-sub,
+            .driver-modal .route-time-box .rt-window { font-size: 11px !important; line-height: 1.3; }
+            .driver-modal .route-time-box .rt-sub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+            .driver-modal .route-time-box .rt-window { display: none; } /* same as From/To right under it */
+            .driver-modal .route-time-box .rt-choices { grid-area: choices; }
+
+            /* From/To block */
+            #historyQuery { padding-top: 6px !important; gap: 6px !important; }
+            #historyQuery > div { gap: 6px !important; }
+            #historyQuery > div > div:first-child { gap: 6px !important; }
+            #historyQuery > div > div:nth-child(2) { gap: 6px !important; }
+            .driver-modal .ec-dt { gap: 6px; }
+            .driver-modal .ec-dt-row { gap: 6px; }
+            .driver-modal .ec-dt-step { width: 36px; height: 36px; font-size: 20px; border-radius: 10px; }
+            .driver-modal .ec-dt-day { height: 36px; font-size: 14px; padding: 0 10px; min-width: 0; border-radius: 10px; }
+            .driver-modal .ec-dt-chip { height: 36px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+            /* From 7:02 AM → To 11:30 AM: the label beside the time, not above it */
+            .driver-modal .ec-dt-time {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: flex-start;
+                gap: 8px;
+                height: 40px;
+                min-height: 0 !important;
+                padding: 0 10px !important;
+                border-radius: 10px;
+            }
+            .driver-modal .ec-dt-cap { font-size: 10px; }
+            .driver-modal .ec-dt-val { font-size: 17px; }
+            .driver-modal .ec-dt-arrow { font-size: 14px; }
+            .driver-modal .ec-dt-quick { flex-wrap: nowrap; }
+            .driver-modal .ec-dt-quick .ec-dt-chip { flex: 1 1 0; height: 32px; padding: 0 6px; font-size: 12px; white-space: nowrap; }
+            #historyQuery #tcShiftRow:not([hidden]) { margin-top: 0; gap: 8px; }
+            #historyQuery .date-picker { height: 36px; font-size: 14px !important; border-radius: 10px; }
+            #historyQuery #tcShiftMsg { font-size: 11px; }
+            #historyQuery .ec-btn,
+            #historyQuery .ec-btn.ec-btn-route { height: 38px; font-size: 13px !important; border-radius: 10px !important; }
+
+            /* Who drove this van */
+            .ec-who { padding: 10px; gap: 6px; border-radius: 14px; margin-top: 2px; }
+            .ec-who-head { gap: 6px 8px; row-gap: 6px; }
+            .ec-who-title { font-size: 16px; }
+            .ec-who-day { min-height: 24px; font-size: 12px; padding: 2px 9px 2px 3px; gap: 6px; }
+            .ec-who-day-tag { font-size: 10px; padding: 2px 7px; }
+            #historyQuery .ec-who-past { height: 34px; font-size: 13px !important; }
+            .ec-who-list { gap: 5px; }
+            .ec-who-btn { min-height: 40px; padding: 4px 10px; border-radius: 10px; gap: 0 10px; }
+            .ec-who-name { font-size: 13.5px; }
+            .ec-who-time { font-size: 11.5px; }
+            .ec-who-dur { font-size: 13px; }
+
+            #historyQuery .route-plan-msg { font-size: 11px; }
+            #historyQuery .ec-route-pick .ec-route-select { height: 36px; }
+            .driver-modal .modal-map-row { gap: 6px !important; }
         }
     </style>
 </head>
@@ -12751,12 +12885,28 @@
             return { start: start, end: Math.max(end, start + 60000) };
         }
 
+        // The day badge: "TODAY Thu 19 Nov", or "PAST DAY Mon 16 Nov · 3 days ago" with the card turned amber
+        function ecWhoRenderDay(box) {
+            const el = document.getElementById('ecWhoDay');
+            const today = ecDayBounds(ecServerNow()).start;
+            const diff = ecWho.day === null ? 0 : Math.round((ecWho.day - today) / 86400000);
+            if (box) {
+                box.classList.toggle('is-past', ecWho.day !== null && diff !== 0);
+                box.classList.toggle('is-today', ecWho.day !== null && diff === 0);
+            }
+            if (!el) return;
+            if (ecWho.day === null) { el.innerHTML = ''; return; }
+            const date = ecFormat(ecWho.day, { weekday: 'short', month: 'short', day: 'numeric' });
+            const tag = diff === 0 ? 'Today' : diff < 0 ? 'Past day' : 'Later day';
+            const ago = diff === -1 ? 'yesterday' : diff < 0 ? (-diff) + ' days ago' : diff === 1 ? 'tomorrow' : diff > 0 ? 'in ' + diff + ' days' : '';
+            el.innerHTML = '<span class="ec-who-day-tag">' + ecEsc(tag) + '</span><span>' + ecEsc(date + (ago ? ' · ' + ago : '')) + '</span>';
+        }
+
         function ecWhoRender(note) {
             const box = document.getElementById('ecWhoBox');
             const list = document.getElementById('ecWhoList');
             if (!box || !list) return;
-            const dayEl = document.getElementById('ecWhoDay');
-            if (dayEl) dayEl.textContent = ecWho.day === null ? '' : ecDtDayLabel(ecWho.day);
+            ecWhoRenderDay(box);
             if (note) { list.innerHTML = '<div class="ec-who-note">' + ecEsc(note) + '</div>'; box.hidden = false; return; }
             if (!ecWho.spans.length) {
                 list.innerHTML = '<div class="ec-who-note">Nobody on the Time Clock drove this van ' +
