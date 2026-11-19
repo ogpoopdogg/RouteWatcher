@@ -5945,6 +5945,67 @@
             .ec-dock-grip:focus-visible { outline: none; }
             body.ec-dock-dragging, body.ec-dock-dragging * { cursor: ew-resize !important; user-select: none !important; }
         }
+        /* ===== WHO DROVE THIS VAN (driver window, from the E&C Time Clock) =====
+           One button per stretch someone drove this GPS on the From day. Tapping one lights it up, sets From/To to
+           that stretch, and makes the next button to press (Show route) glow. Tapping anywhere else turns both off. */
+        .ec-who { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+        .ec-who[hidden] { display: none !important; }
+        .ec-who-head { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted); }
+        .ec-who-title { font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
+        .ec-who-list { display: flex; flex-direction: column; gap: 6px; }
+        .ec-who-head { align-items: center; flex-wrap: wrap; }
+        #historyQuery .ec-who-past { flex: 1 0 100%; width: 100% !important; max-width: none !important; min-width: 0; height: 36px; font-size: 13px !important; padding: 0 8px !important; }
+        #historyQuery .ec-who-past[hidden] { display: none; }
+        .ec-who-note { font-size: 12px; color: var(--muted); line-height: 1.35; }
+        .ec-who-btn {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas: "name dur" "time dur";
+            align-items: center;
+            gap: 1px 10px;
+            width: 100%;
+            min-height: 46px;
+            padding: 6px 12px;
+            box-sizing: border-box;
+            border-radius: 12px;
+            border: 1.5px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.1s;
+        }
+        .ec-who-btn:active { transform: scale(0.985); }
+        @media (hover: hover) { .ec-who-btn:hover { border-color: #f7c948; } }
+        .ec-who-btn:focus-visible { outline: 2px solid #f7c948; outline-offset: 2px; }
+        .ec-who-name { grid-area: name; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ec-who-time { grid-area: time; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ec-who-dur { grid-area: dur; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .ec-who-live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #34d27b; margin-right: 6px; vertical-align: 1px; box-shadow: 0 0 6px #34d27b; }
+        .ec-who-btn.is-on {
+            border-color: #f7c948;
+            background: rgba(247, 201, 72, 0.16);
+            box-shadow: 0 0 0 1px #f7c948 inset, 0 0 12px rgba(247, 201, 72, 0.35);
+        }
+        .ec-who-btn.is-on .ec-who-time { color: var(--text); }
+        body.light-mode .ec-who-btn { background: #fff; border-color: #d6d9e0; }
+        body.light-mode .ec-who-btn.is-on { border-color: #c99a06; background: #fff6d6; box-shadow: 0 0 0 1px #c99a06 inset; }
+        /* The next button to press after picking someone */
+        @keyframes ecWhoGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(247, 201, 72, 0.0), 0 0 6px rgba(247, 201, 72, 0.45); }
+            50% { box-shadow: 0 0 0 4px rgba(247, 201, 72, 0.28), 0 0 16px rgba(247, 201, 72, 0.75); }
+        }
+        #historyQuery .ec-btn.ec-who-next {
+            outline: 2px solid #f7c948;
+            outline-offset: 2px;
+            animation: ecWhoGlow 1.3s ease-in-out infinite;
+        }
+        body.light-mode #historyQuery .ec-btn.ec-who-next { outline-color: #c99a06; }
+        @media (prefers-reduced-motion: reduce) {
+            #historyQuery .ec-btn.ec-who-next { animation: none; box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.45); }
+        }
     </style>
 </head>
 <body>
@@ -6206,12 +6267,18 @@
                         <span class="tc-shift-msg" id="tcShiftMsg" role="status"></span>
                     </div>
                     <div style="display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; flex:1 0 auto; justify-content:flex-start;">
-                        <button onclick="loadHistoricalTrack()" class="ec-btn ec-btn-go">Show Track</button>
+                        <button type="button" id="ecTrackBtn" onclick="loadHistoricalTrack()" class="ec-btn ec-btn-go">Show Track</button>
                         <button onclick="clearHistoricalTrack()" class="ec-btn ec-btn-danger">Clear Track</button>
                         <button type="button" id="ecRouteBtn" class="ec-btn ec-btn-route" onclick="ecRouteToggle()" title="Show the route made for this driver in Route Planner">Show route</button>
                         <span id="historyResult" style="font-size:13px; color:var(--muted); white-space:nowrap;"></span>
                     </div>
                 </div>
+                <!-- Who drove this van on the From day (E&C Time Clock; only for people who can read it) -->
+                <section class="ec-who" id="ecWhoBox" hidden>
+                    <div class="ec-who-head"><span class="ec-who-title">Drove this van</span><span class="ec-who-day" id="ecWhoDay"></span>
+                        <select id="ecWhoPast" class="date-picker ec-who-past" onchange="ecWhoPickDay(this.value)" aria-label="Who drove this van on other days" hidden></select></div>
+                    <div class="ec-who-list" id="ecWhoList" role="group" aria-label="Who drove this van"></div>
+                </section>
                 <span class="ec-route-pick" id="ecRoutePickRow" hidden>
                     <label for="ecRouteSelect">Route:</label>
                     <select id="ecRouteSelect" class="date-picker ec-route-select" onchange="ecRoutePick(this.value)" title="Pick which saved route to show"></select>
@@ -12485,6 +12552,7 @@
             if (row) row.hidden = true;
             ecShiftMsg('');
             ecShiftBindInputs();
+            ecWhoReset();
             if (!driverId || !currentUserId) return;
             let people = null;
             try { people = await ecShiftLoadPeople(); } catch (e) { people = null; }
@@ -12494,6 +12562,7 @@
             ecShift.people = people;
             ecShiftRender();
             if (row) row.hidden = false;
+            ecWhoLoad(); // Who drove this van on the From day
             ecShiftMsg('Checking the Time Clock…');
             let found = null;
             try { found = await ecShiftFindForGps(driverId, people); } catch (e) { found = null; }
@@ -12545,6 +12614,7 @@
         // From/To changed (typed, or set from a punch in): the route and the time follow it
         function ecWindowChanged() {
             if (!activeModalDriverId) return;
+            ecWhoWindowChanged();
             renderRouteTimeWindowLabel(getRouteTimeWindow());
             if (ecRoute.on && ecRoute.driverId === activeModalDriverId) ecRouteLoad(activeModalDriverId, false);
             if (!ecRt.mode && ecRt.start && ecRt.end && ecRt.driverId === activeModalDriverId) {
@@ -12557,6 +12627,351 @@
                 ecRt.end = null;
                 setRouteTimeDisplay('--:--', 'From/To changed. Press Time on route to pick the start and end again', false);
             }
+        }
+
+        // ===== WHO DROVE THIS VAN (E&C Time Clock) =====
+        // Below From/To and the Show buttons: one button per stretch someone drove this GPS on the From day
+        // ("Sam · 7:02 AM – 3:15 PM · 8 h 13 m"; still driving = "7:02 AM – now"), from timeclock/shifts.
+        // A stretch is built like vanTime() in the timeclock repo's tc-core.js: the van history (shift.vans) says when
+        // each van was picked, until the next change, punch out, or now; a shift with no history used shift.vehicleId
+        // for the whole shift; an admin change made after the punch out corrects the whole shift.
+        // Tapping a button lights it up, sets From/To to that stretch (a stretch still going: From + 12 hours, like a
+        // punch in), picks the person in the Driver list, and makes Show Track glow (Justin: that's what you want to see,
+        // since drivers do pickups after their planned route). Tapping it stops the glow; tapping anywhere else, or
+        // changing From/To, turns all of it off. From/To stay as they are.
+        // "Other days": a list of the days this van was driven in the last 7 days, with who drove it, newest first; its
+        // last line "Show more" goes back 14, then 30, then 60 days. Picking a day moves From/To to that day (from its
+        // first stretch to its last) and lists its drivers; when only one person drove it, they're picked (glow only).
+        // Reads: each person's shifts through the same query by punch-in time as the Driver list (ecShiftsBetween,
+        // limitToFirst 10), so it works for Time Clock admins and for Gil. Anyone else never sees it.
+        const EC_WHO_LOOKBACK_MS = 18 * 3600000; // shifts that started up to 18 h before the day can run into it
+        const EC_WHO_GLOW_IDS = ['ecTrackBtn'];
+        const EC_WHO_PAST_STEPS = [7, 14, 30, 60]; // Other days: 7 days back, then Show more = 14, 30, 60 (Justin)
+        const EC_SENT_LATE_MS = 2 * 60000; // SENT_LATE_MS in tc-core.js
+        const ecWho = { seq: 0, day: null, driverId: null, spans: [], sel: -1, cache: {}, timer: null, bound: false, applying: false, past: null, pastFor: null, pastStep: 0, pastDays: 7, pastSeq: 0 };
+
+        // The punch out the hours count from (countedOut() in tc-core.js); null while on the clock
+        function ecWhoCountedOut(s) {
+            if (typeof s.out !== 'number') return null;
+            const late = typeof s.outTap === 'number' && s.out - s.outTap > EC_SENT_LATE_MS;
+            return late ? Math.max(s.in, s.outTap) : s.out;
+        }
+        // When one shift had this GPS: [{ from, to, live }] (live = still has it now)
+        function ecWhoShiftSpans(shift, gpsId, nowMs) {
+            if (!shift || typeof shift.in !== 'number') return [];
+            const live = typeof shift.out !== 'number';
+            const end = live ? Math.max(shift.in, nowMs) : ecWhoCountedOut(shift);
+            const list = Object.values(shift.vans && typeof shift.vans === 'object' ? shift.vans : {})
+                .filter(v => v && typeof v.at === 'number').sort((a, b) => a.at - b.at);
+            const whole = id => (id === gpsId && end > shift.in) ? [{ from: shift.in, to: end, live: live }] : [];
+            const fix = list.filter(v => v.how === 'admin' && v.at >= end).pop();
+            if (fix) return whole(fix.vehicleId);
+            if (!list.length) return whole(shift.vehicleId);
+            const out = [];
+            let cur = null, from = shift.in;
+            const close = to => {
+                if (!cur || cur.vehicleId !== gpsId || to <= from) return;
+                const last = out[out.length - 1];
+                if (last && last.to === from) last.to = to; else out.push({ from: from, to: to, live: false });
+            };
+            list.forEach(v => {
+                const at = Math.min(Math.max(v.at, shift.in), end);
+                close(at);
+                from = at;
+                cur = (v.how === 'taken' || v.how === 'shop' || !v.vehicleId) ? null : v;
+            });
+            close(end);
+            if (live && cur && cur.vehicleId === gpsId && out.length && out[out.length - 1].to === end) out[out.length - 1].live = true;
+            return out;
+        }
+
+        // One person's shifts that started between from and to. The query returns at most 10 (Gil's rules), so a
+        // stretch of days that comes back full is split in two until each part fits (one day at the least).
+        async function ecWhoShiftsRange(ek, from, to) {
+            const list = await ecShiftsBetween(ek, from, to);
+            if (list === null || list.length < 10 || to - from <= 86400000) return list;
+            const mid = from + Math.floor((to - from) / 2);
+            const [x, y] = await Promise.all([ecWhoShiftsRange(ek, from, mid), ecWhoShiftsRange(ek, mid + 1, to)]);
+            if (x === null || y === null) return list;
+            return x.concat(y);
+        }
+        // Everyone's shifts that started between from and to: [{ ek, shift }], or null when none could be read.
+        // Kept 1 minute when the range includes now and 10 minutes for older days, so the next van opens instantly.
+        async function ecWhoShifts(from, to, people) {
+            const key = from + '|' + to + '|' + people.map(p => p.ek).join(',');
+            const hit = ecWho.cache[key];
+            const nowMs = ecServerNow();
+            const ttl = to >= nowMs - 3600000 ? 60000 : 600000;
+            if (hit && nowMs - hit.at < ttl) return hit.data;
+            if (hit && hit.pending) return hit.pending;
+            const pending = Promise.all(people.map(p => ecWhoShiftsRange(p.ek, from, to).then(list => ({ ek: p.ek, list: list }))))
+                .then(lists => {
+                    if (lists.every(r => r.list === null)) { delete ecWho.cache[key]; return null; }
+                    const seen = new Set(), data = [];
+                    lists.forEach(r => (r.list || []).forEach(sh => {
+                        if (seen.has(r.ek + '/' + sh.id)) return;
+                        seen.add(r.ek + '/' + sh.id);
+                        data.push({ ek: r.ek, shift: sh });
+                    }));
+                    ecWho.cache[key] = { at: ecServerNow(), data: data };
+                    return data;
+                }, () => { delete ecWho.cache[key]; return null; });
+            ecWho.cache[key] = { at: 0, pending: pending };
+            return pending;
+        }
+        function ecWhoDayShifts(day, people) { return ecWhoShifts(day.start - EC_WHO_LOOKBACK_MS, day.end, people); }
+
+        // This GPS on that day, earliest first: [{ ek, name, from, to, live }] (from/to are the whole stretch, which
+        // can start the day before or end the day after)
+        function ecWhoBuildSpans(data, gpsId, day) {
+            const nowMs = ecServerNow();
+            const out = [];
+            data.forEach(r => ecWhoShiftSpans(r.shift, gpsId, nowMs).forEach(sp => {
+                if (sp.to < day.start || sp.from > day.end) return;
+                if (!sp.live && sp.to - sp.from < 60000) return; // a tap on the wrong van, fixed straight away
+                out.push({ ek: r.ek, name: ecShiftName(r.ek), from: sp.from, to: sp.to, live: sp.live });
+            }));
+            return out.sort((a, b) => a.from - b.from);
+        }
+
+        function ecWhoDur(ms) {
+            const min = Math.max(1, Math.round(ms / 60000));
+            const h = Math.floor(min / 60), m = min % 60;
+            return h ? h + ' h ' + String(m).padStart(2, '0') + ' m' : m + ' min';
+        }
+        // "7:02 AM", or "Wed 9:40 PM" when it isn't on the day shown
+        function ecWhoClock(ms, dayStart) {
+            const t = formatTimestampTo12h(ms);
+            return ecDayBounds(ms).start === dayStart ? t : ecFormat(ms, { weekday: 'short' }) + ' ' + t;
+        }
+        // The From/To a stretch sets
+        function ecWhoWindow(sp) {
+            const start = Math.floor(sp.from / 60000) * 60000;
+            const end = sp.live ? start + EC_SHIFT_HOURS * 3600000 : Math.ceil(sp.to / 60000) * 60000;
+            return { start: start, end: Math.max(end, start + 60000) };
+        }
+
+        function ecWhoRender(note) {
+            const box = document.getElementById('ecWhoBox');
+            const list = document.getElementById('ecWhoList');
+            if (!box || !list) return;
+            const dayEl = document.getElementById('ecWhoDay');
+            if (dayEl) dayEl.textContent = ecWho.day === null ? '' : ecDtDayLabel(ecWho.day);
+            if (note) { list.innerHTML = '<div class="ec-who-note">' + ecEsc(note) + '</div>'; box.hidden = false; return; }
+            if (!ecWho.spans.length) {
+                list.innerHTML = '<div class="ec-who-note">Nobody on the Time Clock drove this van ' +
+                    (ecWho.day === ecDayBounds(ecServerNow()).start ? 'today' : 'on ' + ecEsc(ecFormat(ecWho.day, { weekday: 'short', month: 'short', day: 'numeric' }))) + '.</div>';
+                box.hidden = false;
+                return;
+            }
+            const nowMs = ecServerNow();
+            list.innerHTML = ecWho.spans.map((sp, i) => {
+                const to = sp.live ? nowMs : sp.to;
+                const time = ecWhoClock(sp.from, ecWho.day) + ' – ' + (sp.live ? 'now' : ecWhoClock(sp.to, ecWho.day));
+                const label = sp.name + ', ' + time + ', ' + ecWhoDur(to - sp.from) + '. Sets From and To to this time.';
+                return '<button type="button" class="ec-who-btn' + (i === ecWho.sel ? ' is-on' : '') + '" data-i="' + i + '" aria-pressed="' + (i === ecWho.sel) + '" aria-label="' + ecEsc(label) + '">' +
+                    '<span class="ec-who-name">' + (sp.live ? '<span class="ec-who-live" title="Still driving it"></span>' : '') + ecEsc(sp.name) + '</span>' +
+                    '<span class="ec-who-time">' + ecEsc(time) + '</span>' +
+                    '<span class="ec-who-dur">' + ecEsc(ecWhoDur(to - sp.from)) + '</span></button>';
+            }).join('');
+            box.hidden = false;
+        }
+
+        function ecWhoStopTimer() { if (ecWho.timer) { clearInterval(ecWho.timer); ecWho.timer = null; } }
+        // Someone still driving: their "now" time and duration move on every minute
+        function ecWhoStartTimer() {
+            ecWhoStopTimer();
+            if (!ecWho.spans.some(sp => sp.live)) return;
+            ecWho.timer = setInterval(() => { if (!activeModalDriverId) { ecWhoStopTimer(); return; } ecWhoRender(); }, 60000);
+        }
+
+        // The driver window closed, or this account can't read the Time Clock
+        function ecWhoReset() {
+            ecWho.seq++;
+            ecWhoStopTimer();
+            ecWhoClearSel();
+            ecWho.spans = [];
+            ecWho.day = null;
+            ecWho.driverId = null;
+            ecWho.past = null;
+            ecWho.pastFor = null;
+            ecWho.pastStep = 0;
+            ecWho.pastSeq++;
+            ecWhoRenderPast();
+            const box = document.getElementById('ecWhoBox');
+            if (box) box.hidden = true;
+            const list = document.getElementById('ecWhoList');
+            if (list) list.innerHTML = '';
+        }
+
+        // (Re)builds the list for the open driver window and its From day
+        async function ecWhoLoad() {
+            ecWhoBind();
+            const driverId = activeModalDriverId;
+            if (!driverId || ecShift.driverId !== driverId || !ecShift.people.length) { ecWhoReset(); return; }
+            const fromMs = ecParseLocalInput(document.getElementById('historyStart').value);
+            const day = ecDayBounds(isFinite(fromMs) ? fromMs : ecServerNow());
+            const seq = ++ecWho.seq;
+            ecWhoStopTimer();
+            ecWhoClearSel();
+            ecWho.day = day.start;
+            ecWho.driverId = driverId;
+            ecWho.spans = [];
+            ecWhoRender('Checking the Time Clock…');
+            let data = null;
+            try { data = await ecWhoDayShifts(day, ecShift.people.slice()); } catch (e) { data = null; }
+            if (seq !== ecWho.seq) return;
+            if (data === null) { ecWhoReset(); return; } // the Time Clock can't be read: no list
+            ecWho.spans = ecWhoBuildSpans(data, driverId, day);
+            ecWhoRender();
+            ecWhoStartTimer();
+            if (!ecWho.past || ecWho.pastFor !== driverId) { ecWho.pastFor = driverId; ecWhoLoadPast(); }
+        }
+
+        // From/To changed: a new From day lists that day; a From/To that no longer matches the pick drops it
+        function ecWhoWindowChanged() {
+            if (ecWho.driverId !== activeModalDriverId || ecWho.day === null) return;
+            const v = ecDtVals();
+            // (a stretch picked from this list may start the day before; the list stays on its day)
+            if (!ecWho.applying && isFinite(v.start) && ecDayBounds(v.start).start !== ecWho.day) { ecWhoLoad(); return; }
+            const sp = ecWho.spans[ecWho.sel];
+            if (!sp) return;
+            const w = ecWhoWindow(sp);
+            if (v.start !== w.start || v.end !== w.end) ecWhoClearSel();
+        }
+
+        function ecWhoSetGlow(on) {
+            EC_WHO_GLOW_IDS.forEach(id => {
+                const b = document.getElementById(id);
+                if (!b) return;
+                b.classList.toggle('ec-who-next', !!on);
+            });
+        }
+        function ecWhoClearSel() {
+            ecWho.sel = -1;
+            ecWhoSetGlow(false);
+            document.querySelectorAll('#ecWhoList .ec-who-btn.is-on').forEach(b => { b.classList.remove('is-on'); b.setAttribute('aria-pressed', 'false'); });
+        }
+
+        // Tapped a stretch: From/To = that stretch, the person is picked in the Driver list, and the Show buttons glow
+        function ecWhoPick(i) {
+            const sp = ecWho.spans[i];
+            if (!sp || !activeModalDriverId) return;
+            const w = ecWhoWindow(sp);
+            ecShift.pickSeq++; // a Driver-list lookup still running must not move From/To after this
+            ecShift.touched = true; // nor the punch-in lookup of the window opening
+            ecShift.ek = sp.ek;
+            ecShift.pickDay = ecDayBounds(w.start).start;
+            ecShiftRender();
+            ecShiftMsg('');
+            ecWho.sel = i;
+            document.getElementById('historyStart').value = ecToLocalInput(w.start);
+            document.getElementById('historyEnd').value = ecToLocalInput(w.end);
+            ecWho.applying = true;
+            try { ecWindowChanged(); } finally { ecWho.applying = false; }
+            document.querySelectorAll('#ecWhoList .ec-who-btn').forEach(b => {
+                const on = Number(b.dataset.i) === i;
+                b.classList.toggle('is-on', on);
+                b.setAttribute('aria-pressed', String(on));
+            });
+            ecWhoSetGlow(true);
+        }
+
+        // ----- Other days -----
+        // [{ day, names, spans }] for each day this van was driven in the last EC_WHO_PAST_STEPS[ecWho.pastStep] days,
+        // newest first
+        async function ecWhoLoadPast() {
+            const sel = document.getElementById('ecWhoPast');
+            if (!sel) return;
+            const driverId = activeModalDriverId;
+            const seq = ++ecWho.pastSeq;
+            const today = ecDayBounds(ecServerNow());
+            const step = ecWho.pastStep || 0;
+            const back = EC_WHO_PAST_STEPS[step];
+            const first = ecDayBounds(today.start - (back - 1) * 86400000 + 3600000).start;
+            ecWhoRenderPast('Loading ' + back + ' days…');
+            let data = null;
+            try { data = await ecWhoShifts(first - EC_WHO_LOOKBACK_MS, today.end, ecShift.people.slice()); } catch (e) { data = null; }
+            if (seq !== ecWho.pastSeq || driverId !== activeModalDriverId) return;
+            const days = [];
+            for (let d = today.start; d >= first; d = ecDayBounds(d - 3600000).start) {
+                const b = ecDayBounds(d);
+                const spans = data ? ecWhoBuildSpans(data, driverId, b) : [];
+                if (!spans.length) continue;
+                const names = [];
+                spans.forEach(sp => { if (!names.includes(sp.name)) names.push(sp.name); });
+                days.push({ day: b.start, names: names, spans: spans });
+            }
+            ecWho.past = days;
+            ecWho.pastDays = back;
+            ecWhoRenderPast();
+        }
+        function ecWhoRenderPast(loading) {
+            const sel = document.getElementById('ecWhoPast');
+            if (!sel) return;
+            if (!activeModalDriverId || ecWho.driverId === null) { sel.hidden = true; sel.innerHTML = ''; return; }
+            if (loading) { sel.innerHTML = '<option value="">' + ecEsc(loading) + '</option>'; sel.value = ''; sel.hidden = false; return; }
+            const days = ecWho.past || [];
+            const step = ecWho.pastStep || 0;
+            const more = EC_WHO_PAST_STEPS[step + 1];
+            const head = days.length ? 'Other days (' + ecWho.pastDays + ' days)…' : 'Not driven in ' + ecWho.pastDays + ' days';
+            sel.innerHTML = '<option value="">' + ecEsc(head) + '</option>' + days.map(d =>
+                '<option value="' + d.day + '">' + ecEsc(ecDtDayLabel(d.day) + ' · ' + d.names.join(', ')) + '</option>').join('') +
+                (more ? '<option value="more">Show more (' + more + ' days)…</option>' : '');
+            sel.value = '';
+            sel.hidden = false;
+        }
+        // Picked a day: From/To = that day's first stretch to its last, and its drivers listed (one driver = picked)
+        function ecWhoPickDay(value) {
+            const sel = document.getElementById('ecWhoPast');
+            if (sel) sel.value = '';
+            if (value === 'more') {
+                if ((ecWho.pastStep || 0) < EC_WHO_PAST_STEPS.length - 1) { ecWho.pastStep = (ecWho.pastStep || 0) + 1; ecWhoLoadPast(); }
+                return;
+            }
+            const d = (ecWho.past || []).find(x => String(x.day) === String(value));
+            if (!d || !activeModalDriverId) return;
+            ecWho.seq++; // a list still loading for another day must not replace this one
+            ecWhoStopTimer();
+            ecWhoClearSel();
+            ecWho.day = d.day;
+            ecWho.spans = d.spans.slice();
+            ecWhoRender();
+            ecWhoStartTimer();
+            if (d.spans.length === 1) { ecWhoPick(0); return; }
+            const w0 = ecWhoWindow(d.spans[0]);
+            const end = Math.max(...d.spans.map(sp => ecWhoWindow(sp).end));
+            ecShift.pickSeq++;
+            ecShift.touched = true;
+            ecShift.ek = '';
+            ecShift.pickDay = ecDayBounds(w0.start).start;
+            ecShiftRender();
+            ecShiftMsg('');
+            document.getElementById('historyStart').value = ecToLocalInput(w0.start);
+            document.getElementById('historyEnd').value = ecToLocalInput(end);
+            ecWho.applying = true;
+            try { ecWindowChanged(); } finally { ecWho.applying = false; }
+        }
+
+        function ecWhoBind() {
+            if (ecWho.bound) return;
+            const list = document.getElementById('ecWhoList');
+            if (!list) return;
+            ecWho.bound = true;
+            list.addEventListener('click', e => {
+                const b = e.target.closest('.ec-who-btn');
+                if (b) ecWhoPick(Number(b.dataset.i));
+            });
+            // A tap anywhere else turns the pick off. A glowing Show button only stops its own glow: the person stays
+            // picked while their track or route is shown.
+            document.addEventListener('click', e => {
+                if (ecWho.sel < 0) return;
+                const t = e.target;
+                if (!(t instanceof Element) || t.closest('#ecWhoList .ec-who-btn')) return;
+                const glow = t.closest('.ec-who-next');
+                if (glow && EC_WHO_GLOW_IDS.includes(glow.id)) { glow.classList.remove('ec-who-next'); return; }
+                ecWhoClearSel();
+            }, true);
         }
 
         function cleanupRouteTimeOnClose() {
