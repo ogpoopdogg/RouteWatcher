@@ -1,0 +1,2 @@
+node_modules/
+# Built Android app files are made by GitHub (see .github/workflows/android-apk.yml)

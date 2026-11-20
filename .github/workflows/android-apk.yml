@@ -1,0 +1,105 @@
+# Builds the E&C Dispatch Android app (android-app/) into an APK.
+# Only runs when the Android app's files change, or when started by hand (Actions > Android APK > Run workflow).
+# The web app (index.html) is not built or changed here: the Android app opens the live site.
+#
+# On main, with both secrets set, the APK is put on the "Android app" release, so the phone can download it from
+#   https://github.com/ogpoopdogg/RouteWatcher/releases/download/android-latest/ec-dispatch.apk
+# Secrets (Settings > Secrets and variables > Actions), see android-app/README.md:
+#   GOOGLE_SERVICES_JSON  the google-services.json file from the Firebase console (needed for notifications)
+#   ANDROID_KEYSTORE_B64  the app's signing key, so each new APK installs over the last one
+name: Android APK
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['android-app/**', '.github/workflows/android-apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write # to update the "android-latest" release
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: android-app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install Capacitor
+        run: npm ci --no-audit --no-fund
+
+      - name: Copy app settings into the Android project
+        run: npx cap sync android
+
+      - name: Add google-services.json (notifications)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::Secret GOOGLE_SERVICES_JSON is not set: this APK can't get notifications and won't be published."
+            echo "EC_NO_PUSH=1" >> "$GITHUB_ENV"
+          else
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            node -e "const j=require('./android/app/google-services.json'); const c=(j.client||[]).find(c=>c.client_info&&c.client_info.android_client_info&&c.client_info.android_client_info.package_name==='ca.eandccourier.dispatch'); if(!c){console.error('google-services.json has no Android app with package name ca.eandccourier.dispatch'); process.exit(1)}"
+          fi
+
+      - name: Add the signing key
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_B64" ]; then
+            echo "::warning::Secret ANDROID_KEYSTORE_B64 is not set: building a test (debug) APK that won't install over another build."
+            echo "EC_DEBUG=1" >> "$GITHUB_ENV"
+          else
+            printf '%s' "$ANDROID_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/ec-dispatch.jks"
+            echo "EC_KEYSTORE_FILE=$RUNNER_TEMP/ec-dispatch.jks" >> "$GITHUB_ENV"
+            echo "EC_KEYSTORE_PASSWORD=ecdispatch" >> "$GITHUB_ENV"
+            echo "EC_KEY_ALIAS=ecdispatch" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build the APK
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          if [ -n "$EC_DEBUG" ]; then TASK=assembleDebug; OUT=app/build/outputs/apk/debug/app-debug.apk
+          else TASK=assembleRelease; OUT=app/build/outputs/apk/release/app-release.apk; fi
+          ./gradlew --no-daemon "$TASK" -PecVersionCode=${{ github.run_number }}
+          cp "$OUT" "$GITHUB_WORKSPACE/ec-dispatch.apk"
+          ls -l "$GITHUB_WORKSPACE/ec-dispatch.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ec-dispatch-apk-${{ github.run_number }}
+          path: ec-dispatch.apk
+          retention-days: 30
+
+      - name: Publish to the "Android app" release (main only)
+        if: github.ref == 'refs/heads/main' && env.EC_NO_PUSH != '1' && env.EC_DEBUG != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: .
+        run: |
+          gh release view android-latest >/dev/null 2>&1 || \
+            gh release create android-latest --title "E&C Dispatch Android app" --latest=false \
+              --notes "Install on an Android phone: download ec-dispatch.apk below, open it, and allow installs from this source if asked."
+          gh release upload android-latest ec-dispatch.apk --clobber
+          gh release edit android-latest --notes "Version 1.0.${{ github.run_number }}, built $(date -u +'%Y-%m-%d %H:%M UTC') from ${GITHUB_SHA::7}. Install on an Android phone: download ec-dispatch.apk below, open it, and allow installs from this source if asked."

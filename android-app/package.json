@@ -1,0 +1,16 @@
+{
+  "name": "ec-dispatch-android",
+  "private": true,
+  "description": "Android app (APK) for E&C Dispatch. Opens https://app.eandccourier.ca inside it and adds phone notifications for driver alerts.",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/push-notifications": "8.1.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

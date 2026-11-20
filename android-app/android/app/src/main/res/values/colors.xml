@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The crown's yellow, used as the notification accent -->
+    <color name="notification_accent">#E9E400</color>
+</resources>
