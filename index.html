@@ -15530,12 +15530,16 @@
         // it, even with the app closed. The server checks once a minute (gps-functions driverAlerts + alerts.js).
         // Data: developer/dispatch_dashboard/proximity_alerts/{id} (the alerts) and
         //       developer/dispatch_dashboard/push_tokens/{uid}/{key} (this phone's notification address).
+        // Only for the accounts in EC_ALERT_EMAILS (Justin's wish: not on other dispatchers' screens). Anyone else
+        // signed in to the app sees no bell, and the phone doesn't sign up for notifications. The server
+        // (gps-functions/alerts.js ALERT_EMAILS) also ignores alerts made by any other account.
         (function () {
             const Cap = window.Capacitor;
             if (!Cap || typeof Cap.isNativePlatform !== 'function' || !Cap.isNativePlatform()) return;
             const Push = Cap.Plugins && Cap.Plugins.PushNotifications;
             document.documentElement.classList.add('ec-native-app');
 
+            const EC_ALERT_EMAILS = ['justin@ec.com']; // must match gps-functions/alerts.js ALERT_EMAILS
             const ALERTS = 'developer/dispatch_dashboard/proximity_alerts';
             const TOKENS = 'developer/dispatch_dashboard/push_tokens';
             const KM_CHOICES = [10, 25, 50, 100];
@@ -15810,6 +15814,7 @@
 
             // The bell goes beside the saved points pin once the map has made it
             function addButton() {
+                if (!st.uid) return false; // waits until an alerts account is signed in (see onUser)
                 if (document.getElementById('ecAlertsBtn')) return true;
                 const pin = document.getElementById('ecPointsBtn');
                 if (!pin) return false;
@@ -15827,7 +15832,17 @@
                 syncButton();
                 return true;
             }
-            const btnTimer = setInterval(() => { if (addButton()) clearInterval(btnTimer); }, 500);
+            let btnTimer = null;
+            function showButton(on) {
+                if (!on) {
+                    if (btnTimer) { clearInterval(btnTimer); btnTimer = null; }
+                    const b = document.getElementById('ecAlertsBtn');
+                    if (b) b.remove();
+                    return;
+                }
+                if (addButton() || btnTimer) return;
+                btnTimer = setInterval(() => { if (addButton()) { clearInterval(btnTimer); btnTimer = null; } }, 500);
+            }
 
             // ----- Notifications: permission, this phone's address (token), taps -----
             function checkPermission() {
@@ -15884,6 +15899,7 @@
                 if (st.ref) { st.ref.off(); st.ref = null; }
                 st.uid = uid;
                 st.alerts = {};
+                showButton(!!uid);
                 if (!uid) { closePanel(); return; }
                 st.ref = db.ref(ALERTS);
                 st.ref.on('value', snap => { st.alerts = snap.val() || {}; syncButton(); if (!st.form) render(); }, // not while a new alert is being typed
@@ -15892,8 +15908,11 @@
                 // Already allowed: refresh this phone's address (it can change). Not allowed yet: asked when an alert is made.
                 checkPermission().then(() => { if (st.perm === 'granted') register(); });
             }
+            // st.uid is set only for an alerts account (EC_ALERT_EMAILS); anyone else counts as nobody here
             setInterval(() => {
-                const uid = (typeof currentUserId !== 'undefined' && currentUserId) || null;
+                const signedIn = (typeof currentUserId !== 'undefined' && currentUserId) || null;
+                const email = String((auth.currentUser && auth.currentUser.email) || '').trim().toLowerCase();
+                const uid = signedIn && EC_ALERT_EMAILS.includes(email) ? signedIn : null;
                 if (uid !== st.uid) onUser(uid);
             }, 1000);
             // Keep "km away now" fresh while the list is open (the server updates it every minute)

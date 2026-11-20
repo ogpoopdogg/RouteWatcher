@@ -88,3 +88,11 @@ test('driver name: nickname first, then vehicle name', () => {
 test('token keys have no characters the database refuses', () => {
   assert.strictEqual(A.tokenKey('ab.c$d#e[f]g/h:i'), 'ab_c_d_e_f_g_h:i');
 });
+
+test('only Justin can use alerts', () => {
+  assert.strictEqual(A.alertsAllowedFor('justin@ec.com'), true);
+  assert.strictEqual(A.alertsAllowedFor(' Justin@EC.com '), true);
+  assert.strictEqual(A.alertsAllowedFor('gil@ec.com'), false);
+  assert.strictEqual(A.alertsAllowedFor(''), false);
+  assert.strictEqual(A.alertsAllowedFor(undefined), false);
+});

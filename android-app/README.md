@@ -9,6 +9,10 @@ only runs inside this app (it checks for Capacitor first and stops otherwise).
 
 ## Driver alerts
 
+Only for **justin@ec.com** (the list is `EC_ALERT_EMAILS` in `index.html` and `ALERT_EMAILS` in
+`gps-functions/alerts.js`; change both to add someone). Other dispatchers signed in to the app see no bell
+and their phones don't sign up for notifications, and the server ignores alerts made by any other account.
+
 In the app, the bell beside the yellow saved points pin opens **Driver alerts**:
 
 1. Press **New alert**.

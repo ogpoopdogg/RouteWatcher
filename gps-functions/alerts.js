@@ -9,6 +9,14 @@
  */
 'use strict';
 
+// Only these accounts can use driver alerts (Justin's wish). Alerts made by anyone else are ignored and never
+// notify anyone. Must match index.html EC_ALERT_EMAILS.
+const ALERT_EMAILS = ['justin@ec.com'];
+
+function alertsAllowedFor(email) {
+  return ALERT_EMAILS.includes(String(email || '').trim().toLowerCase());
+}
+
 // Drive time is only asked of Google when the van could possibly be that close: no van averages more
 // than this in a straight line, so a van further than (minutes x this) can't be inside the time yet.
 const FASTEST_KMH = 120;
@@ -105,6 +113,8 @@ function tokenKey(token) {
 }
 
 module.exports = {
+  ALERT_EMAILS,
+  alertsAllowedFor,
   FASTEST_KMH,
   ROUTE_CHECK_EVERY_MS,
   MAX_KM,

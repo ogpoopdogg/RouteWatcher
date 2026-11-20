@@ -19,7 +19,8 @@
  *                    PAJ email/password/token never leave the server.
  *
  * driverAlerts       Runs every minute. Only does anything while at least one driver alert
- *                    (made in the Android app) is switched on: then it fetches fresh PAJ
+ *                    (made in the Android app by an account in alerts.js ALERT_EMAILS, only
+ *                    justin@ec.com) is switched on: then it fetches fresh PAJ
  *                    positions (sharing pollNow's cooldown), and when a van is inside an
  *                    alert's distance or drive time it sends a phone notification to the
  *                    person who made the alert and switches the alert off. See alerts.js.
@@ -736,10 +737,24 @@ exports.driverAlerts = onSchedule(
   async () => {
     const db = admin.database();
     const all = (await db.ref(ALERTS_PATH).once('value')).val() || {};
-    const live = Object.entries(all)
+    let live = Object.entries(all)
       .map(([id, a]) => [id, AL.validAlert(a), a])
       .filter(([, a]) => a);
     if (live.length === 0) return; // nothing switched on: one small read, nothing else
+
+    // Only alerts made by an allowed account (alerts.js ALERT_EMAILS); any other account's are left alone
+    const allowed = {};
+    await Promise.all(
+      [...new Set(live.map(([, a]) => a.uid))].map(async (uid) => {
+        try {
+          allowed[uid] = AL.alertsAllowedFor((await admin.auth().getUser(uid)).email);
+        } catch (err) {
+          allowed[uid] = false; // deleted account or lookup failed
+        }
+      })
+    );
+    live = live.filter(([, a]) => allowed[a.uid]);
+    if (live.length === 0) return;
 
     // Fresh positions even when every dispatch screen is closed (pollNow only runs while one is open)
     try {
