@@ -15520,5 +15520,405 @@
         console.log('✅ E&C Dispatch Tracker loaded.');
         console.log('📍 GPS tracking enabled for drivers with PAJ device IDs.');
     </script>
+    <script>
+        // ===== DRIVER ALERTS (Android app only) =====
+        // Everything in this block runs ONLY inside the E&C Dispatch Android app (android-app/ folder, built with
+        // Capacitor, which opens this same page). In a browser or an installed PWA it stops at the first line and
+        // the page is exactly as before.
+        // In the app: a bell beside the saved points pin opens "Driver alerts": pick a van, a saved point and
+        // "km away" or "minutes driving", switch it on, and the phone gets a notification when the van is inside
+        // it, even with the app closed. The server checks once a minute (gps-functions driverAlerts + alerts.js).
+        // Data: developer/dispatch_dashboard/proximity_alerts/{id} (the alerts) and
+        //       developer/dispatch_dashboard/push_tokens/{uid}/{key} (this phone's notification address).
+        // Only for the accounts in EC_ALERT_EMAILS (Justin's wish: not on other dispatchers' screens). Anyone else
+        // signed in to the app sees no bell, and the phone doesn't sign up for notifications. The server
+        // (gps-functions/alerts.js ALERT_EMAILS) also ignores alerts made by any other account.
+        (function () {
+            const Cap = window.Capacitor;
+            if (!Cap || typeof Cap.isNativePlatform !== 'function' || !Cap.isNativePlatform()) return;
+            const Push = Cap.Plugins && Cap.Plugins.PushNotifications;
+            document.documentElement.classList.add('ec-native-app');
+
+            const EC_ALERT_EMAILS = ['justin@ec.com']; // must match gps-functions/alerts.js ALERT_EMAILS
+            const ALERTS = 'developer/dispatch_dashboard/proximity_alerts';
+            const TOKENS = 'developer/dispatch_dashboard/push_tokens';
+            const KM_CHOICES = [10, 25, 50, 100];
+            const MIN_CHOICES = [15, 30, 60, 120];
+            const st = {
+                open: false, form: false, uid: null, token: null, perm: 'unknown', alerts: {}, ref: null,
+                draft: { driverId: '', pointId: '', mode: 'km', value: 50 }, msgTimer: null
+            };
+
+            const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const tokenKey = t => String(t).replace(/[.$#[\]/]/g, '_').slice(0, 700); // same as gps-functions/alerts.js
+            const kmText = km => (km < 10 ? Math.round(km * 10) / 10 : Math.round(km)) + ' km';
+            const timeText = ms => (typeof ecFormat === 'function'
+                ? ecFormat(Number(ms), { hour: 'numeric', minute: '2-digit' })
+                : new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+
+            function driverLabel(id) {
+                const drv = drivers && drivers[id];
+                if (!drv) return 'Removed van';
+                const nick = typeof getDriverNickname === 'function' ? getDriverNickname(id) : '';
+                return nick ? nick + ' · ' + (drv.name || 'Van') : (drv.name || 'Van');
+            }
+            function driverShort(id, fallback) {
+                const nick = typeof getDriverNickname === 'function' ? getDriverNickname(id) : '';
+                return nick || (drivers && drivers[id] && drivers[id].name) || fallback || 'Van';
+            }
+
+            // ----- Styles (only added in the app) -----
+            const css = document.createElement('style');
+            css.textContent = `
+                #dispatch-map .ec-alerts-btn svg { fill: none; stroke: #f7c948; }
+                #dispatch-map .ec-alerts-btn.is-on svg { fill: #f7c948; stroke: #111; }
+                #dispatch-map .ec-alerts-btn { position: relative; }
+                #dispatch-map .ec-alerts-btn .eca-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: #2ee66b; box-shadow: 0 0 0 2px #111; }
+                body.ec-alerts-open .ec-voice-btn, body.ec-alerts-open .ec-voice-caption { display: none; }
+                #ecAlertsPanel .eca-notice { flex: none; margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(247, 201, 72, 0.5); background: rgba(247, 201, 72, 0.1); font-size: 13.5px; line-height: 1.35; }
+                #ecAlertsPanel .eca-notice button { margin-top: 8px; height: 36px; padding: 0 14px; border-radius: 9px; border: none !important; background: #f7c948 !important; color: #111 !important; font-weight: 800; font-size: 14px; }
+                #ecAlertsPanel .eca-form { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+                #ecAlertsPanel label.eca-lbl { display: block; margin: 12px 2px 6px; font-size: 13px; font-weight: 700; color: #c9cdd8; }
+                #ecAlertsPanel select, #ecAlertsPanel input[type=number] { width: 100%; height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05); color: inherit; font: inherit; font-size: 16px; }
+                #ecAlertsPanel select option { color: #111; }
+                #ecAlertsPanel .eca-seg { display: flex; gap: 6px; }
+                #ecAlertsPanel .eca-seg button, #ecAlertsPanel .eca-chips button { flex: 1; height: 42px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.16) !important; background: transparent !important; color: inherit !important; font-size: 14.5px; font-weight: 700; }
+                #ecAlertsPanel .eca-seg button.is-on, #ecAlertsPanel .eca-chips button.is-on { border-color: #f7c948 !important; background: rgba(247, 201, 72, 0.16) !important; color: #f7c948 !important; }
+                #ecAlertsPanel .eca-chips { display: flex; gap: 6px; margin-top: 8px; }
+                #ecAlertsPanel .eca-val { display: flex; align-items: center; gap: 10px; }
+                #ecAlertsPanel .eca-val span { flex: none; font-weight: 700; color: #9aa0b0; min-width: 34px; }
+                #ecAlertsPanel .eca-hint { margin: 6px 2px 0; font-size: 12px; color: #9aa0b0; }
+                #ecAlertsPanel .eca-actions { display: flex; gap: 8px; margin-top: 16px; }
+                #ecAlertsPanel .eca-actions .ecp-new { flex: 1; }
+                #ecAlertsPanel .eca-cancel { flex: none; height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.16) !important; background: transparent !important; color: inherit !important; font-size: 15px; font-weight: 700; }
+                #ecAlertsPanel .eca-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; padding: 8px 4px 8px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.035); }
+                #ecAlertsPanel .eca-row.is-live { border-color: rgba(46, 230, 107, 0.55); }
+                #ecAlertsPanel .eca-txt { flex: 1; min-width: 0; }
+                #ecAlertsPanel .eca-t { font-size: 15px; font-weight: 700; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+                #ecAlertsPanel .eca-s { margin-top: 2px; font-size: 12.5px; color: #9aa0b0; }
+                #ecAlertsPanel .eca-s.is-sent { color: #f7c948; }
+                #ecAlertsPanel .eca-s.is-err { color: #ff8a80; }
+                #ecAlertsPanel .eca-sw { flex: none; position: relative; width: 50px; height: 30px; border-radius: 15px; border: none !important; background: rgba(255, 255, 255, 0.18) !important; padding: 0; }
+                #ecAlertsPanel .eca-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.15s ease; }
+                #ecAlertsPanel .eca-sw[aria-checked=true] { background: #2ee66b !important; }
+                #ecAlertsPanel .eca-sw[aria-checked=true]::after { transform: translateX(20px); }
+                body.light-mode #ecAlertsPanel label.eca-lbl { color: #3b4050; }
+                body.light-mode #ecAlertsPanel select, body.light-mode #ecAlertsPanel input[type=number] { border-color: rgba(0, 0, 0, 0.18); background: #fff; }
+                body.light-mode #ecAlertsPanel .eca-seg button, body.light-mode #ecAlertsPanel .eca-chips button, body.light-mode #ecAlertsPanel .eca-cancel { border-color: rgba(0, 0, 0, 0.18) !important; }
+                body.light-mode #ecAlertsPanel .eca-seg button.is-on, body.light-mode #ecAlertsPanel .eca-chips button.is-on { border-color: #d9a800 !important; background: #fff6d6 !important; color: #8a6200 !important; }
+                body.light-mode #ecAlertsPanel .eca-row { border-color: rgba(0, 0, 0, 0.12); background: #f6f6f7; }
+                body.light-mode #ecAlertsPanel .eca-s, body.light-mode #ecAlertsPanel .eca-hint, body.light-mode #ecAlertsPanel .eca-val span { color: #5b6170; }
+                body.light-mode #ecAlertsPanel .eca-s.is-sent { color: #8a6200; }
+                body.light-mode #ecAlertsPanel .eca-sw { background: rgba(0, 0, 0, 0.2) !important; }
+                body.light-mode #ecAlertsPanel .eca-sw[aria-checked=true] { background: #1fbf55 !important; }
+                body.light-mode #ecAlertsPanel .eca-row.is-live { border-color: #1fbf55; }
+                @media (max-width: 760px) { #ecAlertsPanel.is-form { max-height: calc(100vh - 70px); } } /* room for the whole new-alert form */
+            `;
+            document.head.appendChild(css);
+
+            // ----- The panel (same sheet / card look as Saved points) -----
+            const panel = document.createElement('div');
+            panel.id = 'ecAlertsPanel';
+            panel.className = 'ec-points-panel';
+            panel.setAttribute('role', 'dialog');
+            panel.setAttribute('aria-label', 'Driver alerts');
+            panel.hidden = true;
+            document.body.appendChild(panel);
+
+            const BELL = '<svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+
+            function msg(text) {
+                const el = document.getElementById('ecaMsg');
+                if (!el) return;
+                el.textContent = text || '';
+                if (st.msgTimer) clearTimeout(st.msgTimer);
+                st.msgTimer = text ? setTimeout(() => { el.textContent = ''; }, 6000) : null;
+            }
+
+            function myAlerts() {
+                return Object.entries(st.alerts || {})
+                    .filter(([, a]) => a && a.uid === st.uid)
+                    .sort((x, y) => (Number(y[1].createdAt) || 0) - (Number(x[1].createdAt) || 0));
+            }
+
+            function syncButton() {
+                const btn = document.getElementById('ecAlertsBtn');
+                if (!btn) return;
+                btn.classList.toggle('is-on', st.open);
+                btn.setAttribute('aria-pressed', st.open ? 'true' : 'false');
+                const live = myAlerts().filter(([, a]) => a.on === true).length;
+                let dot = btn.querySelector('.eca-dot');
+                if (live && !dot) { dot = document.createElement('span'); dot.className = 'eca-dot'; btn.appendChild(dot); }
+                if (!live && dot) dot.remove();
+                btn.title = live ? 'Driver alerts (' + live + ' on)' : 'Driver alerts';
+            }
+
+            function noticeHtml() {
+                if (!Push) return '<div class="eca-notice">This version of the app can\'t show notifications. Install the newest E&amp;C Dispatch app.</div>';
+                if (st.perm === 'denied') return '<div class="eca-notice">Notifications are off for this app, so alerts can\'t reach this phone. Turn them on in Android Settings &rsaquo; Apps &rsaquo; E&amp;C Dispatch &rsaquo; Notifications.</div>';
+                if (st.perm !== 'granted') return '<div class="eca-notice">Allow notifications so alerts can reach this phone, even with the app closed.<br><button type="button" data-act="allow">Allow notifications</button></div>';
+                return '';
+            }
+
+            function statusLine(a) {
+                if (a.on === true) {
+                    if (a.lastError) return { cls: 'is-err', text: 'On · ' + a.lastError + ', trying again' };
+                    const bits = [];
+                    if (a.mode === 'min' && a.lastMin != null && a.lastRouteAt) bits.push('about ' + a.lastMin + ' min drive at ' + timeText(a.lastRouteAt));
+                    if (a.lastKm != null) bits.push(kmText(a.lastKm) + ' away now');
+                    return { cls: '', text: 'On · ' + (bits.length ? bits.join(' · ') : 'checking every minute') };
+                }
+                if (a.firedAt) return { cls: 'is-sent', text: 'Sent ' + timeText(a.firedAt) + ': ' + (a.firedTitle || '') + (a.sentTo === 0 ? ' (no phone got it)' : '') };
+                return { cls: '', text: 'Off' };
+            }
+
+            function render() {
+                if (!st.open) return;
+                const head = '<div class="ecp-grab"></div><div class="ecp-head">' + BELL.replace('<svg', '<svg style="fill:none;stroke:#f7c948"') +
+                    '<h3>Driver alerts</h3><button type="button" class="ecp-close" data-act="close" aria-label="Close driver alerts" title="Close">✕</button></div>';
+                panel.classList.toggle('is-form', st.form);
+                if (st.form) { panel.innerHTML = head + noticeHtml() + formHtml() + '<div class="ecp-msg" id="ecaMsg"></div>'; return; }
+                const rows = myAlerts();
+                let list = '';
+                if (!rows.length) list = '<div class="ecp-empty">No alerts yet. Press New alert, pick a van and a saved point, and this phone gets a notification when the van gets close.</div>';
+                rows.forEach(([id, a]) => {
+                    const s = statusLine(a);
+                    const limit = a.mode === 'min' ? a.value + ' min drive' : a.value + ' km';
+                    list += '<div class="eca-row' + (a.on === true ? ' is-live' : '') + '" data-id="' + esc(id) + '">' +
+                        '<div class="eca-txt"><div class="eca-t">' + esc(driverShort(a.driverId, a.driverLabel)) + ' · within ' + esc(limit) + ' of ' + esc(a.pointName) + '</div>' +
+                        '<div class="eca-s ' + s.cls + '">' + esc(s.text) + '</div></div>' +
+                        '<button type="button" class="eca-sw" role="switch" aria-checked="' + (a.on === true) + '" data-act="toggle" aria-label="Alert on or off"></button>' +
+                        '<button type="button" class="ecp-del" data-act="del" aria-label="Delete alert" title="Delete">✕</button></div>';
+                });
+                panel.innerHTML = head + noticeHtml() +
+                    '<button type="button" class="ecp-new" data-act="new"><span>+</span>New alert</button>' +
+                    '<div class="ecp-list">' + list + '</div><div class="ecp-msg" id="ecaMsg"></div>';
+            }
+
+            function formHtml() {
+                const d = st.draft;
+                const vans = Object.keys(drivers || {}).map(id => ({ id, label: driverLabel(id) }))
+                    .sort((x, y) => x.label.localeCompare(y.label, undefined, { numeric: true, sensitivity: 'base' }));
+                const pts = typeof ecPointsSorted === 'function' ? ecPointsSorted() : [];
+                if (!d.driverId && vans.length) d.driverId = vans[0].id;
+                if (!pts.find(p => p.id === d.pointId)) d.pointId = pts.length ? pts[0].id : '';
+                const chips = (d.mode === 'km' ? KM_CHOICES : MIN_CHOICES).map(v =>
+                    '<button type="button" data-act="chip" data-v="' + v + '" class="' + (Number(d.value) === v ? 'is-on' : '') + '">' + v + '</button>').join('');
+                return '<div class="eca-form">' +
+                    '<label class="eca-lbl" for="ecaVan">Van</label><select id="ecaVan">' +
+                    vans.map(v => '<option value="' + esc(v.id) + '"' + (v.id === d.driverId ? ' selected' : '') + '>' + esc(v.label) + '</option>').join('') + '</select>' +
+                    '<label class="eca-lbl" for="ecaPoint">Saved point</label>' +
+                    (pts.length
+                        ? '<select id="ecaPoint">' + pts.map(p => '<option value="' + esc(p.id) + '"' + (p.id === d.pointId ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select>'
+                        : '<div class="eca-hint">No saved points yet. Make one with the yellow pin button on the map first.</div>') +
+                    '<label class="eca-lbl">Alert me when the van is within</label>' +
+                    '<div class="eca-seg"><button type="button" data-act="mode" data-v="km" class="' + (d.mode === 'km' ? 'is-on' : '') + '">Km away</button>' +
+                    '<button type="button" data-act="mode" data-v="min" class="' + (d.mode === 'min' ? 'is-on' : '') + '">Minutes driving</button></div>' +
+                    '<div class="eca-chips">' + chips + '</div>' +
+                    '<div class="eca-val" style="margin-top:8px"><input id="ecaValue" type="number" inputmode="decimal" min="1" max="' + (d.mode === 'km' ? 2000 : 1440) + '" step="1" value="' + esc(d.value) + '" aria-label="' + (d.mode === 'km' ? 'Kilometres' : 'Minutes') + '"><span>' + (d.mode === 'km' ? 'km' : 'min') + '</span></div>' +
+                    '<div class="eca-hint">' + (d.mode === 'km'
+                        ? 'Straight-line distance, checked every minute.'
+                        : 'Drive time from Google (no traffic), checked every 5 minutes once the van is close enough.') + '</div>' +
+                    '<div class="eca-actions"><button type="button" class="eca-cancel" data-act="cancel">Cancel</button>' +
+                    '<button type="button" class="ecp-new" data-act="save"' + (pts.length && vans.length ? '' : ' disabled') + '>Turn alert on</button></div></div>';
+            }
+
+            function readForm() {
+                const van = document.getElementById('ecaVan');
+                const pt = document.getElementById('ecaPoint');
+                const val = document.getElementById('ecaValue');
+                if (van) st.draft.driverId = van.value;
+                if (pt) st.draft.pointId = pt.value;
+                if (val) st.draft.value = val.value;
+            }
+
+            function save() {
+                readForm();
+                const d = st.draft;
+                const value = Math.round(Number(d.value) * 10) / 10;
+                const max = d.mode === 'km' ? 2000 : 1440;
+                if (!(value > 0 && value <= max)) { msg('Enter ' + (d.mode === 'km' ? 'a distance from 1 to 2000 km' : 'a time from 1 to 1440 minutes') + '.'); return; }
+                const pt = (typeof ecPointsSorted === 'function' ? ecPointsSorted() : []).find(p => p.id === d.pointId);
+                if (!pt || !d.driverId || !drivers[d.driverId]) { msg('Pick a van and a saved point.'); return; }
+                const alert = {
+                    uid: st.uid, driverId: d.driverId, driverLabel: driverShort(d.driverId), pointName: pt.name.slice(0, 60),
+                    lat: pt.lat, lng: pt.lng, mode: d.mode, value: value, on: true,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                db.ref(ALERTS).push(alert).then(() => {
+                    st.form = false;
+                    render();
+                    msg('Alert on. You\'ll get a notification when ' + alert.driverLabel + ' is within ' + value + (d.mode === 'km' ? ' km' : ' min') + ' of ' + alert.pointName + '.');
+                }).catch(err => { console.warn('Alert save failed:', err); msg('Could not save the alert. Check the connection and try again.'); });
+                askPermission();
+            }
+
+            function toggle(id) {
+                const a = st.alerts[id];
+                if (!a) return;
+                const on = a.on !== true;
+                // Turning it back on starts fresh: the last result and drive time are cleared
+                const upd = on ? { on: true, firedAt: null, firedTitle: null, sentTo: null, lastRouteAt: null, lastMin: null, lastError: null } : { on: false };
+                db.ref(ALERTS + '/' + id).update(upd).catch(err => { console.warn('Alert switch failed:', err); msg('Could not change the alert. Try again.'); });
+                if (on) askPermission();
+            }
+
+            function del(id) {
+                db.ref(ALERTS + '/' + id).remove().catch(err => { console.warn('Alert delete failed:', err); msg('Could not delete the alert. Try again.'); });
+            }
+
+            panel.addEventListener('click', function (e) {
+                const b = e.target.closest('[data-act]');
+                if (!b) return;
+                const act = b.getAttribute('data-act');
+                const row = b.closest('.eca-row');
+                const id = row ? row.getAttribute('data-id') : null;
+                if (act === 'close') closePanel();
+                else if (act === 'allow') askPermission(true);
+                else if (act === 'new') { st.form = true; render(); }
+                else if (act === 'cancel') { st.form = false; render(); }
+                else if (act === 'mode') {
+                    readForm();
+                    const m = b.getAttribute('data-v');
+                    if (m !== st.draft.mode) { st.draft.mode = m; st.draft.value = m === 'km' ? 50 : 30; }
+                    render();
+                } else if (act === 'chip') { readForm(); st.draft.value = Number(b.getAttribute('data-v')); render(); }
+                else if (act === 'save') save();
+                else if (act === 'toggle' && id) toggle(id);
+                else if (act === 'del' && id) del(id);
+            });
+            panel.addEventListener('change', readForm);
+            panel.addEventListener('input', function () {
+                readForm();
+                panel.querySelectorAll('[data-act=chip]').forEach(c => c.classList.toggle('is-on', Number(c.getAttribute('data-v')) === Number(st.draft.value)));
+            });
+
+            function openPanel() {
+                if (typeof ecPointsClose === 'function' && typeof ecPoints !== 'undefined' && ecPoints.open) ecPointsClose();
+                st.open = true;
+                st.form = false;
+                document.body.classList.add('ec-alerts-open');
+                if (typeof ecPointsPlace === 'function') ecPointsPlace();
+                panel.hidden = false;
+                checkPermission().then(render);
+                render();
+                syncButton();
+            }
+            function closePanel() {
+                st.open = false;
+                st.form = false;
+                panel.hidden = true;
+                document.body.classList.remove('ec-alerts-open');
+                syncButton();
+            }
+
+            // The bell goes beside the saved points pin once the map has made it
+            function addButton() {
+                if (!st.uid) return false; // waits until an alerts account is signed in (see onUser)
+                if (document.getElementById('ecAlertsBtn')) return true;
+                const pin = document.getElementById('ecPointsBtn');
+                if (!pin) return false;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = 'ecAlertsBtn';
+                btn.className = 'ec-points-btn ec-alerts-btn';
+                btn.setAttribute('aria-label', 'Driver alerts');
+                btn.setAttribute('aria-pressed', 'false');
+                btn.innerHTML = BELL;
+                btn.addEventListener('click', e => { e.stopPropagation(); if (st.open) closePanel(); else openPanel(); });
+                pin.insertAdjacentElement('afterend', btn);
+                // Opening Saved points closes this panel (one sheet at a time)
+                pin.addEventListener('click', () => { if (st.open) closePanel(); }, true);
+                syncButton();
+                return true;
+            }
+            let btnTimer = null;
+            function showButton(on) {
+                if (!on) {
+                    if (btnTimer) { clearInterval(btnTimer); btnTimer = null; }
+                    const b = document.getElementById('ecAlertsBtn');
+                    if (b) b.remove();
+                    return;
+                }
+                if (addButton() || btnTimer) return;
+                btnTimer = setInterval(() => { if (addButton()) { clearInterval(btnTimer); btnTimer = null; } }, 500);
+            }
+
+            // ----- Notifications: permission, this phone's address (token), taps -----
+            function checkPermission() {
+                if (!Push) return Promise.resolve();
+                return Push.checkPermissions().then(r => {
+                    st.perm = r && r.receive === 'granted' ? 'granted' : (r && r.receive === 'denied' ? 'denied' : 'prompt');
+                }).catch(() => {});
+            }
+            function askPermission(fromButton) {
+                if (!Push) return Promise.resolve();
+                return checkPermission().then(() => {
+                    if (st.perm === 'granted') return register();
+                    if (st.perm === 'denied' && !fromButton) return;
+                    return Push.requestPermissions().then(r => {
+                        st.perm = r && r.receive === 'granted' ? 'granted' : 'denied';
+                        render();
+                        if (st.perm === 'granted') return register();
+                    });
+                }).catch(err => console.warn('Notification permission failed:', err));
+            }
+            function register() {
+                return Push.createChannel({
+                    id: 'driver_alerts', name: 'Driver alerts', description: 'A van is close to a saved point',
+                    importance: 5, visibility: 1, vibration: true, lights: true, lightColor: '#E9E400'
+                }).catch(() => {}).then(() => Push.register());
+            }
+            function saveToken() {
+                if (!st.token || !st.uid) return;
+                db.ref(TOKENS + '/' + st.uid + '/' + tokenKey(st.token)).set({
+                    token: st.token, at: firebase.database.ServerValue.TIMESTAMP,
+                    device: String(navigator.userAgent || '').replace(/^.*?\(([^)]*)\).*$/, '$1').slice(0, 120)
+                }).catch(err => console.warn('Saving this phone for alerts failed:', err));
+            }
+            if (Push) {
+                Push.addListener('registration', t => { st.token = t && t.value; saveToken(); });
+                Push.addListener('registrationError', err => { console.warn('Notification sign-up failed:', err); msg('This phone could not sign up for notifications.'); });
+                // Tapping an alert opens that van's window
+                Push.addListener('pushNotificationActionPerformed', a => {
+                    const id = a && a.notification && a.notification.data && a.notification.data.driverId;
+                    if (!id) return;
+                    const tryOpen = (n) => {
+                        if (drivers && drivers[id] && typeof openDriverModal === 'function') openDriverModal(id);
+                        else if (n > 0) setTimeout(() => tryOpen(n - 1), 500);
+                    };
+                    tryOpen(30);
+                });
+            }
+
+            // ----- Follow the signed-in user (currentUserId is set once the access check passes) -----
+            function onUser(uid) {
+                const prev = st.uid;
+                // Signed out or another person signed in: this phone stops getting the last person's alerts
+                if (prev && prev !== uid && st.token) db.ref(TOKENS + '/' + prev + '/' + tokenKey(st.token)).remove().catch(() => {});
+                if (st.ref) { st.ref.off(); st.ref = null; }
+                st.uid = uid;
+                st.alerts = {};
+                showButton(!!uid);
+                if (!uid) { closePanel(); return; }
+                st.ref = db.ref(ALERTS);
+                st.ref.on('value', snap => { st.alerts = snap.val() || {}; syncButton(); if (!st.form) render(); }, // not while a new alert is being typed
+                    err => console.warn('Driver alerts could not be read:', err));
+                if (st.token) saveToken();
+                // Already allowed: refresh this phone's address (it can change). Not allowed yet: asked when an alert is made.
+                checkPermission().then(() => { if (st.perm === 'granted') register(); });
+            }
+            // st.uid is set only for an alerts account (EC_ALERT_EMAILS); anyone else counts as nobody here
+            setInterval(() => {
+                const signedIn = (typeof currentUserId !== 'undefined' && currentUserId) || null;
+                const email = String((auth.currentUser && auth.currentUser.email) || '').trim().toLowerCase();
+                const uid = signedIn && EC_ALERT_EMAILS.includes(email) ? signedIn : null;
+                if (uid !== st.uid) onUser(uid);
+            }, 1000);
+            // Keep "km away now" fresh while the list is open (the server updates it every minute)
+            setInterval(() => { if (st.open && !st.form) render(); }, 30000);
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && st.open) closePanel(); });
+        })();
+    </script>
 </body>
 </html>

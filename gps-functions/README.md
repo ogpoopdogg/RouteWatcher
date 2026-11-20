@@ -9,6 +9,7 @@ deployed `pollNow` (downloaded from Cloud Shell on 2026-11-05, unchanged).
 | `pollNow` | While a dispatch page is open and awake: polls PAJ (and FleetHunt, every 4.5 minutes) and writes positions to `developer/dispatch_dashboard/drivers`. A shared cooldown in `developer/dispatch_dashboard/poll_state` means several open pages make one upstream call. At most 3 instances. |
 | `pajApi` | `?action=history` for Show Track (31 days at most per call); `?action=devices` (admins only: justin@, desirae@, celeste@ec.com). |
 | `fleetHuntHistory` | Show Track for FleetHunt vans. **Deleted on 2026-11-05** (no van uses FleetHunt any more); the code is still here. |
+| `driverAlerts` | Driver alerts for the Android app (see `../android-app/README.md`). Runs every minute; with no alert switched on it reads the alert list and stops. With one on, it polls PAJ (same cooldown as `pollNow`), checks each alert (`alerts.js`) and sends a phone notification with Firebase Cloud Messaging. Drive-time alerts call Google's Routes API as the function's service account (no API key). Needs `alerts.js` next to `index.js`. |
 
 **Who may call them.** Every call needs a Firebase sign-in token (`Authorization: Bearer`).
 The email must end in @ec.com and be one of the admins (justin@, desirae@, celeste@ec.com) or on RouteWatcher's allowed list
@@ -24,3 +25,6 @@ file (same `pajApi` code, but that copy also defined the scheduled pollers `poll
 Redeploying from this folder would make them match.
 
 They run as the project's default compute service account, like the other functions.
+
+**Tests.** `node --test alerts.test.js` checks the alert rules (distance, when drive time is asked, the
+notification text).

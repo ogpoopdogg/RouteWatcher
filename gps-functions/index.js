@@ -17,9 +17,17 @@
  *                    ?action=history&deviceId=..&dateStart=..&dateEnd=..  (any allowed dispatcher)
  *                    ?action=devices                                     (admin only)
  *                    PAJ email/password/token never leave the server.
+ *
+ * driverAlerts       Runs every minute. Only does anything while at least one driver alert
+ *                    (made in the Android app by an account in alerts.js ALERT_EMAILS, only
+ *                    justin@ec.com) is switched on: then it fetches fresh PAJ
+ *                    positions (sharing pollNow's cooldown), and when a van is inside an
+ *                    alert's distance or drive time it sends a phone notification to the
+ *                    person who made the alert and switches the alert off. See alerts.js.
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
@@ -647,6 +655,163 @@ exports.pajApi = onRequest(
     } catch (err) {
       logger.error(`pajApi: ${action} failed`, err);
       res.status(500).json({ error: 'Internal error' });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// 5. Driver alerts (Android app): "Sheldon is 48 km from Shop"
+// ---------------------------------------------------------------------------
+
+const AL = require('./alerts');
+const ALERTS_PATH = 'developer/dispatch_dashboard/proximity_alerts';
+const PUSH_TOKENS_PATH = 'developer/dispatch_dashboard/push_tokens'; // /{uid}/{tokenKey} = { token, at }
+const NICKNAMES_PATH = 'developer/dispatch_dashboard/driver_nicknames';
+// Fresh positions for alerts: at most one PAJ poll per this gap from here (an open dispatch page polls more often anyway)
+const ALERT_POLL_GAP_MS = 30 * 1000;
+const PROJECT_ID = 'eandccourier-36fcc';
+
+/** Drive time in minutes from the van to the point (Google Routes API, no traffic = the Essentials price), or null. */
+async function driveMinutes(from, to) {
+  // Called as this project's service account (no API key to store); the call is billed to this project
+  const tok = await admin.credential.applicationDefault().getAccessToken();
+  const r = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${tok.access_token}`,
+      'X-Goog-User-Project': PROJECT_ID,
+      'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters'
+    },
+    body: JSON.stringify({
+      origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
+      destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_UNAWARE'
+    })
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`Routes HTTP ${r.status}: ${text.slice(0, 300)}`);
+  const body = JSON.parse(text);
+  const route = body && Array.isArray(body.routes) ? body.routes[0] : null;
+  return route ? AL.durationToMin(route.duration) : null;
+}
+
+/** Sends one alert's notification to every phone the person signed in to the app on. Returns how many got it. */
+async function sendAlert(db, alertId, alert, msg) {
+  const snap = await db.ref(`${PUSH_TOKENS_PATH}/${alert.uid}`).once('value');
+  const rows = Object.entries(snap.val() || {}).filter(([, v]) => v && typeof v.token === 'string');
+  if (rows.length === 0) return 0;
+  const res = await admin.messaging().sendEachForMulticast({
+    tokens: rows.map(([, v]) => v.token),
+    notification: { title: msg.title, body: msg.body },
+    data: { alertId, driverId: alert.driverId },
+    android: {
+      priority: 'high',
+      notification: { channelId: 'driver_alerts', icon: 'ic_stat_alert', color: '#E9E400', tag: `alert-${alertId}`, defaultSound: true }
+    }
+  });
+  // Phones that uninstalled the app or were reset: forget their tokens
+  const gone = {};
+  res.responses.forEach((r, i) => {
+    const code = r.error && r.error.code;
+    if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
+      gone[rows[i][0]] = null;
+    }
+  });
+  if (Object.keys(gone).length) await db.ref(`${PUSH_TOKENS_PATH}/${alert.uid}`).update(gone);
+  return res.successCount;
+}
+
+exports.driverAlerts = onSchedule(
+  {
+    schedule: 'every 1 minutes',
+    region: 'us-central1',
+    timeoutSeconds: 50,
+    memory: '256MiB',
+    cpu: 'gcf_gen1', // fractional CPU, like pollNow
+    maxInstances: 1,
+    retryCount: 0, // the next minute's run is the retry
+    secrets: [FLEETHUNT_KEY, PAJ_EMAIL, PAJ_PASSWORD]
+  },
+  async () => {
+    const db = admin.database();
+    const all = (await db.ref(ALERTS_PATH).once('value')).val() || {};
+    let live = Object.entries(all)
+      .map(([id, a]) => [id, AL.validAlert(a), a])
+      .filter(([, a]) => a);
+    if (live.length === 0) return; // nothing switched on: one small read, nothing else
+
+    // Only alerts made by an allowed account (alerts.js ALERT_EMAILS); any other account's are left alone
+    const allowed = {};
+    await Promise.all(
+      [...new Set(live.map(([, a]) => a.uid))].map(async (uid) => {
+        try {
+          allowed[uid] = AL.alertsAllowedFor((await admin.auth().getUser(uid)).email);
+        } catch (err) {
+          allowed[uid] = false; // deleted account or lookup failed
+        }
+      })
+    );
+    live = live.filter(([, a]) => allowed[a.uid]);
+    if (live.length === 0) return;
+
+    // Fresh positions even when every dispatch screen is closed (pollNow only runs while one is open)
+    try {
+      if (await claimPollSlot('paj', ALERT_POLL_GAP_MS)) await pollPajOnce();
+    } catch (err) {
+      logger.error('driverAlerts: PAJ poll failed (checking with the last known positions)', err);
+    }
+
+    const now = Date.now();
+    const driverIds = [...new Set(live.map(([, a]) => a.driverId))];
+    const info = {};
+    await Promise.all(
+      driverIds.map(async (id) => {
+        const [loc, name, nick] = await Promise.all([
+          db.ref(`${DRIVERS_PATH}/${id}/lastLocation`).once('value').then((s) => s.val()),
+          db.ref(`${DRIVERS_PATH}/${id}/name`).once('value').then((s) => s.val()),
+          db.ref(`${NICKNAMES_PATH}/${id}`).once('value').then((s) => s.val())
+        ]);
+        info[id] = { loc, name: AL.driverName(nick, { name }) };
+      })
+    );
+
+    for (const [id, alert, raw] of live) {
+      const { loc, name } = info[alert.driverId] || {};
+      const d = AL.decide({ ...alert, lastRouteAt: raw.lastRouteAt }, loc, now);
+      const upd = { lastCheckAt: now };
+      if (d.km != null) upd.lastKm = Math.round(d.km * 10) / 10;
+      let fire = d.fire;
+      let min = null;
+      if (d.askRoute) {
+        upd.lastRouteAt = now;
+        try {
+          min = await driveMinutes({ lat: Number(loc.lat), lng: Number(loc.lng) }, alert);
+          if (min != null) {
+            upd.lastMin = Math.round(min);
+            upd.lastError = null;
+            fire = min <= alert.value;
+          }
+        } catch (err) {
+          upd.lastError = 'Drive time check failed';
+          logger.error(`driverAlerts: drive time failed for ${id}`, err);
+        }
+      }
+      if (fire) {
+        const msg = AL.message(alert, name, d.km, min, now);
+        let sent = 0;
+        try {
+          sent = await sendAlert(db, id, alert, msg);
+        } catch (err) {
+          logger.error(`driverAlerts: sending ${id} failed`, err);
+        }
+        Object.assign(upd, { on: false, firedAt: now, firedTitle: msg.title, sentTo: sent });
+        logger.info('driverAlerts: fired', { id, title: msg.title, sentTo: sent });
+      }
+      // Not .update: on an alert deleted meanwhile, that would bring part of it back.
+      // null in, null out: the first try may run before the alert is loaded, and is then retried with it.
+      await db.ref(`${ALERTS_PATH}/${id}`).transaction((cur) => (cur === null ? null : { ...cur, ...upd }));
     }
   }
 );

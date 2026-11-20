@@ -1,0 +1,24 @@
+{
+  "appId": "ca.eandccourier.dispatch",
+  "appName": "E&C Dispatch",
+  "webDir": "www",
+  "server": {
+    "url": "https://app.eandccourier.ca/index.html",
+    "allowNavigation": [
+      "app.eandccourier.ca"
+    ]
+  },
+  "android": {
+    "backgroundColor": "#090a10"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
+  },
+  "appendUserAgent": "ECDispatchAndroid"
+}
