@@ -1,6 +1,6 @@
 # E&C Dispatch Android app
 
-A separate Android app (APK) for E&C Dispatch. It opens the live site (https://app.eandccourier.ca) inside
+A separate Android app (APK) for E&C Dispatch. It opens the live RouteWatcher page (https://app.eandccourier.ca/RouteWatcher/) inside
 it, so it always has the newest version of the dispatch page without a new APK. On top of that it can get
 **driver alerts** as phone notifications, even when the app is closed.
 
