@@ -3,7 +3,7 @@
   "appName": "E&C Dispatch",
   "webDir": "www",
   "server": {
-    "url": "https://app.eandccourier.ca/index.html",
+    "url": "https://app.eandccourier.ca/RouteWatcher/index.html",
     "allowNavigation": [
       "app.eandccourier.ca"
     ]
