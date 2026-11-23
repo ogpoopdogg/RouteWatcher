@@ -51,4 +51,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 13+: needed to show driver alert notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The voice mic: the phone's speech recognition (asked the first time the mic is tapped) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 </manifest>

@@ -15427,7 +15427,9 @@
                 const code = e && e.error;
                 if (code === 'aborted') return;
                 ecVoiceShow(code === 'not-allowed' || code === 'service-not-allowed'
-                    ? 'The microphone is blocked. Allow the microphone for this site in the browser settings, then try again.'
+                    ? (window.ecNativeApp
+                        ? 'The microphone is blocked. Turn it on in Android Settings > Apps > E&C Dispatch > Permissions > Microphone, then try again.'
+                        : 'The microphone is blocked. Allow the microphone for this site in the browser settings, then try again.')
                     : code === 'no-speech' ? 'I didn\'t hear anything. Tap the mic and try again.'
                     : code === 'network' ? 'Listening needs an internet connection.'
                     : code === 'audio-capture' ? 'No microphone was found.'
@@ -15519,6 +15521,64 @@
 
         console.log('✅ E&C Dispatch Tracker loaded.');
         console.log('📍 GPS tracking enabled for drivers with PAJ device IDs.');
+    </script>
+    <script>
+        // ===== VOICE IN THE ANDROID APP =====
+        // Android's in-app browser (WebView) can't use Chrome's speech recognition, so in the E&C Dispatch Android
+        // app the mic uses the phone's own speech recognition (Capacitor plugin @capacitor-community/speech-recognition)
+        // behind the same SpeechRecognition shape the voice code below uses. In a browser or installed PWA this
+        // stops at the first line and nothing changes.
+        (function () {
+            const Cap = window.Capacitor;
+            if (!Cap || typeof Cap.isNativePlatform !== 'function' || !Cap.isNativePlatform()) return;
+            window.ecNativeApp = true;
+            const SR = Cap.Plugins && Cap.Plugins.SpeechRecognition;
+            if (!SR) return; // an older APK without the plugin: the voice code shows its usual message
+            function codeFor(err) {
+                const m = String((err && (err.message || err.errorMessage)) || err || '').toLowerCase();
+                if (m.includes('permission')) return 'not-allowed';
+                if (m.includes('no match') || m.includes('no speech')) return 'no-speech';
+                if (m.includes('network')) return 'network';
+                if (m.includes('audio')) return 'audio-capture';
+                if (m.includes('not available') || (err && err.code === 'UNAVAILABLE')) return 'service-not-allowed';
+                return 'unknown';
+            }
+            function NativeRecognition() {
+                this.lang = 'en-CA';
+                this.maxAlternatives = 1;
+                this.interimResults = false;
+                this.continuous = false;
+                this.onresult = null; this.onerror = null; this.onend = null;
+                this._over = false;
+            }
+            NativeRecognition.prototype._finish = function (code) {
+                if (this._over) return;
+                this._over = true;
+                if (code && this.onerror) this.onerror({ error: code });
+                if (this.onend) this.onend();
+            };
+            NativeRecognition.prototype.start = function () {
+                const self = this;
+                (async function () {
+                    let p = await SR.checkPermissions();
+                    if (!p || p.speechRecognition !== 'granted') p = await SR.requestPermissions(); // Android asks once
+                    if (self._over) return;
+                    if (!p || p.speechRecognition !== 'granted') { self._finish('not-allowed'); return; }
+                    const r = await SR.start({ language: self.lang, maxResults: self.maxAlternatives || 1, partialResults: false, popup: false });
+                    if (self._over) return;
+                    const matches = (r && r.matches) || [];
+                    if (!matches.length) { self._finish('no-speech'); return; }
+                    const alts = matches.map(t => ({ transcript: String(t), confidence: 0 }));
+                    alts.isFinal = true;
+                    if (self.onresult) self.onresult({ resultIndex: 0, results: [alts] });
+                    self._finish(null);
+                })().catch(function (err) { self._finish(codeFor(err)); });
+            };
+            NativeRecognition.prototype.stop = function () { SR.stop().catch(function () {}); };
+            NativeRecognition.prototype.abort = function () { SR.stop().catch(function () {}); this._finish('aborted'); };
+            window.SpeechRecognition = NativeRecognition;
+            window.webkitSpeechRecognition = NativeRecognition;
+        })();
     </script>
     <script>
         // ===== DRIVER ALERTS (Android app only) =====

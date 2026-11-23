@@ -68,8 +68,7 @@ Indonesia, Singapore and Thailand, and is to be expanded to all countries in 202
 
 ## Known limits
 
-- The voice mic may not work inside the app: Android's in-app browser (WebView) doesn't support listening
-  the way Chrome does. Voice still works in Chrome and the installed web app. (Not yet tried on a phone.)
+- The voice mic uses the phone's own speech recognition (plugin `@capacitor-community/speech-recognition`), because Android's in-app browser can't use Chrome's. Android asks for the microphone the first time the mic is tapped; if it was refused, turn it on in Android Settings > Apps > E&C Dispatch > Permissions > Microphone.
 - Alerts can be up to about a minute late (the check runs once a minute; drive time every 5 minutes).
 - Km alerts are straight-line distance, not road distance.
 

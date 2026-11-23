@@ -6,6 +6,7 @@
     "sync": "cap sync android"
   },
   "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor/android": "8.6.0",
     "@capacitor/core": "8.6.0",
     "@capacitor/push-notifications": "8.1.3"
