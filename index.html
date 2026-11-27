@@ -6140,6 +6140,300 @@
             #historyQuery .ec-route-pick .ec-route-select { height: 36px; }
             .driver-modal .modal-map-row { gap: 6px !important; }
         }
+
+        /* =====================================================================
+           NAVY + GOLD HEADER, SCOREBOARD DRIVER CARDS (2026-11, Justin picked ideas 3 + 8)
+           The header is dark blue with a gold line on every screen. Computer screens (same size rule as the rest of the
+           computer layout) get the big cards and the names in the header; phones keep their button sizes (see below).
+           - Header: dark blue with a gold line. The driver name buttons (tap = show on map, hold = ETA) move up
+             into it (the script moves #mapDriverControl there): signed in on the left, not signed in on the right.
+           - Bottom driver buttons: cards along the bottom, all the same size: name, big speed or time since the
+             last fix, status and battery. Long text gets smaller to fit (ecFitBadgeText); the card never grows.
+           Light mode turns every text colour black with !important (body.light-mode *), so colours here use it too.
+           ===================================================================== */
+        .ec-sb-foot { display: none; }
+        /* --- header (every screen size): dark blue with a gold line --- */
+        #app > header,
+        body:not(.light-mode) #app > header,
+        body.light-mode #app > header {
+            background: linear-gradient(90deg, #0f1f3a, #1b2f55) !important;
+            border-bottom: 3px solid #f2b705 !important;
+            box-shadow: 0 4px 14px rgba(15, 31, 58, 0.22);
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+        }
+        body:not(.light-mode) #app > header::after { display: none; }
+        #app > header .header-title { color: #fff !important; letter-spacing: 0.06em; }
+        body.light-mode #app > header .badge { background: #f2b705 !important; color: #1a1300 !important; border: none; }
+        #app > header .gear-btn,
+        body.light-mode #app > header .gear-btn {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
+            color: #fff !important;
+        }
+        #app > header .gear-btn:hover { background: rgba(255, 255, 255, 0.18) !important; }
+        #app > header .gear-btn * { color: #fff !important; }
+        @media (min-width: 1200px) and (min-height: 560px) {
+            /* --- header: a bit taller on a computer --- */
+            #app > header,
+            body:not(.light-mode) #app > header,
+            body.light-mode #app > header { min-height: 60px; padding: 8px 14px; gap: 12px; }
+            #app > header .header-logo { height: 32px !important; }
+            #app > header .header-title { font-size: 15px !important; flex-shrink: 0; }
+            #app > header #headerGroupToggles { flex: 0 1 auto !important; }
+
+            /* --- driver name buttons in the header --- */
+            header #mapDriverControl,
+            body:not(.light-mode) header #mapDriverControl,
+            body.light-mode header #mapDriverControl {
+                position: static !important;
+                inset: auto !important;
+                flex: 1 1 auto;
+                min-width: 0;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+                padding: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                pointer-events: auto !important;
+                background: none !important;
+                border: none !important;
+                box-shadow: none !important;
+                z-index: auto;
+            }
+            header #mapDriverControl::before,
+            header #mapDriverControl::after {
+                flex: 0 0 auto;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+            /* "Signed in 8" before the signed-in buttons; "Not signed in 4" pushed right, before the others */
+            header #mapDriverControl::before { content: attr(data-on); order: -1; margin-right: 2px; color: #f2b705 !important; }
+            header #mapDriverControl::after { content: attr(data-off); order: 1; margin-left: auto; padding-left: 10px; color: #9fb0cc !important; }
+            header #mapDriverControl .driver-entry.ec-st-idle { order: 2; }
+            header #mapDriverControl .driver-entry,
+            body:not(.light-mode) header #mapDriverControl .driver-entry,
+            body.light-mode header #mapDriverControl .driver-entry {
+                min-height: 34px;
+                padding: 0 11px;
+                gap: 7px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.16) !important;
+                background: rgba(255, 255, 255, 0.08) !important;
+                box-shadow: none !important;
+                -webkit-backdrop-filter: none;
+                backdrop-filter: none;
+            }
+            header #mapDriverControl .driver-entry::before {
+                content: '';
+                flex: 0 0 auto;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--drv, #f7c948);
+            }
+            header #mapDriverControl .driver-entry:hover { background: rgba(255, 255, 255, 0.16) !important; }
+            header #mapDriverControl .driver-name,
+            header #mapDriverControl .driver-name.nick-name,
+            body:not(.light-mode) header #mapDriverControl .driver-entry.ec-st-online .driver-name,
+            body.light-mode header #mapDriverControl .driver-name,
+            body.light-mode header #mapDriverControl .driver-name.nick-name {
+                color: #fff !important;
+                font-size: 13.5px;
+                text-shadow: none;
+            }
+            /* Online: filled with the driver's colour, solid border and a small glow */
+            header #mapDriverControl .driver-entry.ec-st-online,
+            body:not(.light-mode) header #mapDriverControl .driver-entry.ec-st-online,
+            body.light-mode header #mapDriverControl .driver-entry.ec-st-online {
+                background: color-mix(in srgb, var(--drv, #f7c948) 32%, #0f1f3a) !important;
+                border-color: var(--drv, #f7c948) !important;
+                box-shadow: 0 0 10px -2px color-mix(in srgb, var(--drv, #f7c948) 75%, transparent) !important;
+            }
+            header #mapDriverControl .driver-entry.ec-st-online.ec-tc-on,
+            body.light-mode header #mapDriverControl .driver-entry.ec-st-online.ec-tc-on { border: 1px solid #ffd400 !important; }
+            /* Not signed in: see-through, softer name */
+            header #mapDriverControl .driver-entry.ec-st-idle,
+            body.light-mode header #mapDriverControl .driver-entry.ec-st-idle { background: transparent !important; }
+            header #mapDriverControl .driver-entry.ec-st-idle .driver-name,
+            body.light-mode header #mapDriverControl .driver-entry.ec-st-idle .driver-name { color: #a9b8d0 !important; }
+            header #mapDriverControl .driver-eta-label,
+            body.light-mode header #mapDriverControl .driver-eta-label { color: #ffe08a !important; }
+            header #mapDriverControl .driver-eta-label.is-pending,
+            body.light-mode header #mapDriverControl .driver-eta-label.is-pending { color: #c4cfe2 !important; }
+            header #mapDriverControl .driver-entry.ec-eta-holding::after { background: rgba(242, 183, 5, 0.3); }
+
+            /* --- scoreboard cards at the bottom --- */
+            #driverBadges .driver-badge,
+            body:not(.light-mode) #driverBadges .driver-badge,
+            body.light-mode #driverBadges .driver-badge {
+                position: relative;
+                height: 108px;
+                min-height: 108px;
+                max-height: 108px;
+                padding: 13px 12px 10px;
+                border-radius: 12px;
+                justify-content: flex-start;
+                gap: 0;
+                cursor: pointer;
+                /* no size animation: the text is fitted to the card's final size (see ecFitBadgeText) */
+                transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            }
+            #driverBadges .driver-badge::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 0;
+                height: 5px;
+                background: var(--drv, #f7c948);
+            }
+            body.light-mode #driverBadges .driver-badge { border: 1px solid #e1e4ea !important; box-shadow: 0 2px 8px rgba(20, 30, 60, 0.08); }
+            body.light-mode #driverBadges .driver-badge.ec-st-online {
+                background: #fff !important;
+                border-color: color-mix(in srgb, var(--drv, #f7c948) 60%, #fff) !important;
+                box-shadow: 0 4px 16px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent) !important;
+            }
+            body.light-mode #driverBadges .driver-badge.ec-st-idle { background: #f6f7f9 !important; box-shadow: none; }
+            body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle { background: rgba(17, 18, 27, 0.85); }
+            body.light-mode #driverBadges .driver-badge.ec-st-online.ec-tc-on { border: 1px solid #d9a800 !important; }
+            /* name (and P / alarm) on the first line; the big number on the second */
+            #driverBadges .driver-badge .badge-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto auto;
+                align-items: center;
+                column-gap: calc(6px * var(--ec-fs, 1));
+                row-gap: 2px;
+                white-space: nowrap;
+            }
+            #driverBadges .driver-badge .badge-row .name,
+            body:not(.light-mode) #driverBadges .driver-badge .badge-row .name {
+                grid-column: 1;
+                grid-row: 1;
+                font-size: calc(15px * var(--ec-fs, 1));
+                font-weight: 800;
+                line-height: 1.2;
+            }
+            #driverBadges .driver-badge .alarm-badge { grid-row: 1; grid-column: 2; }
+            #driverBadges .ec-parked { grid-row: 1; grid-column: 3; margin-left: 0; }
+            #driverBadges .driver-badge .badge-row .last-update,
+            body:not(.light-mode) #driverBadges .driver-badge .badge-row .last-update {
+                grid-row: 2;
+                grid-column: 1 / -1;
+                margin: 2px 0 0 !important;
+                justify-self: start;
+                font-size: calc(26px * var(--ec-fs, 1));
+                font-weight: 800;
+                line-height: 1.1;
+                letter-spacing: -0.02em;
+                color: #f2f4f8;
+            }
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update { color: #141a26 !important; }
+            #driverBadges .driver-badge .badge-row .last-update small { font-size: calc(12px * var(--ec-fs, 1)) !important; font-weight: 700; letter-spacing: 0; margin-left: 1px; }
+            body.light-mode #driverBadges .driver-badge .last-update small { color: #6b7280 !important; }
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast { color: #dc2626 !important; }
+            body.light-mode #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #5b6270 !important; }
+            body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #a3a9b6; }
+            #driverBadges .ec-low-batt { display: none; } /* the battery shows on the card's bottom line instead */
+            /* status + battery % and a battery bar */
+            #driverBadges .ec-sb-foot { display: block; margin-top: auto; }
+            #driverBadges .ec-sb-line {
+                display: flex;
+                justify-content: space-between;
+                gap: 6px;
+                font-size: 11.5px;
+                font-weight: 700;
+                color: #9aa1ae;
+                white-space: nowrap;
+            }
+            body.light-mode #driverBadges .ec-sb-line,
+            body.light-mode #driverBadges .ec-sb-line * { color: #6b7280 !important; }
+            #driverBadges .ec-sb-pct.ec-low,
+            body.light-mode #driverBadges .ec-sb-pct.ec-low { color: #e5484d !important; }
+            #driverBadges .ec-sb-bar { height: 4px; margin-top: 5px; border-radius: 2px; overflow: hidden; background: rgba(127, 127, 127, 0.22); }
+            body.light-mode #driverBadges .ec-sb-bar { background: #eceef2; }
+            #driverBadges .ec-sb-bar[hidden] { visibility: hidden; display: block; }
+            #driverBadges .ec-sb-bar i { display: block; height: 100%; border-radius: 2px; background: #22a565; }
+            #driverBadges .ec-sb-bar i.ec-low { background: #e5484d; }
+        }
+
+        /* --- phones and small windows: the same look at the old sizes (Justin: buttons stay the size they are, only
+           the name and the speed / time in them). Name buttons over the map: dark blue squares with a colour dot.
+           Bottom buttons: cards with a coloured top line, two per line, 36px tall as before. --- */
+        @media not all and (min-width: 1200px) and (min-height: 560px) {
+            .map-wrapper #mapDriverControl .driver-entry,
+            body:not(.light-mode) .map-wrapper #mapDriverControl .driver-entry,
+            body.light-mode .map-wrapper #mapDriverControl .driver-entry {
+                gap: 7px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.16) !important;
+                background: rgba(15, 31, 58, 0.92) !important;
+                box-shadow: 0 2px 8px rgba(15, 31, 58, 0.3) !important;
+            }
+            .map-wrapper #mapDriverControl .driver-entry::before {
+                content: '';
+                flex: 0 0 auto;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--drv, #f7c948);
+            }
+            .map-wrapper #mapDriverControl .driver-name,
+            .map-wrapper #mapDriverControl .driver-name.nick-name,
+            body:not(.light-mode) .map-wrapper #mapDriverControl .driver-entry.ec-st-online .driver-name,
+            body.light-mode .map-wrapper #mapDriverControl .driver-name,
+            body.light-mode .map-wrapper #mapDriverControl .driver-name.nick-name { color: #fff !important; text-shadow: none; }
+            .map-wrapper #mapDriverControl .driver-entry.ec-st-online,
+            body:not(.light-mode) .map-wrapper #mapDriverControl .driver-entry.ec-st-online,
+            body.light-mode .map-wrapper #mapDriverControl .driver-entry.ec-st-online {
+                background: color-mix(in srgb, var(--drv, #f7c948) 35%, #0f1f3a) !important;
+                border-color: var(--drv, #f7c948) !important;
+                box-shadow: 0 0 10px -2px color-mix(in srgb, var(--drv, #f7c948) 75%, transparent) !important;
+            }
+            .map-wrapper #mapDriverControl .driver-entry.ec-st-online.ec-tc-on,
+            body.light-mode .map-wrapper #mapDriverControl .driver-entry.ec-st-online.ec-tc-on { border: 1px solid #ffd400 !important; }
+            .map-wrapper #mapDriverControl .driver-entry.ec-st-idle .driver-name,
+            body.light-mode .map-wrapper #mapDriverControl .driver-entry.ec-st-idle .driver-name { color: #b4c1d6 !important; }
+            .map-wrapper #mapDriverControl .driver-eta-label,
+            body.light-mode .map-wrapper #mapDriverControl .driver-eta-label { color: #ffe08a !important; }
+
+            #driverBadges .driver-badge,
+            body:not(.light-mode) #driverBadges .driver-badge,
+            body.light-mode #driverBadges .driver-badge { position: relative; padding-top: 6px; }
+            #driverBadges .driver-badge::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 0;
+                height: 3px;
+                background: var(--drv, #f7c948);
+            }
+            body.light-mode #app #driverBadges .driver-badge {
+                background: #fff !important;
+                border: 1px solid #e1e4ea !important;
+                box-shadow: 0 1px 4px rgba(20, 30, 60, 0.08);
+            }
+            body.light-mode #app #driverBadges .driver-badge.ec-st-online {
+                background: #fff !important;
+                border-color: color-mix(in srgb, var(--drv, #f7c948) 60%, #fff) !important;
+                box-shadow: 0 2px 10px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent) !important;
+            }
+            body.light-mode #app #driverBadges .driver-badge.ec-st-idle { background: #f6f7f9 !important; box-shadow: none; }
+            body.light-mode #app #driverBadges .driver-badge.ec-st-online.ec-tc-on { border: 1px solid #d9a800 !important; }
+            body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle { background: rgba(17, 18, 27, 0.85); }
+            #driverBadges .driver-badge .badge-row .last-update,
+            body:not(.light-mode) #driverBadges .driver-badge .badge-row .last-update { font-size: calc(13px * var(--ec-fs, 1)); font-weight: 800; }
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update { color: #141a26 !important; }
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast { color: #dc2626 !important; }
+            body.light-mode #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #5b6270 !important; }
+        }
     </style>
 </head>
 <body>
@@ -11146,8 +11440,39 @@
             Object.keys(existingRows).forEach(rowId => {
                 if (!keepIds.has(rowId)) existingRows[rowId].remove();
             });
+            // Computer header labels: "Signed in 8" (Online + Parked) and "Not signed in 4" (only shown in the header)
+            const nOff = container.querySelectorAll('.driver-entry.ec-st-idle').length;
+            const nOn = keepIds.size - nOff;
+            const onLabel = nOn ? 'Signed in ' + nOn : '';
+            const offLabel = nOff ? (ecInUse.readable ? 'Not signed in ' : 'Not in use ') + nOff : '';
+            if (container.dataset.on !== onLabel) container.dataset.on = onLabel;
+            if (container.dataset.off !== offLabel) container.dataset.off = offLabel;
             ecEtaSyncLabels();
         }
+
+        // Computer screens: the driver name buttons sit in the header (navy + gold look); phones keep them on the map.
+        // The same element moves, so tap (show on map) and hold (ETA) keep working in both places.
+        const ecHeaderDriversMq = window.matchMedia('(min-width: 1200px) and (min-height: 560px)');
+        function ecPlaceHeaderDrivers() {
+            const container = document.getElementById('mapDriverControl');
+            const header = document.querySelector('#app > header');
+            const wrapper = document.getElementById('mainMapWrapper');
+            if (!container || !header || !wrapper) return;
+            if (ecHeaderDriversMq.matches) {
+                if (container.parentNode !== header) header.insertBefore(container, document.getElementById('headerGroupToggles') || header.querySelector('.header-controls'));
+            } else if (container.parentNode !== wrapper) {
+                wrapper.appendChild(container);
+            }
+        }
+        function ecOnComputerLayoutChange() {
+            ecPlaceHeaderDrivers();
+            // cards (computer) <-> one-line buttons (phone): fit the driver button text again once the buttons have
+            // finished changing size (they animate for 0.2 s; measuring during that made the text far too small)
+            setTimeout(function() { ecFitBadgeText(document.getElementById('driverBadges')); }, 300);
+        }
+        ecPlaceHeaderDrivers();
+        if (ecHeaderDriversMq.addEventListener) ecHeaderDriversMq.addEventListener('change', ecOnComputerLayoutChange);
+        else if (ecHeaderDriversMq.addListener) ecHeaderDriversMq.addListener(ecOnComputerLayoutChange);
 
         // ===== SHOW DRIVER LOCATION ON MAIN MAP =====
         function showDriverLocation(driverId) {
@@ -11656,6 +11981,14 @@
                 const timeHtml = speed !== null
                     ? `<span class="last-update ec-speed${speed >= EC_FAST_KMH ? ' ec-fast' : ''}">${speed}<small> km/h</small></span>`
                     : `<span class="last-update${lastUpdateText === 'Now' ? ' ec-now' : ''}">${lastUpdateText}</span>`;
+                // Computer scoreboard card only (hidden on phones): status + battery % and a battery bar
+                const battPct = battVal === null ? null : Math.max(0, Math.min(100, Math.round(battVal)));
+                const battLow = battPct !== null && battPct < EC_LOW_BATTERY_PCT ? ' ec-low' : '';
+                const stateText = use === 'online' ? (speed !== null ? 'Moving' : 'Online')
+                    : use === 'parked' ? 'Parked' : (ecInUse.readable ? 'Not signed in' : 'Not in use');
+                const footHtml = `<div class="ec-sb-foot" aria-hidden="true"><div class="ec-sb-line"><span class="ec-sb-state">${stateText}</span>` +
+                    (battPct !== null ? `<span class="ec-sb-pct${battLow}">${battPct}%</span>` : '') + `</div>` +
+                    `<div class="ec-sb-bar"${battPct === null ? ' hidden' : ''}><i class="${battLow.trim()}" style="width:${battPct || 0}%"></i></div></div>`;
                 badgeRows.push({ id: id, color: color, status: use, tc: ecClockedInOnline(id, use), html: `
               <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(ecUseTitle({ status: status, use: use }))}${speed !== null ? ', ' + speed + ' km/h' : ''}, last update ${ecEsc(lastUpdateText)}">
                 <span class="name">${ecEsc(nameText)}</span>
@@ -11663,6 +11996,7 @@
                 ${parkedHtml}${timeHtml}
                 ${lowBattHtml}
               </div>
+              ${footHtml}
             ` });
             }
             // Most updates only move dots on the map: when no badge would look different, keep the ones on
@@ -11719,7 +12053,16 @@
                 // pixel would still get "…"
                 // (the name is measured with shrinking turned off for a moment: once it is cut with "…" the
                 // browser reports the cut width, which made very narrow buttons keep "T…" instead of shrinking)
-                const tooBig = function() {
+                // Computer scoreboard card (grid): the name line and the big number each must fit the card's width
+                const card = getComputedStyle(row).display === 'grid';
+                const tooBig = card ? function() {
+                    const room = row.getBoundingClientRect().width - 1;
+                    const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+                    let line1 = Math.max(ecTextWidth(name), name.scrollWidth);
+                    row.querySelectorAll('.alarm-badge, .ec-parked').forEach(function(el) { line1 += el.getBoundingClientRect().width + gap; });
+                    const val = row.querySelector('.last-update');
+                    return line1 > room || (!!val && ecTextWidth(val) > room);
+                } : function() {
                     name.style.flexShrink = '0';
                     const items = row.children;
                     let need = 0, n = 0;
@@ -11766,8 +12109,8 @@
         // Saved value: a number of pixels, or 'full' = as wide as the window allows (dragged all the way).
         const EC_DOCK_DEFAULT_W = 580;  // the panel's width before anyone drags it (two buttons per line)
         const EC_DOCK_MIN_W = 240;      // narrowest: one button per line
-        const EC_DOCK_MIN_BTN = 190;    // a button is never narrower than this (keeps the default at 2 per line)
-        const EC_DOCK_MAX_BTN = 320;    // nor wider than this (the panel stops growing once all fit on one line)
+        const EC_DOCK_MIN_BTN = 150;    // a card is never narrower than this (scoreboard cards, 2026-11)
+        const EC_DOCK_MAX_BTN = 210;    // nor wider than this (the panel stops growing once all fit on one line)
         const EC_DOCK_FULL_MIN_BTN = 120; // dragged all the way: every button on one line if each still gets this much
         const EC_DOCK_RIGHT_ROOM = 76;  // room kept on the right for the mic button
         const EC_DOCK_KEY = 'ec_dock_w';
@@ -11789,7 +12132,8 @@
             const count = dock ? dock.querySelectorAll('.driver-badge').length : 0;
             const gap = 6, chrome = 2 * 8 + 2; // gap between buttons; padding + border of the panel
             const maxW = ecDockMaxW();
-            let w = want === 'full' ? maxW : Math.round(Number(want) || EC_DOCK_DEFAULT_W);
+            // nothing saved (or put back with a double-click) = the whole width: the scoreboard along the bottom
+            let w = (want === 'full' || want === null || want === undefined) ? maxW : Math.round(Number(want) || EC_DOCK_DEFAULT_W);
             w = Math.min(maxW, Math.max(EC_DOCK_MIN_W, w));
             let cols = Math.max(1, Math.floor((w - chrome + gap) / (EC_DOCK_MIN_BTN + gap)));
             // all the way to the right: squeeze every button onto one line when they still fit (text shrinks to fit)
