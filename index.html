@@ -6296,11 +6296,16 @@
             }
             body.light-mode #driverBadges .driver-badge { border: 1px solid #e1e4ea !important; box-shadow: 0 2px 8px rgba(20, 30, 60, 0.08); }
             body.light-mode #driverBadges .driver-badge.ec-st-online {
-                background: #fff !important;
+                background: color-mix(in srgb, var(--drv, #f7c948) 6%, #eef1f5) !important;
                 border-color: color-mix(in srgb, var(--drv, #f7c948) 60%, #fff) !important;
                 box-shadow: 0 4px 16px color-mix(in srgb, var(--drv, #f7c948) 35%, transparent) !important;
             }
-            body.light-mode #driverBadges .driver-badge.ec-st-idle { background: #f6f7f9 !important; box-shadow: none; }
+            body.light-mode #driverBadges .driver-badge.ec-st-idle { background: #e6e9ee !important; box-shadow: none; }
+            /* softer than pure white (Justin: the white was too bright): light grey-blue cards on a slightly darker panel */
+            body.light-mode #app #driverBadges .driver-badge { background: #eef1f5 !important; }
+            body.light-mode #app #driverBadges .driver-badge.ec-st-online { background: color-mix(in srgb, var(--drv, #f7c948) 6%, #eef1f5) !important; }
+            body.light-mode #app #driverBadges .driver-badge.ec-st-idle { background: #e6e9ee !important; }
+            body.light-mode #driverBadges { background: rgba(214, 220, 229, 0.82) !important; }
             body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle { background: rgba(17, 18, 27, 0.85); }
             body.light-mode #driverBadges .driver-badge.ec-st-online.ec-tc-on { border: 1px solid #d9a800 !important; }
             /* name (and P / alarm) on the first line; the big number on the second */
