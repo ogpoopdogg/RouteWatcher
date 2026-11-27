@@ -6349,6 +6349,14 @@
             body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast small { color: #ffffff !important; opacity: 1; }
             body.light-mode #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #5b6270 !important; }
             body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #a3a9b6; }
+            /* Moving = speed in jet black (white in dark mode); standing still = the time in light grey, so the
+               moving vans stand out (Justin, 2026-11). 100 km/h+ keeps white on red. */
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-speed:not(.ec-fast),
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-speed:not(.ec-fast) small { color: #000000 !important; opacity: 1; }
+            body:not(.light-mode) #driverBadges .driver-badge .badge-row .last-update.ec-speed:not(.ec-fast),
+            body:not(.light-mode) #driverBadges .driver-badge .badge-row .last-update.ec-speed:not(.ec-fast) small { color: #ffffff; opacity: 1; }
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update:not(.ec-speed) { color: #8f96a3 !important; }
+            body:not(.light-mode) #driverBadges .driver-badge .badge-row .last-update:not(.ec-speed) { color: #6f7686 !important; }
             #driverBadges .ec-low-batt { display: none; } /* the battery shows on the card's bottom line instead */
             /* status + battery % and a battery bar */
             #driverBadges .ec-sb-foot { display: block; margin-top: auto; }
