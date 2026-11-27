@@ -6328,14 +6328,14 @@
                 grid-column: 1 / -1;
                 margin: 2px 0 0 !important;
                 justify-self: start;
-                font-size: calc(26px * var(--ec-fs, 1));
+                font-size: calc(26px * var(--ec-vfs, 1));
                 font-weight: 800;
                 line-height: 1.1;
                 letter-spacing: -0.02em;
                 color: #f2f4f8;
             }
             body.light-mode #driverBadges .driver-badge .badge-row .last-update { color: #141a26 !important; }
-            #driverBadges .driver-badge .badge-row .last-update small { font-size: calc(12px * var(--ec-fs, 1)) !important; font-weight: 700; letter-spacing: 0; margin-left: 1px; }
+            #driverBadges .driver-badge .badge-row .last-update small { font-size: calc(12px * var(--ec-vfs, 1)) !important; font-weight: 700; letter-spacing: 0; margin-left: 1px; }
             body.light-mode #driverBadges .driver-badge .last-update small { color: #6b7280 !important; }
             /* 100 km/h and over: white text on the red box (was red on red) */
             #driverBadges .driver-badge .badge-row .last-update.ec-fast,
@@ -6441,6 +6441,11 @@
             body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast,
             body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast small { color: #ffffff !important; opacity: 1; }
             body.light-mode #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #5b6270 !important; }
+        }
+
+        /* Computer: no mic button (Justin, 2026-11: voice is only used on phones). Phones and small windows keep it. */
+        @media (min-width: 1200px) and (min-height: 560px) {
+            #ecVoiceBtn, .ec-voice-btn { display: none !important; }
         }
     </style>
 </head>
@@ -12051,7 +12056,7 @@
             if (!container) return;
             const EC_BADGE_MIN_TEXT = 0.6;
             const badges = container.querySelectorAll('.driver-badge');
-            badges.forEach(function(badge) { badge.style.setProperty('--ec-fs', '1'); });
+            badges.forEach(function(badge) { badge.style.setProperty('--ec-fs', '1'); badge.style.setProperty('--ec-vfs', '1'); });
             badges.forEach(function(badge) {
                 const row = badge.querySelector('.badge-row');
                 const name = badge.querySelector('.badge-row .name');
@@ -12061,16 +12066,30 @@
                 // pixel would still get "…"
                 // (the name is measured with shrinking turned off for a moment: once it is cut with "…" the
                 // browser reports the cut width, which made very narrow buttons keep "T…" instead of shrinking)
-                // Computer scoreboard card (grid): the name line and the big number each must fit the card's width
-                const card = getComputedStyle(row).display === 'grid';
-                const tooBig = card ? function() {
+                // Computer scoreboard card (grid): the name line and the big number are fitted to the card's width
+                // separately (--ec-fs for the name line, --ec-vfs for the number), so a long time like "1 h 30 min"
+                // doesn't make the name small too
+                if (getComputedStyle(row).display === 'grid') {
                     const room = row.getBoundingClientRect().width - 1;
-                    const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
-                    let line1 = Math.max(ecTextWidth(name), name.scrollWidth);
-                    row.querySelectorAll('.alarm-badge, .ec-parked').forEach(function(el) { line1 += el.getBoundingClientRect().width + gap; });
                     const val = row.querySelector('.last-update');
-                    return line1 > room || (!!val && ecTextWidth(val) > room);
-                } : function() {
+                    const nameTooBig = function() {
+                        const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+                        let line1 = Math.max(ecTextWidth(name), name.scrollWidth);
+                        row.querySelectorAll('.alarm-badge, .ec-parked').forEach(function(el) { line1 += el.getBoundingClientRect().width + gap; });
+                        return line1 > room;
+                    };
+                    const shrink = function(prop, tooBigFn) {
+                        let f = 1;
+                        while (tooBigFn() && f > EC_BADGE_MIN_TEXT + 0.001) {
+                            f = Math.max(EC_BADGE_MIN_TEXT, Math.round((f - 0.04) * 100) / 100);
+                            badge.style.setProperty(prop, String(f));
+                        }
+                    };
+                    shrink('--ec-fs', nameTooBig);
+                    if (val) shrink('--ec-vfs', function() { return ecTextWidth(val) > room; });
+                    return;
+                }
+                const tooBig = function() {
                     name.style.flexShrink = '0';
                     const items = row.children;
                     let need = 0, n = 0;
@@ -12120,7 +12139,7 @@
         const EC_DOCK_MIN_BTN = 150;    // a card is never narrower than this (scoreboard cards, 2026-11)
         const EC_DOCK_MAX_BTN = 210;    // nor wider than this (the panel stops growing once all fit on one line)
         const EC_DOCK_FULL_MIN_BTN = 120; // dragged all the way: every button on one line if each still gets this much
-        const EC_DOCK_RIGHT_ROOM = 76;  // room kept on the right for the mic button
+        const EC_DOCK_RIGHT_ROOM = 12;  // right margin, same as the left (the mic button is not shown on a computer since 2026-11)
         const EC_DOCK_KEY = 'ec_dock_w';
         const ecDockMq = window.matchMedia('(min-width: 1200px) and (min-height: 560px)');
         let ecDockPref = null;          // null = default, a number of px, or 'full'
