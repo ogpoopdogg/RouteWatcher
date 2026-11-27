@@ -6677,6 +6677,78 @@
         body.light-mode .ec-cz-tlabel small, body.light-mode .ec-cz-caret, body.light-mode .ec-cz-def { color: #5b6270 !important; }
         /* Fire on a 100+ km/h card */
         #driverBadges .ec-fire { font-size: 0.85em; margin-left: 3px; }
+
+        /* ===== "+ Add" an icon (Settings > Your view, 2026-11) ===== */
+        .ec-cz-add { border-style: dashed; color: var(--muted); }
+        .ec-cz-plus { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #f2b705; color: #0f1f3a; font-size: 30px; font-weight: 800; line-height: 1; }
+        .ec-add { position: fixed; inset: 0; z-index: 10060; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(5, 7, 14, 0.62); }
+        .ec-add[hidden] { display: none; }
+        .ec-add-card { width: 100%; max-width: 580px; max-height: min(88vh, 760px); display: flex; flex-direction: column; border-radius: 18px; background: var(--card, #12151f);
+            border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); color: var(--text); overflow: hidden; }
+        .ec-add-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
+        .ec-add-head h3 { margin: 0; font-size: 18px; font-weight: 800; }
+        .ec-add-x { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 16px; cursor: pointer; }
+        .ec-add-tabs { display: flex; gap: 6px; padding: 0 16px 10px; }
+        .ec-add-tabs button { flex: 1 1 0; min-height: 40px; padding: 0 6px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--card2, rgba(255,255,255,0.04));
+            color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
+        .ec-add-tabs button.on { background: #0f1f3a; border-color: #f2b705; color: #ffffff; }
+        .ec-add-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px 12px; }
+        .ec-add-for { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; }
+        .ec-add-msg { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.5); font-size: 13px; font-weight: 600; }
+        .ec-add-q, .ec-add-name { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--border);
+            background: var(--card2, rgba(255,255,255,0.05)); color: var(--text); font-size: 16px; }
+        .ec-add-q:focus, .ec-add-name:focus, .ec-add-tx:focus { outline: none; border-color: #f2b705; }
+        .ec-add-chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 8px; scrollbar-width: none; }
+        .ec-add-chips::-webkit-scrollbar { display: none; }
+        .ec-add-chip { flex: none; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--border); background: transparent; color: var(--text);
+            font-weight: 700; font-size: 12.5px; cursor: pointer; }
+        .ec-add-chip.on { background: #f2b705; border-color: #f2b705; color: #0f1f3a; }
+        .ec-add-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 4px; }
+        .ec-add-em { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 10px; border: 0; background: transparent; cursor: pointer; padding: 0; }
+        .ec-add-em img { width: 34px; height: 34px; }
+        @media (hover: hover) { .ec-add-em:hover { background: rgba(242, 183, 5, 0.18); } }
+        .ec-add-em:focus-visible { outline: 2px solid #f2b705; }
+        .ec-add-credit { font-size: 11px; color: var(--muted); margin: 10px 0 0; }
+        .ec-add-credit a { color: inherit; text-decoration: underline; }
+        .ec-add-lab { display: block; font-size: 13px; font-weight: 700; margin: 0 0 6px; }
+        .ec-add-typerow { display: flex; gap: 8px; align-items: stretch; }
+        .ec-add-tx { flex: 1 1 auto; min-width: 0; min-height: 64px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card2, rgba(255,255,255,0.05));
+            color: var(--text); font-size: 40px; text-align: center; }
+        .ec-add-go { flex: none; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 0; background: #f2b705; color: #0f1f3a; font-weight: 800; font-size: 14px; cursor: pointer; }
+        .ec-add-tip { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.4; }
+        .ec-add-file { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 12px; border: 2px dashed #f2b705; color: var(--text); font-weight: 800; font-size: 14px; cursor: pointer; }
+        .ec-add-file input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .ec-add-file:focus-within { outline: 2px solid #f2b705; outline-offset: 2px; }
+        .ec-add-uprow { display: flex; gap: 14px; align-items: center; margin-top: 12px; }
+        .ec-add-upimg { flex: none; width: 96px; height: 96px; border-radius: 50%; border: 3px solid #f2b705; object-fit: cover; }
+        .ec-add-upside { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+        .ec-add-upside .ec-add-lab { margin: 0; }
+        .ec-add-mine { flex: none; border-top: 1px solid var(--border); padding: 10px 16px 12px; max-height: 128px; overflow-y: auto; }
+        .ec-add-mine:empty { display: none; }
+        .ec-add-mine h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 800; color: var(--muted); }
+        .ec-add-minelist { display: flex; flex-wrap: wrap; gap: 6px; }
+        .ec-add-mi { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 4px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; font-weight: 700; max-width: 100%; }
+        .ec-add-mi > span { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ec-add-mi img { width: 28px; height: 28px; flex: none; }
+        .ec-add-del { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(239, 68, 68, 0.18); color: #f87171; font-size: 11px; cursor: pointer; }
+        @media (max-width: 600px) {
+            .ec-add { padding: 0; align-items: stretch; }
+            .ec-add-card { max-width: none; max-height: none; height: 100%; border-radius: 0; border: 0; }
+            .ec-add-tabs button { font-size: 12px; }
+        }
+        .ec-add-tabs i { font-style: normal; }
+        @media (max-width: 420px) {
+            .ec-add-tabs i { display: none; }
+        }
+        body.light-mode .ec-add-card { background: #ffffff !important; }
+        body.light-mode .ec-add-tabs button, body.light-mode .ec-add-q, body.light-mode .ec-add-name, body.light-mode .ec-add-tx { background: #f6f7f9 !important; }
+        body.light-mode .ec-add-tabs button.on { background: #0f1f3a !important; color: #ffffff !important; }
+        body.light-mode .ec-add-chip.on, body.light-mode .ec-add-go, body.light-mode .ec-cz-plus { background: #f2b705 !important; color: #0f1f3a !important; }
+        body.light-mode .ec-add-for, body.light-mode .ec-add-credit, body.light-mode .ec-add-tip, body.light-mode .ec-add-mine h4, body.light-mode .ec-cz-add { color: #5b6270 !important; }
+        body.light-mode .ec-add-del { color: #dc2626 !important; }
+        body.light-mode .ec-add-em { background: transparent !important; border: 0 !important; }
+        body.light-mode .ec-add-chip.on { border-color: #f2b705 !important; }
+        body.light-mode .ec-cz-add { border-style: dashed !important; }
     </style>
 </head>
 <body>
@@ -11769,17 +11841,76 @@
         //   trailMin: 0 (off) / 2 / 10 / 30 minutes of trail behind moving vans
         const EC_CUSTOM_KEY = 'ec_custom';
         const EC_CUSTOM_DEFAULT = { icon: 'van', people: {}, size: 'normal', lines: true, zzz: true, fire: true, flames: true,
-            mapType: 'roadmap', mapStyle: 'auto', trailMin: 2 };
+            mapType: 'roadmap', mapStyle: 'auto', trailMin: 2, mine: [] };
         const EC_ICON_SIZES = { small: 0.8, normal: 1, big: 1.3 };
         const EC_MAP_TYPES = ['roadmap', 'satellite', 'hybrid', 'terrain'];
         const EC_MAP_STYLE_IDS = ['auto', 'standard', 'night', 'silver', 'retro', 'clean'];
         const EC_TRAIL_CHOICES = [0, 2, 10, 30];
         const EC_FAST_LINES_KMH = 80;          // speed lines from this speed
         const EC_ZZZ_AFTER_MS = 60 * 60 * 1000; // "zzz" on a van parked this long
+        // ===== MY ICONS (2026-11): icons each person adds with "+ Add" (Settings > Your view) =====
+        // Kept in that person's Your view (ecCustom.mine), so only they see them. Three kinds:
+        //   tw: a Twemoji picture from the emoji/ folder (v = the SVG file's text, copied in when added, so it
+        //       draws at once on any device and never needs the folder again)
+        //   tx: an emoji typed from the device's own keyboard (v = the emoji; drawn with that device's emoji font)
+        //   up: an uploaded picture, cut to a 96 px square (v = a small data: URL)
+        // All three draw upright in a round badge with a ring in the vehicle's colour.
+        const EC_MINE_MAX = 40;
+        const EC_MINE_SVG_MAX = 30000;   // characters; Twemoji files are 1-15 KB
+        const EC_MINE_UP_MAX = 60000;    // characters of data: URL (a 96 px WebP is usually 3-10 KB)
+        function ecMineItemOk(it) {
+            if (!it || typeof it !== 'object' || typeof it.id !== 'string' || typeof it.v !== 'string') return null;
+            const label = String(it.label || '').slice(0, 40) || 'My icon';
+            if (it.k === 'tw') {
+                // Only plain drawing (what Twemoji files use): no links, scripts, styles, pictures or event handlers
+                if (!/^tw:[0-9a-f-]{2,60}$/.test(it.id) || it.v.length > EC_MINE_SVG_MAX || !/^<svg[\s>]/.test(it.v) ||
+                    /href|<\s*(script|style|image|use|foreignObject|a)\b|\son[a-z]+\s*=|javascript:/i.test(it.v)) return null;
+            } else if (it.k === 'tx') {
+                if (!/^tx:[0-9a-f-]{2,80}$/.test(it.id) || !it.v || it.v.length > 16) return null;
+            } else if (it.k === 'up') {
+                if (!/^up:[a-z0-9]{4,24}$/.test(it.id) || it.v.length > EC_MINE_UP_MAX || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(it.v)) return null;
+            } else return null;
+            return { id: it.id, k: it.k, label: label, v: it.v };
+        }
+        function ecMineClean(list) {
+            const out = [], seen = new Set();
+            (Array.isArray(list) ? list : (list && typeof list === 'object' ? Object.values(list) : [])).forEach(it => {
+                const ok = ecMineItemOk(it);
+                if (ok && !seen.has(ok.id) && out.length < EC_MINE_MAX) { seen.add(ok.id); out.push(ok); }
+            });
+            return out;
+        }
+        function ecXmlEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+        function ecMineSvg(it, c, isLight) {
+            let inner;
+            if (it.k === 'tw') inner = it.v.replace(/^<svg\b/, '<svg x="-11.5" y="-11.5" width="23" height="23"');
+            else if (it.k === 'tx') inner = `<text x="0" y="0" dy="0.36em" text-anchor="middle" font-size="19" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Segoe UI Symbol',sans-serif">${ecXmlEsc(it.v)}</text>`;
+            else inner = `<clipPath id="ecMineClip"><circle r="14.2"/></clipPath><image href="${it.v}" x="-14.2" y="-14.2" width="28.4" height="28.4" preserveAspectRatio="xMidYMid slice" clip-path="url(#ecMineClip)"/>`;
+            return `<circle cx="1" cy="2.5" r="16.5" fill="#000000" fill-opacity="0.3"/>` +
+                `<circle r="15.8" fill="${isLight ? '#ffffff' : '#151a29'}" stroke="${c}" stroke-width="3"/>` + inner;
+        }
+        const ecMinePackCache = new Map(); // id -> { v, pack }
+        function ecMinePack(id) {
+            const list = (typeof ecCustom !== 'undefined' && ecCustom && ecCustom.mine) || [];
+            const it = list.find(x => x.id === id);
+            if (!it) return null;
+            const hit = ecMinePackCache.get(id);
+            if (hit && hit.v === it.v && hit.pack.label === it.label) return hit.pack;
+            const pack = { id: it.id, label: it.label, mode: 'up', len: 15, r: 20, mine: it.k, svg: (c, l) => ecMineSvg(it, c, l) };
+            ecMinePackCache.set(id, { v: it.v, pack: pack });
+            return pack;
+        }
+        // Emoji text -> Twemoji file name (same rule Twemoji uses: drop U+FE0F unless the emoji has a U+200D joiner)
+        function ecEmojiCode(text) {
+            let cps = Array.from(String(text)).map(ch => ch.codePointAt(0));
+            if (!cps.includes(0x200D)) cps = cps.filter(cp => cp !== 0xFE0F);
+            return cps.map(cp => cp.toString(16)).join('-');
+        }
         function ecCustomClean(v) {
             const c = Object.assign({}, EC_CUSTOM_DEFAULT);
             if (!v || typeof v !== 'object') return c;
-            const packIds = EC_ICON_PACKS.map(p => p.id);
+            c.mine = ecMineClean(v.mine);
+            const packIds = EC_ICON_PACKS.map(p => p.id).concat(c.mine.map(m => m.id));
             if (packIds.includes(v.icon)) c.icon = v.icon;
             c.people = {};
             if (v.people && typeof v.people === 'object') Object.keys(v.people).forEach(k => { if (packIds.includes(v.people[k])) c.people[k] = v.people[k]; });
@@ -11842,7 +11973,7 @@
                 modalDriverMarker.setIcon(getDriverIcon(getDriverDisplayName(activeModalDriverId, d), d.color || '#f7c948', d.heading, 'online', null, activeModalDriverId));
             }
         }
-        function ecIconPack(id) { return EC_ICON_PACKS.find(p => p.id === id) || EC_ICON_PACKS[0]; }
+        function ecIconPack(id) { return EC_ICON_PACKS.find(p => p.id === id) || ecMinePack(id) || EC_ICON_PACKS[0]; }
         // Who is clocked in on this van in the Time Clock (vehicle_claims/{id}.ek), or null
         function ecClaimEk(driverId) {
             const claim = driverId && ecInUse.claims && ecInUse.claims[driverId];
@@ -11907,8 +12038,257 @@
                 html += `<button type="button" class="ec-cz-ico${now === p.id ? ' on' : ''}" data-cz="${key}" data-ek="${ecEsc(ek || '')}" data-v="${p.id}" title="${ecEsc(p.label)}">` +
                     `<img src="${ecCzIconUrl(p.id)}" alt="" width="44" height="44"><span>${ecEsc(p.label)}</span></button>`;
             });
+            (ecCustom.mine || []).forEach(m => { // My icons (added with "+ Add")
+                html += `<button type="button" class="ec-cz-ico ec-cz-mine${now === m.id ? ' on' : ''}" data-cz="${key}" data-ek="${ecEsc(ek || '')}" data-v="${ecEsc(m.id)}" title="${ecEsc(m.label)}">` +
+                    `<img src="${ecCzIconUrl(m.id)}" alt="" width="44" height="44"><span>${ecEsc(m.label)}</span></button>`;
+            });
+            html += `<button type="button" class="ec-cz-ico ec-cz-add" data-cz="add" data-for="${key}" data-ek="${ecEsc(ek || '')}" title="Add an emoji or your own picture">` +
+                `<span class="ec-cz-plus" aria-hidden="true">+</span><span>Add</span></button>`;
             return html + '</div>';
         }
+        // ===== "+ Add" an icon: search the emoji library, type any emoji, or upload a picture =====
+        // Opened from the "+ Add" tile at the end of the Van icon grid or a person's grid; the new icon is picked
+        // right away for that spot. Emoji pictures: Twemoji (CC BY 4.0, credit in the panel + emoji/CREDITS.md).
+        const ecAdd = { open: false, tab: 'search', key: 'icon', ek: '', q: '', group: 0, idx: null, idxLoading: null, up: null, busy: false, msg: '' };
+        function ecEmojiIndex() {
+            if (ecAdd.idx) return Promise.resolve(ecAdd.idx);
+            if (!ecAdd.idxLoading) {
+                ecAdd.idxLoading = fetch('emoji/index.json').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                    .then(d => {
+                        ecAdd.idx = { groups: d.groups, list: d.e.map((e, i) => ({ tw: e[0], label: e[1], tags: e[2], group: e[3], order: i, lab: e[1].toLowerCase(), tag: (e[2] || '').toLowerCase() })) };
+                        ecAdd.idx.byCode = new Map(ecAdd.idx.list.map(e => [e.tw, e]));
+                        return ecAdd.idx;
+                    })
+                    .catch(err => { ecAdd.idxLoading = null; throw err; });
+            }
+            return ecAdd.idxLoading;
+        }
+        function ecEmojiSearch(q) {
+            const idx = ecAdd.idx;
+            if (!idx) return [];
+            q = q.trim().toLowerCase();
+            if (!q) return idx.list.filter(e => e.group === ecAdd.group);
+            // An emoji typed or pasted into the search box: show that one
+            if (/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(q)) {
+                const hit = idx.byCode.get(ecEmojiCode(q));
+                return hit ? [hit] : [];
+            }
+            const words = q.split(/\s+/).filter(Boolean);
+            const out = [];
+            idx.list.forEach(e => {
+                let score = 0;
+                for (const w of words) {
+                    const inLabel = (' ' + e.lab).indexOf(' ' + w) >= 0;
+                    const inTag = (' ' + e.tag).indexOf(' ' + w) >= 0;
+                    if (!inLabel && !inTag && e.lab.indexOf(w) < 0) return;
+                    score += inLabel ? 3 : (inTag ? 2 : 1);
+                }
+                if (e.lab === q) score += 10; else if (e.lab.startsWith(q)) score += 4;
+                out.push([score, e]);
+            });
+            out.sort((a, b) => b[0] - a[0] || a[1].order - b[1].order);
+            return out.slice(0, 160).map(x => x[1]);
+        }
+        function ecAddEl() {
+            let el = document.getElementById('ecAddIcon');
+            if (el) return el;
+            el = document.createElement('div');
+            el.id = 'ecAddIcon';
+            el.className = 'ec-add';
+            el.hidden = true;
+            el.setAttribute('role', 'dialog');
+            el.setAttribute('aria-modal', 'true');
+            el.setAttribute('aria-labelledby', 'ecAddTitle');
+            el.innerHTML = `<div class="ec-add-card">` +
+                `<div class="ec-add-head"><h3 id="ecAddTitle">Add an icon</h3><button type="button" class="ec-add-x" data-add="close" aria-label="Close">✕</button></div>` +
+                `<div class="ec-add-tabs" role="tablist">` +
+                    `<button type="button" role="tab" data-add="tab" data-v="search"><i>🔎 </i>Search emoji</button>` +
+                    `<button type="button" role="tab" data-add="tab" data-v="type"><i>⌨️ </i>Type emoji</button>` +
+                    `<button type="button" role="tab" data-add="tab" data-v="upload"><i>🖼️ </i>Upload picture</button></div>` +
+                `<div class="ec-add-body" id="ecAddBody"></div>` +
+                `<div class="ec-add-mine" id="ecAddMine"></div></div>`;
+            (document.getElementById('settingsModal') || document.body).appendChild(el);
+            el.addEventListener('click', ecAddClick);
+            el.addEventListener('input', ecAddInput);
+            el.addEventListener('change', ecAddChange);
+            el.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'ecAddTx') { e.preventDefault(); ecAddTyped(); } });
+            return el;
+        }
+        function ecAddOpen(key, ek) {
+            ecAdd.key = key === 'person' ? 'person' : 'icon';
+            ecAdd.ek = ek || '';
+            ecAdd.msg = '';
+            ecAdd.up = null;
+            ecAdd.open = true;
+            const el = ecAddEl();
+            el.hidden = false;
+            ecAddRender();
+            const first = el.querySelector(ecAdd.tab === 'search' ? '#ecAddQ' : '.ec-add-tabs button[aria-selected="true"]');
+            if (first && !window.matchMedia('(pointer: coarse)').matches) first.focus();
+        }
+        function ecAddClose() {
+            ecAdd.open = false;
+            const el = document.getElementById('ecAddIcon');
+            if (el) el.hidden = true;
+        }
+        function ecAddWho() {
+            if (ecAdd.key !== 'person') return 'your van icon';
+            const p = (ecCz.people || []).find(x => x.ek === ecAdd.ek);
+            return p ? p.name : 'this person';
+        }
+        function ecAddRender() {
+            const el = ecAddEl();
+            el.querySelectorAll('.ec-add-tabs button').forEach(b => {
+                const on = b.dataset.v === ecAdd.tab;
+                b.classList.toggle('on', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            const body = document.getElementById('ecAddBody');
+            const msg = ecAdd.msg ? `<div class="ec-add-msg" role="status">${ecEsc(ecAdd.msg)}</div>` : '';
+            const forWho = `<p class="ec-add-for">The one you add is used for <b>${ecEsc(ecAddWho())}</b>.</p>`;
+            if (ecAdd.tab === 'search') {
+                const groups = ecAdd.idx ? ecAdd.idx.groups.map((g, i) => g ? `<button type="button" class="ec-add-chip${!ecAdd.q.trim() && ecAdd.group === i ? ' on' : ''}" data-add="group" data-v="${i}">${ecEsc(g)}</button>` : '').join('') : '';
+                body.innerHTML = forWho + msg +
+                    `<input type="search" id="ecAddQ" class="ec-add-q" placeholder="Search: taco, crown, clown, snail…" autocomplete="off" enterkeyhint="search" aria-label="Search emoji" value="${ecEsc(ecAdd.q)}">` +
+                    `<div class="ec-add-chips">${groups}</div><div class="ec-add-grid" id="ecAddGrid"></div>` +
+                    `<p class="ec-add-credit">Emoji pictures: <a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener">Twemoji</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>`;
+                ecAddRenderGrid();
+                if (!ecAdd.idx) ecEmojiIndex().then(() => { if (ecAdd.open && ecAdd.tab === 'search') ecAddRender(); })
+                    .catch(() => { const g = document.getElementById('ecAddGrid'); if (g) g.innerHTML = '<div class="ec-cz-hint">Could not load the emoji list. Check the connection and try again.</div>'; });
+            } else if (ecAdd.tab === 'type') {
+                body.innerHTML = forWho + msg +
+                    `<label class="ec-add-lab" for="ecAddTx">Tap the box, then pick an emoji from your keyboard</label>` +
+                    `<div class="ec-add-typerow"><input type="text" id="ecAddTx" class="ec-add-tx" maxlength="16" autocomplete="off" placeholder="🙂" aria-label="Emoji">` +
+                    `<button type="button" class="ec-add-go" data-add="typed">Add</button></div>` +
+                    `<p class="ec-add-tip">Computer: Windows key + . (period) on Windows, or Control + Command + Space on a Mac, opens the emoji keyboard. ` +
+                    `If the emoji is in our library it shows the same on every device; if not, it uses each device's own emoji look.</p>`;
+            } else {
+                const up = ecAdd.up;
+                body.innerHTML = forWho + msg +
+                    `<label class="ec-add-file"><input type="file" id="ecAddFile" accept="image/*">${up ? 'Choose a different picture' : 'Choose a picture'}</label>` +
+                    (up ? `<div class="ec-add-uprow"><img class="ec-add-upimg" src="${up.v}" alt="Preview" width="96" height="96">` +
+                        `<div class="ec-add-upside"><label class="ec-add-lab" for="ecAddName">Name</label><input type="text" id="ecAddName" class="ec-add-name" maxlength="40" value="${ecEsc(up.label)}" autocomplete="off">` +
+                        `<button type="button" class="ec-add-go" data-add="upload">Add this picture</button></div></div>` : '') +
+                    `<p class="ec-add-tip">The middle of the picture is cut to a circle and made small, so it saves fast. Only you see it.</p>`;
+            }
+            const mine = ecCustom.mine || [];
+            document.getElementById('ecAddMine').innerHTML = !mine.length ? '' :
+                `<h4>My icons (${mine.length}/${EC_MINE_MAX})</h4><div class="ec-add-minelist">` + mine.map(m =>
+                    `<span class="ec-add-mi"><img src="${ecCzIconUrl(m.id)}" alt="" width="34" height="34"><span>${ecEsc(m.label)}</span>` +
+                    `<button type="button" class="ec-add-del" data-add="del" data-v="${ecEsc(m.id)}" aria-label="Remove ${ecEsc(m.label)}" title="Remove">✕</button></span>`).join('') + '</div>';
+        }
+        function ecAddRenderGrid() {
+            const grid = document.getElementById('ecAddGrid');
+            if (!grid) return;
+            if (!ecAdd.idx) { grid.innerHTML = '<div class="ec-cz-hint">Loading emoji…</div>'; return; }
+            const list = ecEmojiSearch(ecAdd.q);
+            grid.innerHTML = !list.length ? `<div class="ec-cz-hint">No emoji found for “${ecEsc(ecAdd.q)}”. Try another word.</div>` :
+                list.map(e => `<button type="button" class="ec-add-em" data-add="emoji" data-v="${e.tw}" title="${ecEsc(e.label)}" aria-label="${ecEsc(e.label)}"><img src="emoji/${e.tw}.svg" alt="" width="34" height="34" loading="lazy" decoding="async"></button>`).join('');
+            grid.scrollTop = 0;
+        }
+        // Put a new icon in My icons and pick it for the spot "+ Add" was tapped in
+        function ecAddItem(it) {
+            const ok = ecMineItemOk(it);
+            if (!ok) { ecAdd.msg = 'That one could not be added.'; ecAddRender(); return; }
+            const mine = (ecCustom.mine || []).filter(m => m.id !== ok.id);
+            if (mine.length >= EC_MINE_MAX) { ecAdd.msg = `You have ${EC_MINE_MAX} icons. Remove one below to add another.`; ecAddRender(); return; }
+            mine.push(ok);
+            ecCustom.mine = mine;
+            if (ecAdd.key === 'person' && ecAdd.ek) ecCustom.people = Object.assign({}, ecCustom.people, { [ecAdd.ek]: ok.id });
+            else ecCustom.icon = ok.id;
+            ecCustom = ecCustomClean(ecCustom);
+            ecCustomSave();
+            ecCustomApply();
+            ecCzRender();
+            ecAddClose();
+        }
+        function ecAddEmoji(tw) {
+            const e = ecAdd.idx && ecAdd.idx.byCode.get(tw);
+            if (!e || ecAdd.busy) return;
+            ecAdd.busy = true;
+            fetch('emoji/' + tw + '.svg').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+                .then(svg => ecAddItem({ id: 'tw:' + tw, k: 'tw', label: e.label.charAt(0).toUpperCase() + e.label.slice(1), v: svg.trim() }))
+                .catch(() => { ecAdd.msg = 'Could not load that emoji. Check the connection and try again.'; ecAddRender(); })
+                .then(() => { ecAdd.busy = false; });
+        }
+        function ecAddTyped() {
+            const input = document.getElementById('ecAddTx');
+            const raw = (input && input.value || '').trim();
+            let first = raw;
+            if (window.Intl && Intl.Segmenter) { const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(raw)[Symbol.iterator]().next(); first = seg.done ? '' : seg.value.segment; }
+            else first = Array.from(raw).slice(0, 1).join('');
+            if (!first || !/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(first)) { ecAdd.msg = 'Pick an emoji (like 🦄 or 🌮), not letters.'; ecAddRender(); return; }
+            const code = ecEmojiCode(first);
+            ecEmojiIndex().catch(() => null).then(idx => {
+                const hit = idx && idx.byCode.get(code);
+                if (hit) ecAddEmoji(hit.tw); // in our library: the same look on every device
+                else ecAddItem({ id: 'tx:' + code, k: 'tx', label: 'Emoji ' + first, v: first });
+            });
+        }
+        // Cut the middle of a picture to a 96 px square and keep it small
+        function ecAddPicture(file) {
+            if (!file || !/^image\//.test(file.type)) { ecAdd.msg = 'That file is not a picture.'; ecAddRender(); return; }
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = function() {
+                const S = 96, cv = document.createElement('canvas');
+                cv.width = cv.height = S;
+                const g = cv.getContext('2d');
+                const side = Math.min(img.naturalWidth, img.naturalHeight);
+                g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, S, S);
+                URL.revokeObjectURL(url);
+                let v = cv.toDataURL('image/webp', 0.85);
+                if (!/^data:image\/webp/.test(v)) v = cv.toDataURL('image/png');
+                if (v.length > EC_MINE_UP_MAX) v = cv.toDataURL('image/jpeg', 0.82);
+                const name = String(file.name || '').replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').trim().slice(0, 40) || 'My picture';
+                ecAdd.up = { v: v, label: name };
+                ecAdd.msg = '';
+                ecAddRender();
+            };
+            img.onerror = function() { URL.revokeObjectURL(url); ecAdd.msg = 'Could not open that picture. Try a JPG or PNG.'; ecAddRender(); };
+            img.src = url;
+        }
+        function ecAddClick(e) {
+            const el = document.getElementById('ecAddIcon');
+            if (e.target === el) { ecAddClose(); return; } // tap outside the card
+            const b = e.target.closest && e.target.closest('[data-add]');
+            if (!b) return;
+            const what = b.dataset.add, v = b.dataset.v;
+            if (what === 'close') ecAddClose();
+            else if (what === 'tab') { ecAdd.tab = v; ecAdd.msg = ''; ecAddRender(); const f = document.getElementById(v === 'search' ? 'ecAddQ' : (v === 'type' ? 'ecAddTx' : '')); if (f && !window.matchMedia('(pointer: coarse)').matches) f.focus(); }
+            else if (what === 'group') { ecAdd.group = Number(v); ecAdd.q = ''; ecAddRender(); }
+            else if (what === 'emoji') ecAddEmoji(v);
+            else if (what === 'typed') ecAddTyped();
+            else if (what === 'upload' && ecAdd.up) {
+                const n = document.getElementById('ecAddName');
+                ecAddItem({ id: 'up:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), k: 'up', label: (n && n.value.trim()) || ecAdd.up.label, v: ecAdd.up.v });
+            } else if (what === 'del') {
+                ecCustom.mine = (ecCustom.mine || []).filter(m => m.id !== v);
+                ecCustom = ecCustomClean(ecCustom); // anyone using it goes back to the default icon
+                ecCustomSave();
+                ecCustomApply();
+                ecCzRender();
+                ecAddRender();
+            }
+        }
+        let ecAddQTimer = null;
+        function ecAddInput(e) {
+            if (e.target && e.target.id === 'ecAddQ') {
+                ecAdd.q = e.target.value;
+                clearTimeout(ecAddQTimer);
+                ecAddQTimer = setTimeout(() => {
+                    ecAddRenderGrid();
+                    document.querySelectorAll('#ecAddIcon .ec-add-chip').forEach(c => c.classList.toggle('on', !ecAdd.q.trim() && Number(c.dataset.v) === ecAdd.group));
+                }, 120);
+            }
+        }
+        function ecAddChange(e) {
+            if (e.target && e.target.id === 'ecAddFile') ecAddPicture(e.target.files && e.target.files[0]);
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && ecAdd.open) { e.preventDefault(); e.stopPropagation(); ecAddClose(); }
+        }, true);
+
         const EC_MAP_STYLE_LABELS = { auto: 'Auto (light/dark)', standard: 'Standard', night: 'Night', silver: 'Silver', retro: 'Retro', clean: 'Clean (no shops)' };
         const EC_MAP_TYPE_LABELS = { roadmap: 'Map', satellite: 'Satellite', hybrid: 'Satellite + labels', terrain: 'Terrain' };
         function ecCzRender() {
@@ -11948,6 +12328,7 @@
             const b = e.target.closest && e.target.closest('#ecCzBox [data-cz]');
             if (!b || b.tagName === 'INPUT') return;
             const key = b.dataset.cz, v = b.dataset.v;
+            if (key === 'add') { ecAddOpen(b.dataset.for, b.dataset.ek); return; }
             if (key === 'person-open') { ecCz.openEk = ecCz.openEk === b.dataset.ek ? null : b.dataset.ek; ecCzRender(); return; }
             if (key === 'person') {
                 const people = Object.assign({}, ecCustom.people);
@@ -14889,6 +15270,7 @@
         }
 
         function closeSettings() {
+            if (typeof ecAddClose === 'function') ecAddClose();
             document.getElementById('settingsModal').style.display = 'none';
             settingsOpen = false;
             const gearBtn = document.getElementById('settingsGearBtn');
