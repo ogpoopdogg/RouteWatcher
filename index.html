@@ -11455,6 +11455,7 @@
         // Trail length: this person's choice in Your view (0 = no trail); 2 minutes unless changed
         function ecTrailMs() { return (ecCustom.trailMin || 0) * 60 * 1000; }
         const EC_TRAIL_PIECES = 4;
+        const EC_FLAME_TRAIL = ['#b91c1c', '#ef4444', '#f97316', '#facc15']; // oldest piece to newest
         const ecTrails = {}; // driverId -> { lines: [Polyline], color }
         function ecClearTrail(id) {
             const t = ecTrails[id];
@@ -11463,7 +11464,11 @@
         }
         function ecUpdateTrail(id, drv, color) {
             const marker = driverMarkers[id];
-            const trailMs = ecTrailMs();
+            // Flame trail: at EC_FAST_KMH or more the trail burns (red tail to yellow head) and shows at least a minute,
+            // even with the trail turned off
+            const liveKmh = ecLiveSpeed(drv);
+            const flaming = !!(ecCustom.flames && liveKmh !== null && liveKmh >= EC_FAST_KMH);
+            const trailMs = flaming ? Math.max(ecTrailMs(), 60 * 1000) : ecTrailMs();
             if (!marker || !trailMs || ecUseStateFor(id, drv).use !== 'online') { ecClearTrail(id); return; }
             const now = ecServerNow();
             const target = marker._target;
@@ -11475,11 +11480,16 @@
             if (cur) pts.push({ lat: cur.lat(), lng: cur.lng() });
             if (pts.length < 2) { ecClearTrail(id); return; }
             let t = ecTrails[id];
-            if (t && t.color !== color) { ecClearTrail(id); t = null; }
+            const look = flaming ? 'flame' : color;
+            if (t && t.color !== look) { ecClearTrail(id); t = null; }
             if (!t) {
-                t = ecTrails[id] = { color: color, lines: [] };
+                t = ecTrails[id] = { color: look, lines: [] };
                 for (let i = 0; i < EC_TRAIL_PIECES; i++) {
-                    t.lines.push(new google.maps.Polyline({
+                    t.lines.push(new google.maps.Polyline(flaming ? {
+                        map: map, clickable: false, zIndex: 1,
+                        strokeColor: EC_FLAME_TRAIL[i], strokeWeight: 4 + i * 1.5, // thin dark-red tail, thick yellow head
+                        strokeOpacity: 0.45 + 0.5 * (i + 1) / EC_TRAIL_PIECES
+                    } : {
                         map: map, clickable: false, zIndex: 1,
                         strokeColor: color, strokeWeight: 4,
                         strokeOpacity: 0.15 + 0.6 * (i + 1) / EC_TRAIL_PIECES // tail faint, head strong
@@ -11758,7 +11768,7 @@
         //   mapType: roadmap / satellite / hybrid / terrain    mapStyle: auto / standard / night / silver / retro / clean
         //   trailMin: 0 (off) / 2 / 10 / 30 minutes of trail behind moving vans
         const EC_CUSTOM_KEY = 'ec_custom';
-        const EC_CUSTOM_DEFAULT = { icon: 'van', people: {}, size: 'normal', lines: true, zzz: true, fire: true,
+        const EC_CUSTOM_DEFAULT = { icon: 'van', people: {}, size: 'normal', lines: true, zzz: true, fire: true, flames: true,
             mapType: 'roadmap', mapStyle: 'auto', trailMin: 2 };
         const EC_ICON_SIZES = { small: 0.8, normal: 1, big: 1.3 };
         const EC_MAP_TYPES = ['roadmap', 'satellite', 'hybrid', 'terrain'];
@@ -11774,7 +11784,7 @@
             c.people = {};
             if (v.people && typeof v.people === 'object') Object.keys(v.people).forEach(k => { if (packIds.includes(v.people[k])) c.people[k] = v.people[k]; });
             if (EC_ICON_SIZES[v.size]) c.size = v.size;
-            ['lines', 'zzz', 'fire'].forEach(k => { if (typeof v[k] === 'boolean') c[k] = v[k]; });
+            ['lines', 'zzz', 'fire', 'flames'].forEach(k => { if (typeof v[k] === 'boolean') c[k] = v[k]; });
             if (EC_MAP_TYPES.includes(v.mapType)) c.mapType = v.mapType;
             if (EC_MAP_STYLE_IDS.includes(v.mapStyle)) c.mapStyle = v.mapStyle;
             if (EC_TRAIL_CHOICES.includes(v.trailMin)) c.trailMin = v.trailMin;
@@ -11847,14 +11857,16 @@
             return {
                 pack: pack,
                 scale: EC_ICON_SIZES[ecCustom.size] || 1,
-                lines: !!(ecCustom.lines && use === 'online' && speed !== null && speed !== undefined && Number(speed) >= EC_FAST_LINES_KMH),
+                flames: !!(ecCustom.flames && use === 'online' && speed !== null && speed !== undefined && Number(speed) >= EC_FAST_KMH),
+                lines: !!(ecCustom.lines && use === 'online' && speed !== null && speed !== undefined && Number(speed) >= EC_FAST_LINES_KMH &&
+                    !(ecCustom.flames && Number(speed) >= EC_FAST_KMH)), // flames take the place of the lines at 100+
                 zzz: !!(ecCustom.zzz && use === 'parked' && at && ecServerNow() - at >= EC_ZZZ_AFTER_MS)
             };
         }
         // Part of each marker's redraw key, so a change of icon, size or extra redraws it
         function ecIconKeyPart(driverId, use, speed) {
             const l = ecIconLook(driverId, use, speed);
-            return l.pack.id + '|' + l.scale + '|' + (l.lines ? 1 : 0) + '|' + (l.zzz ? 1 : 0);
+            return l.pack.id + '|' + l.scale + '|' + (l.lines ? 1 : 0) + '|' + (l.zzz ? 1 : 0) + '|' + (l.flames ? 1 : 0);
         }
 
         // ===== SETTINGS: Your view tab (everyone) + Vehicles tab (admins) =====
@@ -11925,7 +11937,8 @@
                 `<section class="ec-cz-sec"><h3>Fun extras</h3>` +
                     toggle('lines', 'Speed lines', 'Behind a van going ' + EC_FAST_LINES_KMH + ' km/h or more') +
                     toggle('zzz', 'Zzz', 'Over a van parked for an hour or more') +
-                    toggle('fire', 'Fire', '🔥 on the card at ' + EC_FAST_KMH + ' km/h or more') + `</section>` +
+                    toggle('fire', 'Fire', '🔥 on the card at ' + EC_FAST_KMH + ' km/h or more') +
+                    toggle('flames', 'Flame trail', 'Flames behind a van going ' + EC_FAST_KMH + ' km/h or more') + `</section>` +
                 `<section class="ec-cz-sec"><h3>Map type</h3>${ecCzSeg('mapType', EC_MAP_TYPES.map(t => [t, EC_MAP_TYPE_LABELS[t]]), c.mapType)}</section>` +
                 `<section class="ec-cz-sec"><h3>Map style</h3><p>Satellite shows photos, so the style mostly changes the plain map.</p>` +
                     '<div class="ec-cz-styles">' + EC_MAP_STYLE_IDS.map(id => `<button type="button" class="ec-cz-style ec-cz-style-${id}${c.mapStyle === id ? ' on' : ''}" data-cz="mapStyle" data-v="${id}"><i aria-hidden="true"></i><span>${EC_MAP_STYLE_LABELS[id]}</span></button>`).join('') + '</div></section>' +
@@ -11959,6 +11972,16 @@
                 : `M-6 ${y} V${y + 8} M0 ${y + 1} V${y + 11} M6 ${y} V${y + 8}`;
             return `<path d="${d}" stroke="${col}" stroke-opacity="0.6" stroke-width="2.2" stroke-linecap="round"/>`;
         }
+        // Flames out the back of a van going EC_FAST_KMH or more (drawn pointing down = behind a nose-up icon;
+        // side = turned to point left, behind an icon drawn facing right). They flicker where the browser animates them.
+        function ecFlamesSvg(len, side) {
+            const tongue = (sc, fill) => `<path transform="scale(${sc})" d="M-8 0 C-9 8 -5 12 -6.5 18 C-3 15.5 -2 20 0 27 C2 20 3 15.5 6.5 18 C5 12 9 8 8 0 Z" fill="${fill}"/>`;
+            return `<g transform="${side ? 'rotate(90) ' : ''}translate(0 ${len - 4}) scale(0.8)"><g>` +
+                `<animateTransform attributeName="transform" type="scale" values="1 1;1.1 0.86;0.92 1.12;1 1" dur="0.45s" repeatCount="indefinite"/>` +
+                tongue(1.05, '#dc2626') + tongue(0.78, '#f97316') + tongue(0.5, '#fde047') +
+                `<circle cx="-7" cy="25" r="1.4" fill="#f97316"/><circle cx="6" cy="29" r="1.1" fill="#facc15"/><circle cx="1" cy="33" r="0.9" fill="#ef4444"/>` +
+                `</g></g>`;
+        }
         // "zzz" over a van that has been parked for a long time
         function ecZzzSvg(x, y) {
             const t = (dx, dy, size) => `<text x="${x + dx}" y="${y + dy}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="900" fill="#60a5fa" stroke="#ffffff" stroke-width="2.4" paint-order="stroke">z</text>`;
@@ -11981,7 +12004,7 @@
             const look = ecIconLook(driverId, use, speed);
             const pack = look.pack;
             const scale = look.scale;
-            const R = Math.max(21, pack.r, look.lines ? pack.len + 14 : 0) * scale; // room the icon needs at any angle
+            const R = Math.max(21, pack.r, look.lines ? pack.len + 14 : 0, look.flames ? pack.len + 24 : 0) * scale; // room the icon needs at any angle
             const width = Math.max(50, Math.ceil(2 * R + (look.zzz ? 36 : 8)), speedW + 4, Math.min(220, rawName.length * 7 + 16)); // wide enough that long names (and the speed tag) are not clipped
             const half = width / 2;
             const cy = Math.round(24 + R); // the van's centre (= the GPS spot); room for the icon at any angle below the name (45 for the normal van)
@@ -11993,8 +12016,10 @@
             const mode = pack.mode || 'turn';
             const west = Number(turn) > 180;
             const iconTf = mode === 'turn' ? `rotate(${turn}) scale(${scale})` : (mode === 'side' && west ? `scale(${-scale} ${scale})` : `scale(${scale})`);
-            const linesSvg = !look.lines ? '' : mode === 'turn' ? ecSpeedLinesSvg(pack.len, isLight, false) :
-                (mode === 'side' ? ecSpeedLinesSvg(pack.len, isLight, true) : `<g transform="scale(${west ? -1 : 1} 1)">${ecSpeedLinesSvg(pack.len, isLight, true)}</g>`);
+            const behind = (draw) => mode === 'turn' ? draw(false) :
+                (mode === 'side' ? draw(true) : `<g transform="scale(${west ? -1 : 1} 1)">${draw(true)}</g>`);
+            const linesSvg = (look.lines ? behind(side => ecSpeedLinesSvg(pack.len, isLight, side)) : '') +
+                (look.flames ? behind(side => ecFlamesSvg(pack.len, side)) : '');
             const fast = speedText && Number(speed) >= EC_FAST_KMH;
             const speedTag = !speedText ? '' :
                 `<g transform="translate(${half} ${Math.round(cy + R + 9)})"><rect x="${-speedW / 2}" y="-9" width="${speedW}" height="18" rx="9" fill="${fast ? '#dc2626' : (isLight ? '#111827' : '#ffffff')}"/>` +
