@@ -6152,6 +6152,7 @@
            Light mode turns every text colour black with !important (body.light-mode *), so colours here use it too.
            ===================================================================== */
         .ec-sb-foot { display: none; }
+        .ec-gps-dot { display: none; }
         /* --- header (every screen size): dark blue with a gold line --- */
         #app > header,
         body:not(.light-mode) #app > header,
@@ -6311,7 +6312,7 @@
             /* name (and P / alarm) on the first line; the big number on the second */
             #driverBadges .driver-badge .badge-row {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) auto auto;
+                grid-template-columns: minmax(0, 1fr) auto auto auto;
                 align-items: center;
                 column-gap: calc(6px * var(--ec-fs, 1));
                 row-gap: 2px;
@@ -6327,6 +6328,22 @@
             }
             #driverBadges .driver-badge .alarm-badge { grid-row: 1; grid-column: 2; }
             #driverBadges .ec-parked { grid-row: 1; grid-column: 3; margin-left: 0; }
+            /* GPS status dot, top right: green Online, yellow Standby, red Offline (Justin, 2026-11) */
+            #driverBadges .ec-gps-dot {
+                display: block;
+                grid-row: 1;
+                grid-column: 4;
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                margin-left: 2px;
+                box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
+            }
+            body:not(.light-mode) #driverBadges .ec-gps-dot { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35); }
+            #driverBadges .ec-gps-dot.ec-gps-online { background: #22c55e; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 6px rgba(34, 197, 94, 0.8); }
+            body:not(.light-mode) #driverBadges .ec-gps-dot.ec-gps-online { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35), 0 0 6px rgba(34, 197, 94, 0.8); }
+            #driverBadges .ec-gps-dot.ec-gps-standby { background: #f5b800; }
+            #driverBadges .ec-gps-dot.ec-gps-offline { background: #ef4444; }
             #driverBadges .driver-badge .badge-row .last-update,
             body:not(.light-mode) #driverBadges .driver-badge .badge-row .last-update {
                 grid-row: 2;
@@ -6342,9 +6359,9 @@
             body.light-mode #driverBadges .driver-badge .badge-row .last-update { color: #141a26 !important; }
             #driverBadges .driver-badge .badge-row .last-update small { font-size: calc(12px * var(--ec-vfs, 1)) !important; font-weight: 700; letter-spacing: 0; margin-left: 1px; }
             body.light-mode #driverBadges .driver-badge .last-update small { color: #6b7280 !important; }
-            /* Standing still: the time ("25 min", "2 h", "Now") is 30% smaller than a moving van's speed (Justin,
+            /* Standing still: the time ("25 min", "2 h"; not "Now") is 30% smaller than a moving van's speed (Justin,
                2026-11). Same line height, so the card and its bottom line don't move. */
-            body #driverBadges .driver-badge .badge-row .last-update:not(.ec-speed) {
+            body #driverBadges .driver-badge .badge-row .last-update:not(.ec-speed):not(.ec-now) {
                 font-size: calc(26px * 0.7 * var(--ec-vfs, 1));
                 line-height: calc(26px * 1.1 * var(--ec-vfs, 1));
                 letter-spacing: -0.01em;
@@ -12113,6 +12130,8 @@
                 const nameText = getDriverNickname(id) || getDriverDisplayName(id, drv);
                 const use = ecUseState(id, drv, status);
                 const parkedHtml = use === 'parked' ? '<span class="ec-parked" aria-hidden="true">P</span>' : '';
+                // Computer cards only: tiny GPS status dot in the top right corner (green Online, yellow Standby, red Offline)
+                const gpsDotHtml = '<span class="ec-gps-dot ec-gps-' + status.status + '" aria-hidden="true"></span>';
                 // Moving: the speed takes the place of "Now" (red at EC_FAST_KMH and over)
                 const speed = use === 'online' ? ecLiveSpeed(drv) : null;
                 const timeHtml = speed !== null
@@ -12130,7 +12149,7 @@
               <div class="badge-row" title="${ecEsc(nameText)}: ${ecEsc(ecUseTitle({ status: status, use: use }))}${speed !== null ? ', ' + speed + ' km/h' : ''}, last update ${ecEsc(lastUpdateText)}">
                 <span class="name">${ecEsc(nameText)}</span>
                 ${alarmHtml}
-                ${parkedHtml}${timeHtml}
+                ${parkedHtml}${gpsDotHtml}${timeHtml}
                 ${lowBattHtml}
               </div>
               ${footHtml}
