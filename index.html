@@ -6607,6 +6607,76 @@
         @media (prefers-reduced-motion: reduce) {
             #app > header .badge, #app > header .badge::before { animation: none !important; }
         }
+
+        /* ===== SETTINGS: Your view + Vehicles tabs (2026-11) ===== */
+        .ec-set-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .ec-set-head h2 { margin: 0 !important; }
+        .ec-set-tabs { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--card2, rgba(255,255,255,0.06)); border: 1px solid var(--border); }
+        .ec-set-tab { border: 0; background: transparent; color: var(--muted); font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+        .ec-set-tab.active { background: #0f1f3a; color: #ffffff; box-shadow: 0 0 0 1px #f2b705 inset; }
+        body.light-mode .ec-set-tab { color: #4b5563 !important; background: transparent !important; }
+        body.light-mode .ec-set-tab.active { background: #0f1f3a !important; color: #ffffff !important; }
+        .settings-modal .ec-set-pane { display: none; }
+        .settings-modal[data-tab="view"] #ecSetView,
+        .settings-modal[data-tab="vehicles"] #ecSetVehicles { display: block; }
+        .settings-modal[data-tab="view"] #ecSettingsSave { display: none; }
+        /* Not an admin (Gil): only each vehicle's colour; no adding/removing, names, Device IDs, GPS refresh or PAJ */
+        .settings-modal:not(.ec-set-admin) .ec-admin-only { display: none !important; }
+        .settings-modal.ec-set-admin #ecColorOnlyNote { display: none; }
+        .settings-card h2.ec-set-sub { font-size: 18px; margin-bottom: 14px; }
+        .ec-cz-note { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+        .ec-cz-sec { padding: 14px 0; border-top: 1px solid var(--border); }
+        .ec-cz-sec:first-child { border-top: 0; padding-top: 4px; }
+        .ec-cz-sec h3 { font-size: 15px; font-weight: 800; margin: 0 0 4px; }
+        .ec-cz-sec p { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; }
+        .ec-cz-hint { font-size: 13px; color: var(--muted); padding: 6px 0; }
+        .ec-cz-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 8px; margin-top: 8px; }
+        .ec-cz-ico { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 7px; border-radius: 12px; border: 1.5px solid var(--border);
+            background: var(--card2, rgba(255,255,255,0.04)); color: var(--text); font-size: 11px; font-weight: 700; line-height: 1.15; cursor: pointer; text-align: center; min-height: 82px; }
+        .ec-cz-ico img { width: 44px; height: 44px; }
+        .ec-cz-ico.on { border-color: #f2b705; box-shadow: 0 0 0 2px rgba(242, 183, 5, 0.35); background: rgba(242, 183, 5, 0.1); }
+        @media (hover: hover) { .ec-cz-ico:hover { border-color: #f2b705; } }
+        .ec-cz-def { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 1.5px dashed var(--muted); font-size: 8.5px; color: var(--muted); }
+        .ec-cz-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+        .ec-cz-opt { flex: 1 1 auto; min-height: 38px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--card2, rgba(255,255,255,0.04));
+            color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer; }
+        .ec-cz-opt.on { background: #0f1f3a; border-color: #f2b705; color: #ffffff; }
+        .ec-cz-people { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 2px; }
+        .ec-cz-person { border: 1.5px solid var(--border); border-radius: 12px; background: var(--card2, rgba(255,255,255,0.03)); }
+        .ec-cz-person.open { border-color: #f2b705; }
+        .ec-cz-person .ec-cz-icons { padding: 0 8px 8px; margin-top: 0; }
+        .ec-cz-prow { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 0; background: transparent; color: var(--text); cursor: pointer; text-align: left; }
+        .ec-cz-prow img { width: 36px; height: 36px; flex: none; }
+        .ec-cz-pname { flex: 1 1 auto; min-width: 0; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ec-cz-pval { font-size: 12px; color: var(--muted); white-space: nowrap; }
+        .ec-cz-caret { color: var(--muted); font-size: 12px; }
+        .ec-cz-toggle { display: flex; align-items: center; gap: 12px; padding: 8px 0; cursor: pointer; }
+        .ec-cz-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .ec-cz-switch { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; background: #9aa1ad; transition: background 0.2s; }
+        .ec-cz-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .ec-cz-toggle input:checked + .ec-cz-switch { background: #22c55e; }
+        .ec-cz-toggle input:checked + .ec-cz-switch::after { transform: translateX(18px); }
+        .ec-cz-toggle input:focus-visible + .ec-cz-switch { outline: 2px solid #f2b705; outline-offset: 2px; }
+        .ec-cz-tlabel { display: flex; flex-direction: column; font-weight: 700; font-size: 14px; }
+        .ec-cz-tlabel small { font-weight: 500; font-size: 12px; color: var(--muted); }
+        .ec-cz-styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+        .ec-cz-style { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card2, rgba(255,255,255,0.04));
+            color: var(--text); font-size: 11.5px; font-weight: 700; cursor: pointer; text-align: center; }
+        .ec-cz-style i { display: block; height: 44px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.12); }
+        .ec-cz-style.on { border-color: #f2b705; box-shadow: 0 0 0 2px rgba(242, 183, 5, 0.35); }
+        .ec-cz-style-auto i { background: linear-gradient(135deg, #e8eaed 0 50%, #12141d 50% 100%); }
+        .ec-cz-style-standard i { background: linear-gradient(160deg, #e8eaed 0 40%, #ffffff 40% 46%, #aadaff 46% 70%, #c8e6c9 70%); }
+        .ec-cz-style-night i { background: linear-gradient(160deg, #12141d 0 40%, #2a2e3d 40% 46%, #0b1a2a 46% 70%, #142017 70%); }
+        .ec-cz-style-silver i { background: linear-gradient(160deg, #f2f3f5 0 40%, #ffffff 40% 46%, #cdd4de 46% 70%, #e6e8ec 70%); }
+        .ec-cz-style-retro i { background: linear-gradient(160deg, #ece0c8 0 40%, #f2c47a 40% 46%, #a9c8c5 46% 70%, #b9c98f 70%); }
+        .ec-cz-style-clean i { background: linear-gradient(160deg, #eef0f2 0 45%, #ffffff 45% 52%, #eef0f2 52%); }
+        body.light-mode .ec-cz-ico, body.light-mode .ec-cz-opt, body.light-mode .ec-cz-style, body.light-mode .ec-cz-person { background: #f6f7f9 !important; }
+        body.light-mode .ec-cz-ico.on { background: #fff6d6 !important; }
+        body.light-mode .ec-cz-opt.on { background: #0f1f3a !important; color: #ffffff !important; }
+        body.light-mode .ec-cz-sec p, body.light-mode .ec-cz-note, body.light-mode .ec-cz-hint, body.light-mode .ec-cz-pval,
+        body.light-mode .ec-cz-tlabel small, body.light-mode .ec-cz-caret, body.light-mode .ec-cz-def { color: #5b6270 !important; }
+        /* Fire on a 100+ km/h card */
+        #driverBadges .ec-fire { font-size: 0.85em; margin-left: 3px; }
     </style>
 </head>
 <body>
@@ -6901,21 +6971,33 @@
     <!-- Settings Modal -->
     <div class="settings-modal" id="settingsModal">
         <div class="settings-card">
-            <h2>Drivers &amp; PAJ GPS</h2>
+            <div class="ec-set-head">
+                <h2>Settings</h2>
+                <div class="ec-set-tabs" id="ecSetTabs" role="tablist">
+                    <button type="button" role="tab" class="ec-set-tab" data-tab="view" onclick="ecSetTab('view')">Your view</button>
+                    <button type="button" role="tab" class="ec-set-tab" data-tab="vehicles" onclick="ecSetTab('vehicles')">Vehicles</button>
+                </div>
+            </div>
+
+            <!-- Your view: each person's own look (only they see it; saves right away) -->
+            <div class="ec-set-pane" id="ecSetView">
+                <p class="ec-cz-note">Only you see these. Changes save right away.</p>
+                <div class="ec-cz" id="ecCzBox"></div>
+            </div>
+
+            <!-- Vehicles: admins only -->
+            <div class="ec-set-pane" id="ecSetVehicles">
+            <h2 class="ec-set-sub ec-admin-only">Drivers &amp; PAJ GPS</h2>
+            <p class="ec-cz-note" id="ecColorOnlyNote">Pick a colour for each vehicle. Everyone sees these colours.</p>
 
             <div id="driverSettingsList"></div>
-            <button onclick="addDriverRow()" class="ec-add-driver-btn">+ Add Driver</button>
+            <button onclick="addDriverRow()" class="ec-add-driver-btn ec-admin-only">+ Add Driver</button>
 
-            <button type="button" class="settings-collapsible-toggle" id="driverGroupsBtn" onclick="openGroupManager()" style="border-style:solid; border-color:var(--accent); color:var(--accent);">
-                Driver Groups
-                <span class="settings-collapsible-caret" style="color:var(--accent);">→</span>
-            </button>
-
-            <button type="button" class="settings-collapsible-toggle" id="pajSettingsToggle" onclick="toggleSettingsSection('pajSettingsSection', this)">
+            <button type="button" class="settings-collapsible-toggle ec-admin-only" id="pajSettingsToggle" onclick="toggleSettingsSection('pajSettingsSection', this)">
                 PAJ GPS Settings
                 <span class="settings-collapsible-caret">▾</span>
             </button>
-            <div class="settings-collapsible-content" id="pajSettingsSection" style="display:none;">
+            <div class="settings-collapsible-content ec-admin-only" id="pajSettingsSection" style="display:none;">
                 <div class="field">
                     <label>PAJ GPS login</label>
                     <div style="font-size:12px; color:var(--muted);">Stored on the server as Cloud Function secrets (PAJ_EMAIL / PAJ_PASSWORD). It is never sent to this page.</div>
@@ -6931,11 +7013,11 @@
                 </div>
             </div>
 
-            <button type="button" class="settings-collapsible-toggle" id="listDevicesToggle" onclick="toggleSettingsSection('listDevicesSection', this)">
+            <button type="button" class="settings-collapsible-toggle ec-admin-only" id="listDevicesToggle" onclick="toggleSettingsSection('listDevicesSection', this)">
                 List Devices
                 <span class="settings-collapsible-caret">▾</span>
             </button>
-            <div class="settings-collapsible-content" id="listDevicesSection" style="display:none;">
+            <div class="settings-collapsible-content ec-admin-only" id="listDevicesSection" style="display:none;">
                 <h3 style="font-size:14px; margin-bottom:10px;">Find Your Device IDs</h3>
                 <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">Click the button below to see all your PAJ GPS devices and their IDs.</p>
                 <button onclick="testPAJConnection()" class="ec-test-btn">
@@ -6946,8 +7028,10 @@
                 </div>
             </div>
 
+            </div><!-- /#ecSetVehicles -->
+
             <div class="settings-actions">
-                <button class="save-btn" onclick="saveSettings()">Save</button>
+                <button class="save-btn" id="ecSettingsSave" onclick="saveSettings()">Save</button>
                 <button class="close-btn" onclick="closeSettings()">✕ Close</button>
             </div>
         </div>
@@ -6967,26 +7051,6 @@
                 <button type="button" class="nick-remove" onclick="removeDriverNickname()">Remove</button>
                 <button type="button" class="nick-cancel" onclick="closeNicknameModal()">Cancel</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Driver Groups Drawer -->
-    <div class="group-drawer-overlay" id="groupDrawerOverlay" onclick="closeGroupManager()"></div>
-    <div class="group-drawer" id="groupDrawer">
-        <div class="drawer-header">
-            <h2>Driver Groups</h2>
-            <button class="drawer-close" onclick="closeGroupManager()">✕</button>
-        </div>
-
-        <div class="create-section">
-            <input type="text" id="newGroupName" placeholder="Group name">
-            <button onclick="createGroup()">Create</button>
-        </div>
-
-        <button class="show-all-btn" id="showAllBtn" onclick="showAllDrivers()">Show All Drivers</button>
-
-        <div class="group-list" id="groupList">
-            <div class="no-groups">No groups yet. Create one above.</div>
         </div>
     </div>
 
@@ -8003,16 +8067,63 @@
             ecFitBadgeText(document.getElementById('driverBadges')); // text can be a little wider in the other theme
             if (modalDriverMarker && activeModalDriverId && drivers[activeModalDriverId]) {
                 const themeDrv = drivers[activeModalDriverId];
-                modalDriverMarker.setIcon(getDriverIcon(getDriverDisplayName(activeModalDriverId, themeDrv), themeDrv.color || '#f7c948', themeDrv.heading));
+                modalDriverMarker.setIcon(getDriverIcon(getDriverDisplayName(activeModalDriverId, themeDrv), themeDrv.color || '#f7c948', themeDrv.heading, 'online', null, activeModalDriverId));
             }
         }
 
-        function updateMapStyles() {
+        // Map style (Your view in Settings). auto = follows light/dark like before; the rest stay the same in both.
+        const EC_MAP_STYLE_SILVER = [
+            { elementType: 'geometry', stylers: [{ color: '#f2f3f5' }] },
+            { elementType: 'labels.icon', stylers: [{ saturation: -100 }, { lightness: 20 }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#626875' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#f7f8fa' }] },
+            { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#e6e8ec' }] },
+            { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#dfe5df' }] },
+            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+            { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#fdfdfd' }] },
+            { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#d9dce2' }] },
+            { featureType: 'road.highway', elementType: 'labels.icon', stylers: [{ saturation: -100 }] },
+            { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#e3e5e9' }] },
+            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#cdd4de' }] },
+            { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8a93a3' }] }
+        ];
+        const EC_MAP_STYLE_RETRO = [
+            { elementType: 'geometry', stylers: [{ color: '#ece0c8' }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#5e4a33' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#f4ead6' }] },
+            { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#c4a77d' }] },
+            { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#e2d3b2' }] },
+            { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#dccaa5' }] },
+            { featureType: 'poi.park', elementType: 'geometry.fill', stylers: [{ color: '#b9c98f' }] },
+            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#f7efdc' }] },
+            { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#fbf3e1' }] },
+            { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#f2c47a' }] },
+            { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#d9a253' }] },
+            { featureType: 'transit.line', elementType: 'geometry', stylers: [{ color: '#cbb48d' }] },
+            { featureType: 'water', elementType: 'geometry.fill', stylers: [{ color: '#a9c8c5' }] },
+            { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6f8f8b' }] }
+        ];
+        const EC_MAP_HIDE_PLACES = [
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+            { featureType: 'transit', stylers: [{ visibility: 'off' }] }
+        ];
+        function ecMapStyleNow() {
             const isLight = document.body.classList.contains('light-mode');
-            const style = isLight ? [] : mapStyles;
-            if (map) map.setOptions({ styles: style });
-            if (driverModalMap) driverModalMap.setOptions({ styles: style });
-            if (historicalMapInstance) historicalMapInstance.setOptions({ styles: style });
+            const themeStyle = isLight ? [] : mapStyles;
+            switch (ecCustom.mapStyle) {
+                case 'standard': return [];
+                case 'night': return mapStyles;
+                case 'silver': return EC_MAP_STYLE_SILVER;
+                case 'retro': return EC_MAP_STYLE_RETRO;
+                case 'clean': return themeStyle.concat(EC_MAP_HIDE_PLACES); // shops and places hidden, so the vans stand out
+                default: return themeStyle;
+            }
+        }
+        function updateMapStyles() {
+            const opts = { styles: ecMapStyleNow(), mapTypeId: ecCustom.mapType };
+            if (map) map.setOptions(opts);
+            if (driverModalMap) driverModalMap.setOptions(opts);
+            if (historicalMapInstance) historicalMapInstance.setOptions(opts);
         }
 
         // ===== BUTTON PRESS RIPPLE (visual only; skips Google Maps controls and buttons with their own effect) =====
@@ -10005,7 +10116,7 @@
                 historicalMapInstance = new google.maps.Map(mapContainer, {
                     center: drv?.lastLocation ? { lat: drv.lastLocation.lat, lng: drv.lastLocation.lng } : { lat: 49.8425, lng: -99.9497 },
                     zoom: 13,
-                    styles: isLight ? [] : mapStyles,
+                    styles: ecMapStyleNow(), mapTypeId: ecCustom.mapType,
                     gestureHandling: 'greedy',
                     mapTypeControl: false,
                     keyboardShortcuts: false
@@ -11068,7 +11179,7 @@
             map = new google.maps.Map(document.getElementById('dispatch-map'), {
                 center: startView ? { lat: Number(startView.lat), lng: Number(startView.lng) } : { lat: 49.8425, lng: -99.9497 },
                 zoom: startView ? Number(startView.zoom) : 11,
-                styles: isLight ? [] : mapStyles,
+                styles: ecMapStyleNow(), mapTypeId: ecCustom.mapType,
                 gestureHandling: 'greedy',
                 mapTypeControl: false,
                 keyboardShortcuts: false,
@@ -11193,7 +11304,7 @@
                 // colour + blue P and no ring, not in use = full colour, no ring (no longer faded, 2026-11)
                 const use = ecUseStateFor(id, drv).use;
                 const speed = use === 'online' ? ecLiveSpeed(drv) : null; // tag under a moving van
-                const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading) + '|' + use + '|' + speed;
+                const iconKey = displayName + '|' + color + '|' + ecMarkerTextColor() + '|' + ecHeadingKey(drv.heading) + '|' + use + '|' + speed + '|' + ecIconKeyPart(id, use, speed);
 
                 let marker = driverMarkers[id];
                 let glideFrom = null; // where the van is drawn now, when it has to glide to a new fix
@@ -11206,7 +11317,7 @@
                         if (!glideFrom) marker.setPosition(pos);
                     }
                     if (marker._iconKey !== iconKey) {
-                        marker.setIcon(getDriverIcon(displayName, color, drv.heading, use, speed));
+                        marker.setIcon(getDriverIcon(displayName, color, drv.heading, use, speed, id));
                         marker.setZIndex(EC_MARKER_Z[use]);
                         marker._iconKey = iconKey;
                     }
@@ -11216,7 +11327,7 @@
                         position: pos,
                         map: map,
                         zIndex: EC_MARKER_Z[use], // vans being driven are drawn over parked and unused ones
-                        icon: getDriverIcon(displayName, color, drv.heading, use, speed)
+                        icon: getDriverIcon(displayName, color, drv.heading, use, speed, id)
                     });
                     marker._iconKey = iconKey;
                     marker._target = pos;
@@ -11341,7 +11452,8 @@
         // Online vans leave a short trail of where they drove in the last 2 minutes (points this page
         // has received since it was opened), fading out toward the tail. Main map only. Drawn as a few
         // pieces with rising opacity, because a single Google Maps line can't fade along its length.
-        const EC_TRAIL_MS = 2 * 60 * 1000;
+        // Trail length: this person's choice in Your view (0 = no trail); 2 minutes unless changed
+        function ecTrailMs() { return (ecCustom.trailMin || 0) * 60 * 1000; }
         const EC_TRAIL_PIECES = 4;
         const ecTrails = {}; // driverId -> { lines: [Polyline], color }
         function ecClearTrail(id) {
@@ -11351,12 +11463,13 @@
         }
         function ecUpdateTrail(id, drv, color) {
             const marker = driverMarkers[id];
-            if (!marker || ecUseStateFor(id, drv).use !== 'online') { ecClearTrail(id); return; }
+            const trailMs = ecTrailMs();
+            if (!marker || !trailMs || ecUseStateFor(id, drv).use !== 'online') { ecClearTrail(id); return; }
             const now = ecServerNow();
             const target = marker._target;
             const pts = (driverTracks[id] || []).filter(function(p) {
-                return now - p.timestamp < EC_TRAIL_MS && !(target && p.lat === target.lat && p.lng === target.lng);
-            }).slice(-16).map(function(p) { return { lat: p.lat, lng: p.lng }; });
+                return now - p.timestamp < trailMs && !(target && p.lat === target.lat && p.lng === target.lng);
+            }).slice(-Math.max(16, ecCustom.trailMin * 8)).map(function(p) { return { lat: p.lat, lng: p.lng }; });
             if (!pts.length) { ecClearTrail(id); return; }
             const cur = marker.getPosition();
             if (cur) pts.push({ lat: cur.lat(), lng: cur.lng() });
@@ -11405,10 +11518,339 @@
                 `<rect x="4.6" y="15.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/>`;
         }
 
+        // ===== VAN ICON PACK (Make it yours, 2026-11) =====
+        // Every icon is drawn top-down, nose up (north), centred on (0, 0), and turns with the GPS heading.
+        // len = how far it reaches behind the centre (speed lines start there); r = radius it needs at any angle.
+        const EC_ICON_SHADOW = (rx, ry) => `<ellipse cx="1" cy="2" rx="${rx}" ry="${ry}" fill="#000000" fill-opacity="0.35"/>`;
+        const EC_ICON_PACKS = [
+            { id: 'van', label: 'Cargo van', len: 17, r: 21, svg: (c, l) => ecCargoVanSvg(c, l) },
+            { id: 'pickup', label: 'Pickup truck', len: 18, r: 21, svg: (c, l) => {
+                const glass = l ? '#1f2937' : '#0b0d14';
+                return EC_ICON_SHADOW(10, 18.5) +
+                    `<rect x="-9.5" y="-18" width="19" height="36" rx="4.5" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
+                    `<path d="M-7.5 -10.5 Q0 -13 7.5 -10.5 L6.5 -14.6 Q0 -16.2 -6.5 -14.6 Z" fill="${glass}" fill-opacity="0.9"/>` +
+                    `<rect x="-7" y="-9.5" width="14" height="8" rx="2" fill="#ffffff" fill-opacity="0.25"/>` +
+                    `<path d="M-7 -0.6 H7" stroke="${glass}" stroke-opacity="0.8" stroke-width="1.6"/>` +
+                    `<rect x="-7.5" y="1.2" width="15" height="14.5" rx="1.5" fill="#000000" fill-opacity="0.3"/>` +
+                    `<path d="M-3.8 2.5 V14.5 M0 2.5 V14.5 M3.8 2.5 V14.5" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1"/>` +
+                    `<rect x="-12.2" y="-11.5" width="2.8" height="4" rx="1" fill="${c}" stroke="#ffffff" stroke-width="1"/>` +
+                    `<rect x="9.4" y="-11.5" width="2.8" height="4" rx="1" fill="${c}" stroke="#ffffff" stroke-width="1"/>` +
+                    `<rect x="-7.6" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/><rect x="4" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/>` +
+                    `<rect x="-7.6" y="16.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/><rect x="4.6" y="16.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/>`;
+            } },
+            { id: 'boxtruck', label: 'Box truck', len: 21, r: 24, svg: (c, l) => {
+                const glass = l ? '#1f2937' : '#0b0d14';
+                return EC_ICON_SHADOW(11.5, 22) +
+                    `<rect x="-9" y="-21.5" width="18" height="12" rx="4" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
+                    `<path d="M-7 -14.5 Q0 -16.5 7 -14.5 L6 -19 Q0 -20.3 -6 -19 Z" fill="${glass}" fill-opacity="0.9"/>` +
+                    `<rect x="-11" y="-10.5" width="22" height="32" rx="2" fill="#f3f4f6" stroke="${c}" stroke-width="2"/>` +
+                    `<rect x="-11" y="4" width="22" height="3.2" fill="${c}"/>` +
+                    `<path d="M-8 -6 H8 M-8 -2 H8" stroke="#000000" stroke-opacity="0.12" stroke-width="1"/>` +
+                    `<rect x="-11.6" y="-18" width="2.4" height="3.6" rx="1" fill="${c}" stroke="#ffffff" stroke-width="1"/><rect x="9.2" y="-18" width="2.4" height="3.6" rx="1" fill="${c}" stroke="#ffffff" stroke-width="1"/>` +
+                    `<rect x="-7" y="-21.1" width="3.4" height="1.5" rx="0.7" fill="#fff6c2"/><rect x="3.6" y="-21.1" width="3.4" height="1.5" rx="0.7" fill="#fff6c2"/>` +
+                    `<rect x="-9" y="20.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/><rect x="6" y="20.2" width="3" height="1.4" rx="0.7" fill="#ff4d4d"/>`;
+            } },
+            { id: 'sports', label: 'Sports car', len: 19, r: 21, svg: (c, l) => {
+                const glass = l ? '#1f2937' : '#0b0d14';
+                return EC_ICON_SHADOW(10.5, 19) +
+                    `<path d="M0 -19 C6 -19 9 -15 9.6 -8 L10 10 C10 16 7 18 0 18.5 C-7 18 -10 16 -10 10 L-9.6 -8 C-9 -15 -6 -19 0 -19 Z" fill="${c}" stroke="#ffffff" stroke-width="1.5"/>` +
+                    `<path d="M-7 -6 Q0 -9 7 -6 L5.5 -11.5 Q0 -13 -5.5 -11.5 Z" fill="${glass}" fill-opacity="0.92"/>` +
+                    `<rect x="-6" y="-5.5" width="12" height="9" rx="3" fill="${glass}" fill-opacity="0.55"/>` +
+                    `<path d="M-6.5 7 Q0 9 6.5 7 L6 4.5 Q0 5.8 -6 4.5 Z" fill="${glass}" fill-opacity="0.85"/>` +
+                    `<rect x="-3.2" y="-18.6" width="2.2" height="36.6" fill="#ffffff" fill-opacity="0.9"/><rect x="1" y="-18.6" width="2.2" height="36.6" fill="#ffffff" fill-opacity="0.9"/>` +
+                    `<rect x="-11.5" y="14.5" width="23" height="2.8" rx="1.2" fill="#111827"/>` +
+                    `<path d="M-8 -16.5 L-5 -17.8 M8 -16.5 L5 -17.8" stroke="#fff6c2" stroke-width="1.6" stroke-linecap="round"/>`;
+            } },
+            { id: 'bus', label: 'School bus', len: 23, r: 25, svg: (c, l) => {
+                const glass = l ? '#1f2937' : '#0b0d14';
+                let win = '';
+                for (let y = -11; y <= 15; y += 6.5) win += `<rect x="-8.4" y="${y}" width="2.2" height="4.2" rx="0.8" fill="${glass}" fill-opacity="0.85"/><rect x="6.2" y="${y}" width="2.2" height="4.2" rx="0.8" fill="${glass}" fill-opacity="0.85"/>`;
+                return EC_ICON_SHADOW(10.5, 24) +
+                    `<rect x="-9.5" y="-23" width="19" height="46" rx="3.5" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
+                    `<path d="M-7.5 -15.5 Q0 -17.5 7.5 -15.5 L6.8 -20.6 Q0 -21.8 -6.8 -20.6 Z" fill="${glass}" fill-opacity="0.9"/>` +
+                    `<rect x="-5" y="-12" width="10" height="33" rx="1.5" fill="#ffffff" fill-opacity="0.2"/>` +
+                    `<rect x="-3" y="-6" width="6" height="5" rx="1" fill="#000000" fill-opacity="0.18"/><rect x="-3" y="8" width="6" height="5" rx="1" fill="#000000" fill-opacity="0.18"/>` + win +
+                    `<circle cx="-7.4" cy="-21.6" r="1.1" fill="#ffb020"/><circle cx="7.4" cy="-21.6" r="1.1" fill="#ffb020"/>` +
+                    `<circle cx="-7.4" cy="21.6" r="1.1" fill="#ff4d4d"/><circle cx="7.4" cy="21.6" r="1.1" fill="#ff4d4d"/>`;
+            } },
+            { id: 'monster', label: 'Monster truck', len: 18, r: 24, svg: (c, l) => {
+                const glass = l ? '#1f2937' : '#0b0d14';
+                const wheel = (x, y) => `<rect x="${x}" y="${y}" width="7.5" height="12" rx="3" fill="#111111" stroke="#3a3a3a" stroke-width="0.8"/>` +
+                    `<path d="M${x + 0.8} ${y + 3} H${x + 6.7} M${x + 0.8} ${y + 6} H${x + 6.7} M${x + 0.8} ${y + 9} H${x + 6.7}" stroke="#555555" stroke-width="1"/>`;
+                return EC_ICON_SHADOW(15, 19) + wheel(-16, -18) + wheel(8.5, -18) + wheel(-16, 6) + wheel(8.5, 6) +
+                    `<rect x="-9" y="-16" width="18" height="32" rx="5" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
+                    `<path d="M-7 -8.5 Q0 -11 7 -8.5 L6 -12.8 Q0 -14.2 -6 -12.8 Z" fill="${glass}" fill-opacity="0.9"/>` +
+                    `<rect x="-6.5" y="-7.5" width="13" height="10" rx="2.5" fill="#ffffff" fill-opacity="0.22"/>` +
+                    `<path d="M-6.5 6 H6.5 M-6.5 9 H6.5" stroke="#111111" stroke-opacity="0.45" stroke-width="1.4"/>` +
+                    `<path d="M-4 -15.6 L-2.5 -18 M4 -15.6 L2.5 -18" stroke="#fff6c2" stroke-width="1.6" stroke-linecap="round"/>`;
+            } },
+            { id: 'rocket', label: 'Rocket', len: 22, r: 24, svg: (c) =>
+                `<path d="M-4.2 13.5 Q0 25 4.2 13.5 Z" fill="#ff8c1a"/><path d="M-2.2 13.5 Q0 20 2.2 13.5 Z" fill="#ffe066"/>` +
+                `<path d="M-5.6 4 L-12 16 L-5.6 12.6 Z M5.6 4 L12 16 L5.6 12.6 Z" fill="${c}" stroke="#ffffff" stroke-width="1.1"/>` +
+                `<path d="M0 -21.5 C6.5 -15 7 -6 6 13.5 L-6 13.5 C-7 -6 -6.5 -15 0 -21.5 Z" fill="#f8fafc" stroke="${c}" stroke-width="1.6"/>` +
+                `<path d="M0 -21.5 C4.4 -17.2 5.8 -12.5 6.1 -9 L-6.1 -9 C-5.8 -12.5 -4.4 -17.2 0 -21.5 Z" fill="${c}"/>` +
+                `<circle cx="0" cy="-1.5" r="3.4" fill="#7dd3fc" stroke="${c}" stroke-width="1.6"/>` +
+                `<path d="M0 6 V13" stroke="${c}" stroke-width="1.6"/>` },
+            { id: 'ufo', label: 'UFO', len: 15, r: 18, svg: (c) => {
+                let lights = '';
+                for (let i = 0; i < 8; i++) {
+                    const a = i * Math.PI / 4;
+                    lights += `<circle cx="${(12.6 * Math.cos(a)).toFixed(2)}" cy="${(12.6 * Math.sin(a)).toFixed(2)}" r="1.5" fill="${i % 2 ? '#fde047' : c}"/>`;
+                }
+                return `<ellipse cx="1.5" cy="2.5" rx="16" ry="15" fill="#000000" fill-opacity="0.3"/>` +
+                    `<circle cx="0" cy="0" r="15.5" fill="#cbd5e1" stroke="${c}" stroke-width="2"/>` +
+                    `<circle cx="0" cy="0" r="10.5" fill="#94a3b8"/>` + lights +
+                    `<circle cx="0" cy="0" r="6.8" fill="#a5f3fc" stroke="#ffffff" stroke-width="1.2"/>` +
+                    `<ellipse cx="-2" cy="-2.4" rx="2.4" ry="1.5" fill="#ffffff" fill-opacity="0.8"/>`;
+            } },
+            { id: 'duck', label: 'Rubber duck', len: 17, r: 19, svg: (c) =>
+                EC_ICON_SHADOW(10.5, 15) +
+                `<path d="M-3 15 L0 19.5 L3 15 Z" fill="#fcc419" stroke="${c}" stroke-width="1.2"/>` +
+                `<ellipse cx="0" cy="4" rx="10.5" ry="13" fill="#ffd43b" stroke="${c}" stroke-width="1.8"/>` +
+                `<path d="M-9 0 Q-6 9 -2 12 Q-7 10 -9 0 Z M9 0 Q6 9 2 12 Q7 10 9 0 Z" fill="#f59f00" fill-opacity="0.8"/>` +
+                `<path d="M-3.4 -15.2 Q0 -22.5 3.4 -15.2 Z" fill="#ff922b"/>` +
+                `<circle cx="0" cy="-10" r="7" fill="#ffd43b" stroke="${c}" stroke-width="1.5"/>` +
+                `<circle cx="-3" cy="-11.2" r="1.3" fill="#111111"/><circle cx="3" cy="-11.2" r="1.3" fill="#111111"/>` +
+                `<circle cx="-2.6" cy="-11.6" r="0.45" fill="#ffffff"/><circle cx="3.4" cy="-11.6" r="0.45" fill="#ffffff"/>` },
+            { id: 'pizza', label: 'Pizza slice', len: 20, r: 22, svg: (c) =>
+                EC_ICON_SHADOW(12, 18) +
+                `<path d="M0 -20 L12 13.5 Q0 18.5 -12 13.5 Z" fill="#ffd166" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/>` +
+                `<path d="M-12.5 13.2 Q0 18.6 12.5 13.2 L13.6 17 Q0 23 -13.6 17 Z" fill="#c9823c" stroke="${c}" stroke-width="1.5" stroke-linejoin="round"/>` +
+                `<circle cx="0" cy="-7" r="2.6" fill="#d64545"/><circle cx="-4.2" cy="4" r="3" fill="#d64545"/><circle cx="4.6" cy="2.5" r="2.8" fill="#d64545"/>` +
+                `<circle cx="0.6" cy="11" r="2.4" fill="#d64545"/>` +
+                `<path d="M-1.8 -1.5 l2 1 M5 9.5 l1.6 -1.4 M-6.2 10 l1.8 0.8" stroke="#2f9e44" stroke-width="1.4" stroke-linecap="round"/>` },
+            { id: 'dog', label: 'Dog out the window', len: 18, r: 22, svg: (c, l) => {
+                const glass = l ? '#1f2937' : '#0b0d14';
+                return EC_ICON_SHADOW(10, 18.5) +
+                    `<rect x="-9.5" y="-18" width="19" height="36" rx="6.5" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
+                    `<path d="M-7.5 -8 Q0 -11 7.5 -8 L6.3 -13 Q0 -14.6 -6.3 -13 Z" fill="${glass}" fill-opacity="0.9"/>` +
+                    `<rect x="-6.5" y="-7" width="13" height="14" rx="3" fill="${glass}" fill-opacity="0.35"/>` +
+                    `<path d="M-6.5 11.5 Q0 13.5 6.5 11.5 L6 9 Q0 10.4 -6 9 Z" fill="${glass}" fill-opacity="0.85"/>` +
+                    `<ellipse cx="-14.6" cy="1.5" rx="2.4" ry="4.6" fill="#8b5a2b" transform="rotate(-25 -14.6 1.5)"/>` +
+                    `<circle cx="-11.6" cy="-3.6" r="5.4" fill="#c58b4e" stroke="#ffffff" stroke-width="1"/>` +
+                    `<ellipse cx="-11.6" cy="-8.4" rx="2.8" ry="2.2" fill="#e2b07a"/><circle cx="-11.6" cy="-10.2" r="1.15" fill="#111111"/>` +
+                    `<circle cx="-13.6" cy="-4.8" r="0.9" fill="#111111"/><circle cx="-9.6" cy="-4.8" r="0.9" fill="#111111"/>` +
+                    `<path d="M-10.4 -7.4 q1.4 2.6 -0.2 3.6" stroke="#ff6b8b" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
+                    `<rect x="-7.6" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/><rect x="4" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/>`;
+            } }
+        ];
+        // ===== YOUR VIEW (2026-11): each person's own look, saved to their account =====
+        // developer/dispatch_dashboard/user_prefs/{uid}/custom (same place as the dock width; the live rules let
+        // staff write there) + a copy on this device (localStorage ec_custom, with the uid) so it shows at first paint.
+        // Only the person who picks something sees it: Gil's icons never show on Justin's screen.
+        //   icon: default icon for every van   people: { Time Clock employee key: icon } for whoever is clocked in on a van
+        //   size: small / normal / big          lines / zzz / fire: fun extras on or off
+        //   mapType: roadmap / satellite / hybrid / terrain    mapStyle: auto / standard / night / silver / retro / clean
+        //   trailMin: 0 (off) / 2 / 10 / 30 minutes of trail behind moving vans
+        const EC_CUSTOM_KEY = 'ec_custom';
+        const EC_CUSTOM_DEFAULT = { icon: 'van', people: {}, size: 'normal', lines: true, zzz: true, fire: true,
+            mapType: 'roadmap', mapStyle: 'auto', trailMin: 2 };
+        const EC_ICON_SIZES = { small: 0.8, normal: 1, big: 1.3 };
+        const EC_MAP_TYPES = ['roadmap', 'satellite', 'hybrid', 'terrain'];
+        const EC_MAP_STYLE_IDS = ['auto', 'standard', 'night', 'silver', 'retro', 'clean'];
+        const EC_TRAIL_CHOICES = [0, 2, 10, 30];
+        const EC_FAST_LINES_KMH = 80;          // speed lines from this speed
+        const EC_ZZZ_AFTER_MS = 60 * 60 * 1000; // "zzz" on a van parked this long
+        function ecCustomClean(v) {
+            const c = Object.assign({}, EC_CUSTOM_DEFAULT);
+            if (!v || typeof v !== 'object') return c;
+            const packIds = EC_ICON_PACKS.map(p => p.id);
+            if (packIds.includes(v.icon)) c.icon = v.icon;
+            c.people = {};
+            if (v.people && typeof v.people === 'object') Object.keys(v.people).forEach(k => { if (packIds.includes(v.people[k])) c.people[k] = v.people[k]; });
+            if (EC_ICON_SIZES[v.size]) c.size = v.size;
+            ['lines', 'zzz', 'fire'].forEach(k => { if (typeof v[k] === 'boolean') c[k] = v[k]; });
+            if (EC_MAP_TYPES.includes(v.mapType)) c.mapType = v.mapType;
+            if (EC_MAP_STYLE_IDS.includes(v.mapStyle)) c.mapStyle = v.mapStyle;
+            if (EC_TRAIL_CHOICES.includes(v.trailMin)) c.trailMin = v.trailMin;
+            return c;
+        }
+        let ecCustom = (function() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(EC_CUSTOM_KEY) || 'null');
+                if (saved && saved.v) return ecCustomClean(saved.v);
+            } catch (e) {}
+            return ecCustomClean(null);
+        })();
+        let ecCustomUid = null;
+        function ecCustomRef(uid) { return db.ref('developer/dispatch_dashboard/user_prefs/' + uid + '/custom'); }
+        function ecCustomKeepLocal() {
+            try { localStorage.setItem(EC_CUSTOM_KEY, JSON.stringify({ uid: ecCustomUid, v: ecCustom })); } catch (e) {}
+        }
+        // After sign in: this person's saved look (another person may have used this computer before)
+        function ecLoadCustomPref() {
+            if (!currentUserId) return;
+            const uid = currentUserId;
+            let localUid = null;
+            try { localUid = (JSON.parse(localStorage.getItem(EC_CUSTOM_KEY) || 'null') || {}).uid || null; } catch (e) {}
+            ecCustomRef(uid).once('value').then(snap => {
+                if (uid !== currentUserId) return;
+                ecCustomUid = uid;
+                const v = snap.val();
+                if (v && typeof v === 'object') ecCustom = ecCustomClean(v);
+                else if (localUid !== uid) ecCustom = ecCustomClean(null); // someone else's look on this device
+                ecCustomKeepLocal();
+                ecCustomApply();
+            }).catch(err => console.warn('Make it yours: not loaded', err));
+        }
+        function ecCustomSave() {
+            ecCustomKeepLocal();
+            if (!currentUserId) return;
+            ecCustomUid = currentUserId;
+            ecCustomRef(currentUserId).set(JSON.parse(JSON.stringify(ecCustom)))
+                .catch(err => console.warn('Make it yours: not saved', err));
+        }
+        function ecCustomSet(key, value) {
+            ecCustom[key] = value;
+            ecCustom = ecCustomClean(ecCustom);
+            ecCustomSave();
+            ecCustomApply();
+            if (typeof ecCzRender === 'function') ecCzRender();
+        }
+        // Redraw everything a choice can change
+        function ecCustomApply() {
+            if (typeof updateMapStyles === 'function') updateMapStyles();
+            Object.keys(driverMarkers || {}).forEach(id => { if (driverMarkers[id]) driverMarkers[id]._iconKey = null; });
+            if (dashboardLoaded) queueRender({ badges: true, markers: true, control: true });
+            if (typeof modalDriverMarker !== 'undefined' && modalDriverMarker && activeModalDriverId && drivers[activeModalDriverId]) {
+                const d = drivers[activeModalDriverId];
+                modalDriverMarker.setIcon(getDriverIcon(getDriverDisplayName(activeModalDriverId, d), d.color || '#f7c948', d.heading, 'online', null, activeModalDriverId));
+            }
+        }
+        function ecIconPack(id) { return EC_ICON_PACKS.find(p => p.id === id) || EC_ICON_PACKS[0]; }
+        // Who is clocked in on this van in the Time Clock (vehicle_claims/{id}.ek), or null
+        function ecClaimEk(driverId) {
+            const claim = driverId && ecInUse.claims && ecInUse.claims[driverId];
+            return claim && typeof claim === 'object' && typeof claim.ek === 'string' ? claim.ek : null;
+        }
+        // The icon for a van: the clocked-in person's icon (this viewer's pick), else this viewer's default icon
+        function ecIconLook(driverId, use, speed) {
+            const ek = ecClaimEk(driverId);
+            const pack = ecIconPack((ek && ecCustom.people[ek]) || ecCustom.icon);
+            const drv = driverId ? drivers[driverId] : null;
+            const at = drv && drv.lastLocation && drv.lastLocation.updatedAt;
+            return {
+                pack: pack,
+                scale: EC_ICON_SIZES[ecCustom.size] || 1,
+                lines: !!(ecCustom.lines && use === 'online' && speed !== null && speed !== undefined && Number(speed) >= EC_FAST_LINES_KMH),
+                zzz: !!(ecCustom.zzz && use === 'parked' && at && ecServerNow() - at >= EC_ZZZ_AFTER_MS)
+            };
+        }
+        // Part of each marker's redraw key, so a change of icon, size or extra redraws it
+        function ecIconKeyPart(driverId, use, speed) {
+            const l = ecIconLook(driverId, use, speed);
+            return l.pack.id + '|' + l.scale + '|' + (l.lines ? 1 : 0) + '|' + (l.zzz ? 1 : 0);
+        }
+
+        // ===== SETTINGS: Your view tab (everyone) + Vehicles tab (admins) =====
+        let ecSetTabNow = 'view';
+        function ecSetTab(tab) {
+            ecSetTabNow = tab;
+            const modal = document.getElementById('settingsModal');
+            if (!modal) return;
+            modal.dataset.tab = tab;
+            modal.querySelectorAll('.ec-set-tab').forEach(b => {
+                const on = b.dataset.tab === tab;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+        }
+        // Time Clock names for Driver icons: [{ ek, name }], null = this account can't read the Time Clock
+        const ecCz = { people: undefined, loading: false, openEk: null };
+        function ecCzLoadPeople() {
+            if (ecCz.loading || (ecCz.people !== undefined && ecCz.people !== null)) return;
+            ecCz.loading = true;
+            ecShiftLoadPeople().then(list => {
+                ecCz.people = Array.isArray(list) ? list.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })) : null;
+            }).catch(() => { ecCz.people = null; }).then(() => { ecCz.loading = false; ecCzRender(); });
+        }
+        function ecCzIconUrl(packId, color) {
+            const isLight = document.body.classList.contains('light-mode');
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="-24 -24 48 48">${ecIconPack(packId).svg(color || '#3b82f6', isLight)}</svg>`;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+        function ecCzSeg(key, items, now) {
+            return '<div class="ec-cz-seg" role="radiogroup">' + items.map(([v, label]) =>
+                `<button type="button" class="ec-cz-opt${String(v) === String(now) ? ' on' : ''}" role="radio" aria-checked="${String(v) === String(now)}" data-cz="${key}" data-v="${v}">${label}</button>`).join('') + '</div>';
+        }
+        function ecCzIconGrid(key, now, ek, withDefault) {
+            let html = '<div class="ec-cz-icons">';
+            if (withDefault) html += `<button type="button" class="ec-cz-ico${!now ? ' on' : ''}" data-cz="${key}" data-ek="${ecEsc(ek || '')}" data-v=""><span class="ec-cz-def">Same as<br>default</span><span>Default</span></button>`;
+            EC_ICON_PACKS.forEach(p => {
+                html += `<button type="button" class="ec-cz-ico${now === p.id ? ' on' : ''}" data-cz="${key}" data-ek="${ecEsc(ek || '')}" data-v="${p.id}" title="${ecEsc(p.label)}">` +
+                    `<img src="${ecCzIconUrl(p.id)}" alt="" width="44" height="44"><span>${ecEsc(p.label)}</span></button>`;
+            });
+            return html + '</div>';
+        }
+        const EC_MAP_STYLE_LABELS = { auto: 'Auto (light/dark)', standard: 'Standard', night: 'Night', silver: 'Silver', retro: 'Retro', clean: 'Clean (no shops)' };
+        const EC_MAP_TYPE_LABELS = { roadmap: 'Map', satellite: 'Satellite', hybrid: 'Satellite + labels', terrain: 'Terrain' };
+        function ecCzRender() {
+            const box = document.getElementById('ecCzBox');
+            if (!box) return;
+            const c = ecCustom;
+            let people;
+            if (ecCz.people === undefined) people = '<div class="ec-cz-hint">Loading Time Clock names…</div>';
+            else if (ecCz.people === null) people = '<div class="ec-cz-hint">Driver icons need Time Clock access.</div>';
+            else if (!ecCz.people.length) people = '<div class="ec-cz-hint">No one in the Time Clock yet.</div>';
+            else people = ecCz.people.map(p => {
+                const pick = c.people[p.ek] || '';
+                const open = ecCz.openEk === p.ek;
+                return `<div class="ec-cz-person${open ? ' open' : ''}">` +
+                    `<button type="button" class="ec-cz-prow" data-cz="person-open" data-ek="${ecEsc(p.ek)}" aria-expanded="${open}">` +
+                    `<img src="${ecCzIconUrl(pick || c.icon)}" alt="" width="36" height="36"><span class="ec-cz-pname">${ecEsc(p.name)}</span>` +
+                    `<span class="ec-cz-pval">${pick ? ecEsc(ecIconPack(pick).label) : 'Default'}</span><span class="ec-cz-caret">${open ? '▴' : '▾'}</span></button>` +
+                    (open ? ecCzIconGrid('person', pick, p.ek, true) : '') + '</div>';
+            }).join('');
+            const toggle = (key, label, sub) => `<label class="ec-cz-toggle"><input type="checkbox" data-cz="${key}"${c[key] ? ' checked' : ''}><span class="ec-cz-switch" aria-hidden="true"></span>` +
+                `<span class="ec-cz-tlabel">${label}<small>${sub}</small></span></label>`;
+            box.innerHTML =
+                `<section class="ec-cz-sec"><h3>Van icon</h3><p>Shows on every van, unless the driver clocked in on it has their own icon below.</p>${ecCzIconGrid('icon', c.icon, '', false)}</section>` +
+                `<section class="ec-cz-sec"><h3>Icon size</h3>${ecCzSeg('size', [['small', 'Small'], ['normal', 'Normal'], ['big', 'Big']], c.size)}</section>` +
+                `<section class="ec-cz-sec"><h3>Driver icons</h3><p>Pick an icon for each person in the Time Clock. Whatever van they clock in on shows it.</p><div class="ec-cz-people">${people}</div></section>` +
+                `<section class="ec-cz-sec"><h3>Fun extras</h3>` +
+                    toggle('lines', 'Speed lines', 'Behind a van going ' + EC_FAST_LINES_KMH + ' km/h or more') +
+                    toggle('zzz', 'Zzz', 'Over a van parked for an hour or more') +
+                    toggle('fire', 'Fire', '🔥 on the card at ' + EC_FAST_KMH + ' km/h or more') + `</section>` +
+                `<section class="ec-cz-sec"><h3>Map type</h3>${ecCzSeg('mapType', EC_MAP_TYPES.map(t => [t, EC_MAP_TYPE_LABELS[t]]), c.mapType)}</section>` +
+                `<section class="ec-cz-sec"><h3>Map style</h3><p>Satellite shows photos, so the style mostly changes the plain map.</p>` +
+                    '<div class="ec-cz-styles">' + EC_MAP_STYLE_IDS.map(id => `<button type="button" class="ec-cz-style ec-cz-style-${id}${c.mapStyle === id ? ' on' : ''}" data-cz="mapStyle" data-v="${id}"><i aria-hidden="true"></i><span>${EC_MAP_STYLE_LABELS[id]}</span></button>`).join('') + '</div></section>' +
+                `<section class="ec-cz-sec"><h3>Trail behind moving vans</h3>${ecCzSeg('trailMin', EC_TRAIL_CHOICES.map(m => [m, m ? m + ' min' : 'Off']), c.trailMin)}</section>`;
+        }
+        document.addEventListener('click', function(e) {
+            const b = e.target.closest && e.target.closest('#ecCzBox [data-cz]');
+            if (!b || b.tagName === 'INPUT') return;
+            const key = b.dataset.cz, v = b.dataset.v;
+            if (key === 'person-open') { ecCz.openEk = ecCz.openEk === b.dataset.ek ? null : b.dataset.ek; ecCzRender(); return; }
+            if (key === 'person') {
+                const people = Object.assign({}, ecCustom.people);
+                if (v) people[b.dataset.ek] = v; else delete people[b.dataset.ek];
+                ecCustomSet('people', people);
+                return;
+            }
+            if (key === 'trailMin') { ecCustomSet('trailMin', Number(v)); return; }
+            if (key === 'icon' || key === 'size' || key === 'mapType' || key === 'mapStyle') ecCustomSet(key, v);
+        });
+        document.addEventListener('change', function(e) {
+            const t = e.target;
+            if (t && t.matches && t.matches('#ecCzBox input[type=checkbox][data-cz]')) ecCustomSet(t.dataset.cz, t.checked);
+        });
+
+        // Cartoon speed lines behind a fast van (drawn in the icon's own turned space, behind its tail)
+        function ecSpeedLinesSvg(len, isLight) {
+            const col = isLight ? '#1f2937' : '#ffffff';
+            const y = len + 3;
+            return `<path d="M-6 ${y} V${y + 8} M0 ${y + 1} V${y + 11} M6 ${y} V${y + 8}" stroke="${col}" stroke-opacity="0.6" stroke-width="2.2" stroke-linecap="round"/>`;
+        }
+        // "zzz" over a van that has been parked for a long time
+        function ecZzzSvg(x, y) {
+            const t = (dx, dy, size) => `<text x="${x + dx}" y="${y + dy}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="900" fill="#60a5fa" stroke="#ffffff" stroke-width="2.4" paint-order="stroke">z</text>`;
+            return t(0, 0, 8) + t(5, -7, 10) + t(11, -15, 12); // small to big, rising up and to the right
+        }
+
         const EC_MARKER_Z = { online: 30, parked: 20, idle: 10 };
         // use: 'online' (default look), 'parked' (blue P on the van) or 'idle' (not in use: same normal look, no P)
         // speed: km/h to show in a tag under the van (only for a moving Online van), or null
-        function getDriverIcon(name, color, heading = null, use = 'online', speed = null) {
+        function getDriverIcon(name, color, heading = null, use = 'online', speed = null, driverId = null) {
             const rawName = String(name == null ? '' : name);
             const speedText = (use === 'online' && speed !== null && speed !== undefined) ? Math.round(Number(speed)) + ' km/h' : '';
             const speedW = speedText ? speedText.length * 7 + 12 : 0;
@@ -11417,26 +11859,32 @@
             const textColor = ecMarkerTextColor();
             const isLight = document.body.classList.contains('light-mode');
             const pillFill = isLight ? '#ffffff' : 'rgba(12,13,20,0.88)';
-            const width = Math.max(50, speedW + 4, Math.min(220, rawName.length * 7 + 16)); // wide enough that long names (and the speed tag) are not clipped
+            // Make it yours: this person's icon for whoever is clocked in on the van, its size, and the fun extras
+            const look = ecIconLook(driverId, use, speed);
+            const pack = look.pack;
+            const scale = look.scale;
+            const R = Math.max(21, pack.r, look.lines ? pack.len + 14 : 0) * scale; // room the icon needs at any angle
+            const width = Math.max(50, Math.ceil(2 * R + (look.zzz ? 36 : 8)), speedW + 4, Math.min(220, rawName.length * 7 + 16)); // wide enough that long names (and the speed tag) are not clipped
             const half = width / 2;
-            const cy = 45; // the van's centre (= the GPS spot); room for the van at any angle below the name
-            const height = speedText ? 88 : 66; // room for the speed tag under the van
+            const cy = Math.round(24 + R); // the van's centre (= the GPS spot); room for the icon at any angle below the name (45 for the normal van)
+            const height = Math.round(cy + R + (speedText ? 22 : 0)); // room for the speed tag under the van
             const headingKey = ecHeadingKey(heading);
             const turn = headingKey === 'n' ? 0 : headingKey;
             const fast = speedText && Number(speed) >= EC_FAST_KMH;
             const speedTag = !speedText ? '' :
-                `<g transform="translate(${half} ${cy + 30})"><rect x="${-speedW / 2}" y="-9" width="${speedW}" height="18" rx="9" fill="${fast ? '#dc2626' : (isLight ? '#111827' : '#ffffff')}"/>` +
+                `<g transform="translate(${half} ${Math.round(cy + R + 9)})"><rect x="${-speedW / 2}" y="-9" width="${speedW}" height="18" rx="9" fill="${fast ? '#dc2626' : (isLight ? '#111827' : '#ffffff')}"/>` +
                 `<text x="0" y="4.2" text-anchor="middle" fill="${fast || isLight ? '#ffffff' : '#0b0d14'}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800">${speedText}</text></g>`;
             const parkedBadge = use !== 'parked' ? '' :
-                `<g transform="translate(${half + 11} ${cy - 13})"><rect x="-7" y="-7" width="14" height="14" rx="4" fill="#3b82f6" stroke="#ffffff" stroke-width="1.2"/>` +
+                `<g transform="translate(${half + Math.round(11 * scale)} ${cy - Math.round(13 * scale)})"><rect x="-7" y="-7" width="14" height="14" rx="4" fill="#3b82f6" stroke="#ffffff" stroke-width="1.2"/>` +
                 `<text x="0" y="3.6" text-anchor="middle" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold">P</text></g>`;
             const svg =
                 `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
                 `<g>` +
                 `<rect x="1" y="1" width="${width - 2}" height="19" rx="9.5" fill="${pillFill}" stroke="${safeColor}" stroke-width="1.5"/>` +
                 `<text x="${half}" y="14.5" text-anchor="middle" fill="${textColor}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold">${safeName}</text>` +
-                `<g transform="translate(${half} ${cy}) rotate(${turn})">` + ecCargoVanSvg(safeColor, isLight) + `</g>` +
-                `</g>` + parkedBadge + speedTag +
+                `<g transform="translate(${half} ${cy}) rotate(${turn}) scale(${scale})">` +
+                (look.lines ? ecSpeedLinesSvg(pack.len, isLight) : '') + pack.svg(safeColor, isLight) + `</g>` +
+                `</g>` + parkedBadge + (look.zzz ? ecZzzSvg(Math.round(half - R - 14), cy + 4) : '') + speedTag +
                 `</svg>`;
             return {
                 url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
@@ -12135,7 +12583,7 @@
                 // Moving: the speed takes the place of "Now" (red at EC_FAST_KMH and over)
                 const speed = use === 'online' ? ecLiveSpeed(drv) : null;
                 const timeHtml = speed !== null
-                    ? `<span class="last-update ec-speed${speed >= EC_FAST_KMH ? ' ec-fast' : ''}">${speed}<small> km/h</small></span>`
+                    ? `<span class="last-update ec-speed${speed >= EC_FAST_KMH ? ' ec-fast' : ''}">${speed}<small> km/h</small>${speed >= EC_FAST_KMH && ecCustom.fire ? '<span class="ec-fire" aria-hidden="true">🔥</span>' : ''}</span>`
                     : `<span class="last-update${lastUpdateText === 'Now' ? ' ec-now' : ''}">${lastUpdateText}</span>`;
                 // Computer scoreboard card only (hidden on phones): status + battery % and a battery bar
                 const battPct = battVal === null ? null : Math.max(0, Math.min(100, Math.round(battVal)));
@@ -12552,7 +13000,7 @@
                         center: drv?.lastLocation ? { lat: drv.lastLocation.lat, lng: drv.lastLocation.lng } :
                             { lat: 49.8425, lng: -99.9497 },
                         zoom: DEFAULT_MAP_ZOOM,
-                        styles: isLight ? [] : mapStyles,
+                        styles: ecMapStyleNow(), mapTypeId: ecCustom.mapType,
                         gestureHandling: 'greedy',
                         mapTypeControl: false,
                         keyboardShortcuts: false
@@ -12588,7 +13036,7 @@
 
                 if (drv?.lastLocation) {
                     const color = drv.color || '#f7c948';
-                    const icon = getDriverIcon(getDriverDisplayName(driverId, drv), color, drv.heading);
+                    const icon = getDriverIcon(getDriverDisplayName(driverId, drv), color, drv.heading, 'online', null, driverId);
                     const mk = new google.maps.Marker({
                         position: { lat: drv.lastLocation.lat, lng: drv.lastLocation.lng },
                         map: driverModalMap,
@@ -14277,7 +14725,13 @@
             settingsOpen = true;
             const gearBtn = document.getElementById('settingsGearBtn');
             if (gearBtn) gearBtn.classList.add('active');
+            // Everyone gets Your view; admins also get the Vehicles tab (driver/GPS editing)
+            document.getElementById('settingsModal').classList.toggle('ec-set-admin', !!isAdminUser);
+            ecSetTab(ecSetTabNow);
+            ecCzRender();
+            ecCzLoadPeople();
             renderSettingsList();
+            if (!isAdminUser) return;
             getMasterRef().once('value').then(snap => {
                 const cfg = snap.val() || {};
                 ecApplyWorkdayFromCfg(cfg);
@@ -14295,10 +14749,6 @@
         }
 
         function toggleSettings() {
-            if (!isAdminUser) {
-                openGroupManager();
-                return;
-            }
             const modal = document.getElementById('settingsModal');
             if (modal.style.display === 'flex') {
                 closeSettings();
@@ -14328,8 +14778,10 @@
             applyFilter();
         }
 
+        // Driver groups were removed (Justin, 2026-11): every van always shows
         function getFilteredDrivers() {
-            if (activeGroupIds.size === 0) return drivers;
+            return drivers;
+            /* eslint-disable no-unreachable */
             const filtered = {};
             for (let [id, drv] of Object.entries(drivers)) {
                 for (const gid of activeGroupIds) {
@@ -14354,6 +14806,7 @@
             const container = document.getElementById('headerGroupToggles');
             if (!container) return;
             container.innerHTML = '';
+            return; // driver groups were removed (2026-11)
             for (let [id, group] of Object.entries(groups)) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -14397,6 +14850,7 @@
         }
 
         function openGroupManager() {
+            return; // driver groups were removed (2026-11)
             const overlay = document.getElementById('groupDrawerOverlay');
             const drawer = document.getElementById('groupDrawer');
             overlay.style.display = 'block';
@@ -14407,6 +14861,7 @@
 
         function closeGroupManager() {
             const overlay = document.getElementById('groupDrawerOverlay');
+            if (!overlay) return;
             const drawer = document.getElementById('groupDrawer');
             overlay.style.display = 'none';
             drawer.classList.remove('open');
@@ -14586,17 +15041,17 @@
                 <span class="driver-row-toggle-caret">▾</span>
               </button>
               <div class="driver-row-fields" id="driverRowFields-${id}" style="display:none;">
-                <label>Name</label>
-                <input type="text" value="${ecEsc(drv.name || '')}" placeholder="Name" data-id="${ecEsc(id)}" class="drv-name">
+                ${isAdminUser ? `<label>Name</label>
+                <input type="text" value="${ecEsc(drv.name || '')}" placeholder="Name" data-id="${ecEsc(id)}" class="drv-name">` : ''}
                 <label>Color</label>
                 <input type="color" value="${ecEsc(drv.color || '#f7c948')}" data-id="${ecEsc(id)}" class="drv-color color-pick">
-                <label>Device ID</label>
+                ${isAdminUser ? `<label>Device ID</label>
                 <input type="text" value="${ecEsc(drv.deviceId || '')}" placeholder="Device ID" data-id="${ecEsc(id)}" class="drv-device">
                 <label>GPS refresh (how often the map updates)</label>
                 <select data-id="${ecEsc(id)}" class="drv-gps-interval">
                   ${EC_GPS_INTERVAL_CHOICES.map(sec => `<option value="${sec}"${sec === ecDriverGpsIntervalSec(drv) ? ' selected' : ''}>Every ${sec} seconds</option>`).join('')}
                 </select>
-                <button class="remove-driver" onclick="removeDriver('${ecAttrJs(id)}')">✕ Remove Driver</button>
+                <button class="remove-driver" onclick="removeDriver('${ecAttrJs(id)}')">✕ Remove Driver</button>` : ''}
               </div>
             `;
                 container.appendChild(row);
@@ -14648,6 +15103,14 @@
             const colorInput = fields.querySelector('.drv-color');
             const deviceInput = fields.querySelector('.drv-device');
             const intervalInput = fields.querySelector('.drv-gps-interval');
+            if (!isAdminUser) { // Gil: only the colour
+                if (!colorInput) return;
+                getDriversRef().child(id).update({ color: colorInput.value }).catch(ecSaveError('vehicle colour'));
+                const dot = btn && btn.querySelector('.driver-row-toggle-dot');
+                if (dot) dot.style.background = colorInput.value;
+                renderDriverBadges();
+                return;
+            }
             if (!nameInput || !colorInput || !deviceInput || !intervalInput) return;
             const name = nameInput.value;
             const color = colorInput.value;
@@ -14691,6 +15154,15 @@
         }
 
         function saveSettings() {
+            if (!isAdminUser) { // Gil: only vehicle colours
+                document.querySelectorAll('#driverSettingsList .drv-color').forEach(inp => {
+                    const id = inp.dataset.id;
+                    if (id && drivers[id] && inp.value !== drivers[id].color) getDriversRef().child(id).update({ color: inp.value }).catch(ecSaveError('vehicle colour'));
+                });
+                renderDriverBadges();
+                closeSettings();
+                return;
+            }
             const wsVal = (document.getElementById('workdayStart') || {}).value || '';
             const weVal = (document.getElementById('workdayEnd') || {}).value || '';
             if (!ecValidHHMM(wsVal) || !ecValidHHMM(weVal) || wsVal >= weVal) {
@@ -14754,6 +15226,7 @@
             listenContactList();
 
             ecLoadDockPref(); // this user's driver buttons width (computer screens)
+            ecLoadCustomPref(); // this person's icons, map type/style and trail (Your view in Settings)
 
             getDriversRef().off('value');
             getDriversRef().on('value', snap => {
