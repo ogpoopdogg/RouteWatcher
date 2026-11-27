@@ -11632,7 +11632,122 @@
                     `<circle cx="-13.6" cy="-4.8" r="0.9" fill="#111111"/><circle cx="-9.6" cy="-4.8" r="0.9" fill="#111111"/>` +
                     `<path d="M-10.4 -7.4 q1.4 2.6 -0.2 3.6" stroke="#ff6b8b" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
                     `<rect x="-7.6" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/><rect x="4" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/>`;
-            } }
+            } },
+            // --- Funny pack (2026-11). mode 'side' = drawn facing right, flipped when the van heads west;
+            //     mode 'up' = always upright (faces and food); the rest turn with the heading like the vans.
+            { id: 'snail', label: 'Snail', mode: 'side', len: 19, r: 22, svg: (c) =>
+                `<ellipse cx="0" cy="13" rx="18" ry="3" fill="#000000" fill-opacity="0.25"/>` +
+                `<path d="M-18 11 Q-19 6 -13 6 L7 6 Q11 -2 14 -4 Q19 -5 19 1 L18 11 Z" fill="#b5e48c" stroke="#5f8f3e" stroke-width="1.3"/>` +
+                `<path d="M14.5 -3 L13 -12 M17 -3 L19.5 -11" stroke="#5f8f3e" stroke-width="1.4" stroke-linecap="round"/>` +
+                `<circle cx="13" cy="-12.5" r="2" fill="#ffffff" stroke="#5f8f3e" stroke-width="0.8"/><circle cx="19.6" cy="-11.5" r="2" fill="#ffffff" stroke="#5f8f3e" stroke-width="0.8"/>` +
+                `<circle cx="13.4" cy="-12.3" r="0.9" fill="#111111"/><circle cx="20" cy="-11.3" r="0.9" fill="#111111"/>` +
+                `<path d="M15 2 Q17 4 19 2" stroke="#3d5f28" stroke-width="1" fill="none" stroke-linecap="round"/>` +
+                `<circle cx="-3" cy="-3" r="11" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
+                `<path d="M-3 -3 m0 -1.5 a1.5 1.5 0 1 1 -1.5 1.5 a3.5 3.5 0 1 1 3.5 3.5 a5.8 5.8 0 1 1 -5.8 -5.8 a8 8 0 1 1 8 8" stroke="#ffffff" stroke-opacity="0.75" stroke-width="1.4" fill="none" stroke-linecap="round"/>` },
+            { id: 'turtle', label: 'Turtle', mode: 'side', len: 19, r: 23, svg: (c) =>
+                `<ellipse cx="0" cy="12" rx="19" ry="3" fill="#000000" fill-opacity="0.25"/>` +
+                `<path d="M-17 3 L-21 6 L-16 6 Z" fill="#7cb342"/>` +
+                `<rect x="-12" y="5" width="5" height="7" rx="2" fill="#7cb342"/><rect x="8" y="5" width="5" height="7" rx="2" fill="#7cb342"/>` +
+                `<ellipse cx="19" cy="-1" rx="5.5" ry="4.6" fill="#8bc34a" stroke="#5a8f2a" stroke-width="1"/>` +
+                `<circle cx="20.6" cy="-2.4" r="1.2" fill="#111111"/><path d="M19.5 1 Q21.5 2.2 23.4 0.6" stroke="#3d6b1c" stroke-width="0.9" fill="none"/>` +
+                `<path d="M-16 5 Q-14 -14 1 -14 Q16 -14 17 5 Z" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
+                `<path d="M-5 -10 L5 -10 L8 -3 L3 3 L-4 3 L-8 -3 Z M-5 -10 L-10 -6 M5 -10 L10 -6 M-8 -3 L-14 0 M8 -3 L15 0" stroke="#000000" stroke-opacity="0.25" stroke-width="1.1" fill="none"/>` +
+                `<rect x="-17" y="4" width="35" height="3.4" rx="1.7" fill="#689f38"/>` },
+            { id: 'sloth', label: 'Sloth', mode: 'side', len: 18, r: 22, svg: (c) =>
+                `<path d="M-21 -13 Q0 -16 21 -12" stroke="#6d4c2f" stroke-width="3.2" fill="none" stroke-linecap="round"/>` +
+                `<ellipse cx="15" cy="-15.5" rx="3.6" ry="2" fill="#4caf50" transform="rotate(-20 15 -15.5)"/><ellipse cx="-14" cy="-15" rx="3.6" ry="2" fill="#4caf50" transform="rotate(15 -14 -15)"/>` +
+                `<path d="M-9 -1 L-10 -13 M8 -1 L9 -13" stroke="#8d6e4f" stroke-width="4" stroke-linecap="round"/>` +
+                `<path d="M-12 -13 q2 -3 4 0 M7 -13 q2 -3 4 0" stroke="#3b2a1a" stroke-width="1.2" fill="none"/>` +
+                `<ellipse cx="0" cy="4" rx="13" ry="10" fill="#a47e5b" stroke="#ffffff" stroke-width="1.2"/>` +
+                `<ellipse cx="4" cy="5" rx="7.5" ry="6" fill="#ead7bb"/>` +
+                `<ellipse cx="1.2" cy="4" rx="2.6" ry="1.5" fill="#5b4330" transform="rotate(-15 1.2 4)"/><ellipse cx="7" cy="4" rx="2.6" ry="1.5" fill="#5b4330" transform="rotate(15 7 4)"/>` +
+                `<circle cx="1.6" cy="4" r="0.8" fill="#ffffff"/><circle cx="6.6" cy="4" r="0.8" fill="#ffffff"/>` +
+                `<ellipse cx="4" cy="7" rx="1.3" ry="0.9" fill="#3b2a1a"/><path d="M2 9 Q4 10.6 6 9" stroke="#3b2a1a" stroke-width="0.9" fill="none" stroke-linecap="round"/>` +
+                `<path d="M-6 -4.5 Q2 -10 11 -4.5 Q2 -7 -6 -4.5 Z" fill="${c}"/><circle cx="2.5" cy="-8.4" r="1.6" fill="${c}"/>` },
+            { id: 'scooter', label: 'Grandma\'s scooter', mode: 'side', len: 18, r: 24, svg: (c) =>
+                `<ellipse cx="0" cy="15" rx="18" ry="2.6" fill="#000000" fill-opacity="0.25"/>` +
+                `<path d="M-15 6 L-17 -21" stroke="#9e9e9e" stroke-width="1.1"/><path d="M-17 -21 L-10 -18.5 L-16.6 -16 Z" fill="#ff7a00"/>` +
+                `<rect x="-16" y="5" width="30" height="4.5" rx="2" fill="${c}" stroke="#ffffff" stroke-width="1"/>` +
+                `<path d="M11 6 L15 -10 M12 -11 L18 -11" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>` +
+                `<rect x="13.5" y="-8" width="7" height="6.5" rx="1" fill="#d4a373" stroke="#8d6b44" stroke-width="0.8"/><path d="M13.5 -4.8 H20.5 M17 -8 V-1.5" stroke="#8d6b44" stroke-width="0.6"/>` +
+                `<rect x="-14" y="-5" width="10" height="10" rx="2" fill="#4a4a4a"/><rect x="-15" y="-13" width="3" height="11" rx="1.2" fill="#4a4a4a"/>` +
+                `<rect x="-12" y="-11.5" width="9" height="11" rx="3" fill="#c77dff"/>` +
+                `<path d="M-5 -8 L11 -11" stroke="#c77dff" stroke-width="2.4" stroke-linecap="round"/>` +
+                `<circle cx="-7.5" cy="-16" r="4.8" fill="#f1c27d"/><circle cx="-11.5" cy="-19" r="2.8" fill="#d9d9d9"/><path d="M-12 -18 Q-8 -22.5 -3.2 -18" stroke="#d9d9d9" stroke-width="2.2" fill="none"/>` +
+                `<circle cx="-5.6" cy="-16.2" r="1.6" fill="none" stroke="#333333" stroke-width="0.7"/><circle cx="-2.6" cy="-16.2" r="1.3" fill="none" stroke="#333333" stroke-width="0.7"/>` +
+                `<circle cx="-11" cy="11" r="4.6" fill="#222222"/><circle cx="-11" cy="11" r="1.6" fill="#bdbdbd"/><circle cx="9.5" cy="11" r="4.6" fill="#222222"/><circle cx="9.5" cy="11" r="1.6" fill="#bdbdbd"/>` },
+            { id: 'trike', label: 'Kid\'s tricycle', mode: 'side', len: 17, r: 22, svg: (c) => {
+                let spokes = '';
+                for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; spokes += `<path d="M9 5 L${(9 + 8 * Math.cos(a)).toFixed(1)} ${(5 + 8 * Math.sin(a)).toFixed(1)}" stroke="#9e9e9e" stroke-width="0.7"/>`; }
+                return `<ellipse cx="0" cy="15" rx="17" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
+                    `<circle cx="-11" cy="10" r="4.6" fill="none" stroke="#ffffff" stroke-width="4"/><circle cx="9" cy="5" r="8.6" fill="none" stroke="#ffffff" stroke-width="4.4"/><circle cx="-11" cy="10" r="4.6" fill="none" stroke="#222222" stroke-width="2.4"/><circle cx="-11" cy="10" r="1.2" fill="#9e9e9e"/>` +
+                    `<circle cx="9" cy="5" r="8.6" fill="none" stroke="#222222" stroke-width="2.8"/>` + spokes + `<circle cx="9" cy="5" r="1.6" fill="#9e9e9e"/>` +
+                    `<path d="M-11 10 L-3 2 L6 -8 M-3 2 L9 5" stroke="${c}" stroke-width="3" stroke-linecap="round" fill="none"/>` +
+                    `<path d="M-6 -3 Q-3 -6 1 -3" stroke="#222222" stroke-width="3" stroke-linecap="round" fill="none"/>` +
+                    `<path d="M3 -12 L9 -12" stroke="#222222" stroke-width="2.4" stroke-linecap="round"/><path d="M6 -8 L6 -12" stroke="${c}" stroke-width="2.4"/>` +
+                    `<path d="M3 -12 q-3 3 -5 1 M3 -12 q-2 4 -4 4" stroke="#ff4fa3" stroke-width="1.2" fill="none"/><path d="M9 -12 q3 3 5 1 M9 -12 q2 4 4 4" stroke="#4fc3ff" stroke-width="1.2" fill="none"/>` +
+                    `<circle cx="7.5" cy="-14.3" r="1.6" fill="#ffd43b" stroke="#c99a06" stroke-width="0.6"/>`;
+            } },
+            { id: 'toilet', label: 'Toilet', mode: 'up', len: 16, r: 22, svg: (c) =>
+                `<ellipse cx="0" cy="18.5" rx="13" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
+                `<rect x="-9" y="-19" width="18" height="12" rx="2.4" fill="#ffffff" stroke="${c}" stroke-width="2"/>` +
+                `<rect x="5" y="-16.5" width="5" height="2" rx="1" fill="#b0bec5"/>` +
+                `<path d="M-12 -4 Q-11 9 -4.5 11.5 L4.5 11.5 Q11 9 12 -4 Z" fill="#ffffff" stroke="#b0bec5" stroke-width="1.3"/>` +
+                `<ellipse cx="0" cy="-4.5" rx="12.5" ry="4" fill="#ffffff" stroke="${c}" stroke-width="2"/><ellipse cx="0" cy="-4.5" rx="8" ry="2.2" fill="#90caf9"/>` +
+                `<rect x="-5" y="11" width="10" height="4.5" rx="1" fill="#eceff1" stroke="#b0bec5" stroke-width="1"/>` +
+                `<circle cx="-8" cy="16" r="3" fill="#222222"/><circle cx="8" cy="16" r="3" fill="#222222"/>` +
+                `<path d="M-17 -16 q2 -2 4 0 M14 -18 q2 -2 4 0" stroke="#7cb342" stroke-width="1.2" fill="none" stroke-linecap="round"/>` },
+            { id: 'pinkcar', label: 'Pink convertible', len: 19, r: 21, svg: (c) =>
+                EC_ICON_SHADOW(10.5, 19) +
+                `<rect x="-10" y="-19" width="20" height="38" rx="8" fill="#ff7eb6" stroke="#ffffff" stroke-width="1.6"/>` +
+                `<path d="M-7.5 -8.5 Q0 -11.5 7.5 -8.5 L6.3 -12 Q0 -13.6 -6.3 -12 Z" fill="#cdeffd" fill-opacity="0.95"/>` +
+                `<rect x="-7.5" y="-7" width="15" height="17" rx="4" fill="#5a2340"/>` +
+                `<rect x="-6.2" y="-5.5" width="5.4" height="6" rx="2" fill="${c}"/><rect x="0.8" y="-5.5" width="5.4" height="6" rx="2" fill="${c}"/>` +
+                `<rect x="-6.2" y="2.5" width="12.4" height="5.6" rx="2" fill="${c}" fill-opacity="0.85"/>` +
+                `<circle cx="-3.5" cy="-6.6" r="2.1" fill="none" stroke="#2b2b2b" stroke-width="1"/>` +
+                `<circle cx="-5.5" cy="-16.6" r="1.8" fill="#fff6c2"/><circle cx="5.5" cy="-16.6" r="1.8" fill="#fff6c2"/>` +
+                `<path d="M-7.6 -16.8 l-1.2 -1.6 M-6.3 -18 l-0.6 -1.9 M-4.8 -18.2 l0 -2 M7.6 -16.8 l1.2 -1.6 M6.3 -18 l0.6 -1.9 M4.8 -18.2 l0 -2" stroke="#2b2b2b" stroke-width="0.8" stroke-linecap="round"/>` +
+                `<path d="M-2 14.5 l2 1.6 l2 -1.6 l-2 -1.6 Z" fill="#ffffff"/>` },
+            { id: 'cupcake', label: 'Cupcake', mode: 'up', len: 15, r: 21, svg: (c) =>
+                `<ellipse cx="0" cy="17.5" rx="10" ry="2.2" fill="#000000" fill-opacity="0.25"/>` +
+                `<path d="M-11 2 L11 2 L8 17 L-8 17 Z" fill="${c}" stroke="#ffffff" stroke-width="1.4"/>` +
+                `<path d="M-6 2 L-4.5 17 M0 2 V17 M6 2 L4.5 17" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.2"/>` +
+                `<path d="M-13 3 Q-15 -4 -9 -6 Q-10 -13 -3 -12 Q0 -18 5 -12 Q12 -13 10 -6 Q15 -4 13 3 Z" fill="#ffafcc" stroke="#ffffff" stroke-width="1.4"/>` +
+                `<path d="M-8 -3 Q0 -7 8 -3" stroke="#ff85b3" stroke-width="1.4" fill="none"/>` +
+                `<path d="M-7 -1 l2 -1 M-1 -8 l1.8 0.6 M5 -2 l1.6 1.2 M3 -9.5 l-1.6 1 M-5 -8 l1 1.6" stroke-width="1.6" stroke-linecap="round" stroke="#4fc3ff"/>` +
+                `<path d="M-3 -4 l1.6 -0.8 M7.5 -6 l1.2 1.4" stroke-width="1.6" stroke-linecap="round" stroke="#ffd43b"/>` +
+                `<circle cx="1" cy="-15.5" r="3.4" fill="#e63946" stroke="#ffffff" stroke-width="1"/><path d="M1.6 -18.6 Q3 -22 6 -22" stroke="#2d6a4f" stroke-width="1.2" fill="none"/>` },
+            { id: 'hotdog', label: 'Hot dog', mode: 'up', len: 20, r: 22, svg: (c) =>
+                `<ellipse cx="0" cy="10" rx="19" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
+                `<path d="M-19 0 Q-20 8 -12 8 L12 8 Q20 8 19 0 Z" fill="#e9b872" stroke="${c}" stroke-width="1.8"/>` +
+                `<rect x="-21" y="-5" width="42" height="9" rx="4.5" fill="#c1440e" stroke="#ffffff" stroke-width="1.2"/>` +
+                `<path d="M-15 -1 l3 -2.4 l3 2.4 l3 -2.4 l3 2.4 l3 -2.4 l3 2.4 l3 -2.4 l3 2.4 l3 -2.4" stroke="#ffd60a" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-linecap="round"/>` +
+                `<path d="M-19 -3 Q-20 -10 -12 -9 L12 -9 Q20 -10 19 -3" fill="none" stroke="#e9b872" stroke-width="3.6" stroke-linecap="round"/>` },
+            { id: 'clown', label: 'Clown', mode: 'up', len: 16, r: 22, svg: (c) =>
+                `<circle cx="-13" cy="0" r="7" fill="${c}"/><circle cx="13" cy="0" r="7" fill="${c}"/><circle cx="-10" cy="-9" r="6" fill="${c}"/><circle cx="10" cy="-9" r="6" fill="${c}"/>` +
+                `<circle cx="0" cy="2" r="12" fill="#ffffff" stroke="#e0e0e0" stroke-width="1"/>` +
+                `<path d="M-3 -18 L0 -10.5 L3 -18 Z" fill="none"/><path d="M-5.5 -9.5 L0 -21 L5.5 -9.5 Z" fill="#ffd43b" stroke="#ffffff" stroke-width="1"/><circle cx="0" cy="-21.5" r="2" fill="#e63946"/>` +
+                `<path d="M-5 -4 l1.6 2.6 l-1.6 2.6 l-1.6 -2.6 Z M5 -4 l1.6 2.6 l-1.6 2.6 l-1.6 -2.6 Z" fill="#4fc3ff"/>` +
+                `<circle cx="-5" cy="-1.4" r="1.2" fill="#111111"/><circle cx="5" cy="-1.4" r="1.2" fill="#111111"/>` +
+                `<path d="M-8 6 Q0 15 8 6 Q0 10 -8 6 Z" fill="#e63946"/>` +
+                `<circle cx="0" cy="3.5" r="3.6" fill="#e63946" stroke="#ffffff" stroke-width="0.8"/><circle cx="-1" cy="2.4" r="1" fill="#ffffff" fill-opacity="0.8"/>` },
+            { id: 'poop', label: 'Poop', mode: 'up', len: 16, r: 21, svg: (c) =>
+                `<ellipse cx="0" cy="15.5" rx="16" ry="3" fill="none" stroke="${c}" stroke-width="2"/>` +
+                `<ellipse cx="0" cy="10" rx="15" ry="6" fill="#8b5a2b" stroke="#5c3a1a" stroke-width="1.2"/>` +
+                `<ellipse cx="0" cy="1.5" rx="11" ry="5.5" fill="#9c6634" stroke="#5c3a1a" stroke-width="1.2"/>` +
+                `<path d="M-7 -5 Q-7 -11 0 -11.5 Q2 -15 0 -19 Q8 -15 7 -7 Q7 -4 0 -3.6 Q-7 -3.6 -7 -5 Z" fill="#a8703a" stroke="#5c3a1a" stroke-width="1.2"/>` +
+                `<circle cx="-4" cy="0.5" r="2.6" fill="#ffffff"/><circle cx="4" cy="0.5" r="2.6" fill="#ffffff"/><circle cx="-3.6" cy="1" r="1.2" fill="#111111"/><circle cx="4.4" cy="1" r="1.2" fill="#111111"/>` +
+                `<path d="M-5 8 Q0 13 5 8 Z" fill="#3b1f0e"/><path d="M-3 8.6 Q0 10.4 3 8.6" fill="#ffffff"/>` },
+            { id: 'unicorn', label: 'Unicorn', mode: 'side', len: 18, r: 23, svg: (c) =>
+                `<ellipse cx="0" cy="15" rx="15" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
+                `<path d="M-13 -1 Q-21 0 -19 9" stroke="#ff8fd8" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-13 1 Q-19 3 -17 10" stroke="#9b8cff" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
+                `<rect x="-10" y="5" width="3" height="10" rx="1.4" fill="#f5f5f5" stroke="#d6d6d6" stroke-width="0.7"/><rect x="-5" y="5" width="3" height="10" rx="1.4" fill="#ffffff" stroke="#d6d6d6" stroke-width="0.7"/>` +
+                `<rect x="5" y="5" width="3" height="10" rx="1.4" fill="#f5f5f5" stroke="#d6d6d6" stroke-width="0.7"/><rect x="10" y="5" width="3" height="10" rx="1.4" fill="#ffffff" stroke="#d6d6d6" stroke-width="0.7"/>` +
+                `<ellipse cx="0" cy="2" rx="14" ry="7" fill="#ffffff" stroke="${c}" stroke-width="1.6"/>` +
+                `<path d="M8 -1 L12 -11 L19 -9 L21 -4 Q21 -1 17 -2 L13 2 Z" fill="#ffffff" stroke="${c}" stroke-width="1.6" stroke-linejoin="round"/>` +
+                `<path d="M14 -11 L19 -21 L17 -10.4 Z" fill="#ffd43b" stroke="#c99a06" stroke-width="0.8"/>` +
+                `<path d="M12 -11 Q7 -8 9 -3 M11 -10 Q5 -6 7 0" stroke="#ff8fd8" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M13 -9.5 Q9 -5 10.5 -1" stroke="#7ad3ff" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+                `<circle cx="16.6" cy="-7" r="1.1" fill="#111111"/><circle cx="18.2" cy="-4.4" r="1.3" fill="#ffb3d1"/>` }
         ];
         // ===== YOUR VIEW (2026-11): each person's own look, saved to their account =====
         // developer/dispatch_dashboard/user_prefs/{uid}/custom (same place as the dock width; the live rules let
@@ -11836,10 +11951,13 @@
         });
 
         // Cartoon speed lines behind a fast van (drawn in the icon's own turned space, behind its tail)
-        function ecSpeedLinesSvg(len, isLight) {
+        // side = the icon is drawn facing right, so the lines go out to its left (behind it)
+        function ecSpeedLinesSvg(len, isLight, side) {
             const col = isLight ? '#1f2937' : '#ffffff';
             const y = len + 3;
-            return `<path d="M-6 ${y} V${y + 8} M0 ${y + 1} V${y + 11} M6 ${y} V${y + 8}" stroke="${col}" stroke-opacity="0.6" stroke-width="2.2" stroke-linecap="round"/>`;
+            const d = side ? `M${-y} -6 H${-y - 8} M${-y - 1} 0 H${-y - 11} M${-y} 6 H${-y - 8}`
+                : `M-6 ${y} V${y + 8} M0 ${y + 1} V${y + 11} M6 ${y} V${y + 8}`;
+            return `<path d="${d}" stroke="${col}" stroke-opacity="0.6" stroke-width="2.2" stroke-linecap="round"/>`;
         }
         // "zzz" over a van that has been parked for a long time
         function ecZzzSvg(x, y) {
@@ -11870,6 +11988,13 @@
             const height = Math.round(cy + R + (speedText ? 22 : 0)); // room for the speed tag under the van
             const headingKey = ecHeadingKey(heading);
             const turn = headingKey === 'n' ? 0 : headingKey;
+            // Funny pack: 'side' icons (snail, unicorn...) stay level and face the way the van is going (flipped when
+            // it heads west); 'up' icons (faces, food) always stay upright; the rest turn with the heading like the vans
+            const mode = pack.mode || 'turn';
+            const west = Number(turn) > 180;
+            const iconTf = mode === 'turn' ? `rotate(${turn}) scale(${scale})` : (mode === 'side' && west ? `scale(${-scale} ${scale})` : `scale(${scale})`);
+            const linesSvg = !look.lines ? '' : mode === 'turn' ? ecSpeedLinesSvg(pack.len, isLight, false) :
+                (mode === 'side' ? ecSpeedLinesSvg(pack.len, isLight, true) : `<g transform="scale(${west ? -1 : 1} 1)">${ecSpeedLinesSvg(pack.len, isLight, true)}</g>`);
             const fast = speedText && Number(speed) >= EC_FAST_KMH;
             const speedTag = !speedText ? '' :
                 `<g transform="translate(${half} ${Math.round(cy + R + 9)})"><rect x="${-speedW / 2}" y="-9" width="${speedW}" height="18" rx="9" fill="${fast ? '#dc2626' : (isLight ? '#111827' : '#ffffff')}"/>` +
@@ -11882,8 +12007,8 @@
                 `<g>` +
                 `<rect x="1" y="1" width="${width - 2}" height="19" rx="9.5" fill="${pillFill}" stroke="${safeColor}" stroke-width="1.5"/>` +
                 `<text x="${half}" y="14.5" text-anchor="middle" fill="${textColor}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold">${safeName}</text>` +
-                `<g transform="translate(${half} ${cy}) rotate(${turn}) scale(${scale})">` +
-                (look.lines ? ecSpeedLinesSvg(pack.len, isLight) : '') + pack.svg(safeColor, isLight) + `</g>` +
+                `<g transform="translate(${half} ${cy}) ${iconTf}">` +
+                linesSvg + pack.svg(safeColor, isLight) + `</g>` +
                 `</g>` + parkedBadge + (look.zzz ? ecZzzSvg(Math.round(half - R - 14), cy + 4) : '') + speedTag +
                 `</svg>`;
             return {
