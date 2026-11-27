@@ -6342,6 +6342,13 @@
             body.light-mode #driverBadges .driver-badge .badge-row .last-update { color: #141a26 !important; }
             #driverBadges .driver-badge .badge-row .last-update small { font-size: calc(12px * var(--ec-vfs, 1)) !important; font-weight: 700; letter-spacing: 0; margin-left: 1px; }
             body.light-mode #driverBadges .driver-badge .last-update small { color: #6b7280 !important; }
+            /* Standing still: the time ("25 min", "2 h", "Now") is 30% smaller than a moving van's speed (Justin,
+               2026-11). Same line height, so the card and its bottom line don't move. */
+            body #driverBadges .driver-badge .badge-row .last-update:not(.ec-speed) {
+                font-size: calc(26px * 0.7 * var(--ec-vfs, 1));
+                line-height: calc(26px * 1.1 * var(--ec-vfs, 1));
+                letter-spacing: -0.01em;
+            }
             /* 100 km/h and over: white text on the red box (was red on red) */
             #driverBadges .driver-badge .badge-row .last-update.ec-fast,
             #driverBadges .driver-badge .badge-row .last-update.ec-fast small,
