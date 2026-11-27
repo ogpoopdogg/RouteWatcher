@@ -5904,7 +5904,7 @@
         /* ===== Computer: the driver buttons panel can be dragged wider (2026-11) =====
            Drag the handle on its right edge: the wider it is, the more buttons fit on each line (each button at
            least EC_DOCK_MIN_BTN wide), up to all on one line. The script sets --ec-dock-w (panel width) and
-           --ec-badge-cols (buttons per line); the width is saved per user (users/{uid}/dispatch_dashboard/dock_width).
+           --ec-badge-cols (buttons per line); the width is saved per user (developer/dispatch_dashboard/user_prefs/{uid}/dock_width).
            Phones are not affected. */
         .ec-dock-grip { display: none; }
         @media (min-width: 1200px) and (min-height: 560px) {
@@ -11514,7 +11514,7 @@
         // ===== DRIVER ETA (long-press a driver in the map driver list) =====
         // Hold a driver row for 0.5 s -> pick a saved point or your current location ->
         // the road ETA from the driver's last GPS position shows beside the status dot for 15 minutes.
-        // Each driver can be checked once every 15 minutes (kept in this browser's localStorage).
+        // No limit (Justin, 2026-11-26): a driver can be checked again at any time; the new ETA replaces the old one.
         const EC_ETA_HOLD_MS = 500;
         const EC_ETA_DISPLAY_MS = 15 * 60 * 1000;
         const EC_ETA_STORAGE_KEY = 'ec_driver_eta';
@@ -11538,10 +11538,6 @@
         }
         function ecEtaIsActive(entry) {
             return !!entry && isFinite(Number(entry.at)) && (Date.now() - Number(entry.at)) < EC_ETA_DISPLAY_MS;
-        }
-        function ecEtaGetActive(driverId) {
-            const entry = ecEtaLoad()[String(driverId)];
-            return ecEtaIsActive(entry) ? entry : null;
         }
 
         function ecEtaFormatDuration(ms) {
@@ -11735,16 +11731,6 @@
             ecEtaOpenPopup(ecEtaFindRow(driverId), el);
         }
 
-        function ecEtaCooldownNotice(driverId, entry) {
-            const drv = drivers[driverId];
-            const name = getDriverNickname(driverId) || (drv ? getDriverDisplayName(driverId, drv) : 'this driver');
-            const remainingMs = EC_ETA_DISPLAY_MS - (Date.now() - Number(entry.at));
-            const minutes = Math.max(1, Math.ceil(remainingMs / 60000));
-            ecEtaNotice(driverId, 'ETA Limit Reached',
-                'An ETA can be requested once every 15 minutes for each driver. A new ETA for ' + name +
-                ' will be available in ' + minutes + ' Min.');
-        }
-
         function ecEtaErrorMessage(err) {
             const code = err && err.ecCode;
             if (code === 'geo') {
@@ -11834,7 +11820,7 @@
         async function ecEtaRun(driverId, target) {
             ecEtaClosePopup();
             const id = String(driverId);
-            if (ecEtaPending[id] || ecEtaGetActive(id)) return;
+            if (ecEtaPending[id]) return; // that driver's ETA is still being worked out
             try {
                 const drv = drivers[id];
                 const loc = drv && drv.lastLocation ? drv.lastLocation : null;
@@ -11887,11 +11873,6 @@
             ecEtaSuppressClick = true;
             const id = hold.driverId;
             if (ecEtaPending[id]) return;
-            const active = ecEtaGetActive(id);
-            if (active) {
-                ecEtaCooldownNotice(id, active);
-                return;
-            }
             ecEtaOpenPopup(hold.row, ecEtaBuildMenu(id));
         }
         function ecEtaPointerEnd(e) {
@@ -12136,9 +12117,14 @@
         // ===== COMPUTER: DRAG THE DRIVER BUTTONS PANEL WIDER =====
         // On a computer screen the driver buttons float over the bottom left of the map. A handle on the panel's
         // right edge drags it wider or narrower; more buttons fit on each line as it gets wider, up to all on one
-        // line. The width is saved for the signed-in user (users/{uid}/dispatch_dashboard/dock_width, which the
-        // user may already write: the map view is saved next to it) and on this device for a fast start.
-        // Saved value: a number of pixels, or 'full' = as wide as the window allows (dragged all the way).
+        // line. The width is saved for the signed-in user in the database and on this device for a fast start.
+        // Database: developer/dispatch_dashboard/user_prefs/{uid}/dock_width (staff may write there, like the
+        // drivers' saved points). It used to be users/{uid}/dispatch_dashboard/dock_width, but the live rules only
+        // let users/{uid} hold company_id, theme and profile, so that save was refused, the database stayed empty,
+        // and the empty value then wiped this device's copy on every refresh (2026-11-26). The old place is still
+        // read once, in case a width did get saved there.
+        // Saved value: a number of pixels, 'full' = as wide as the window allows (dragged all the way), or
+        // 'default' = put back to normal (double-click). Nothing saved yet = keep this device's copy and upload it.
         const EC_DOCK_DEFAULT_W = 580;  // the panel's width before anyone drags it (two buttons per line)
         const EC_DOCK_MIN_W = 240;      // narrowest: one button per line
         const EC_DOCK_MIN_BTN = 150;    // a card is never narrower than this (scoreboard cards, 2026-11)
@@ -12197,29 +12183,53 @@
             grip.style.top = Math.round(d.top - g.top) + 'px';
             grip.style.height = Math.round(d.height) + 'px';
         }
-        function ecSaveDockPref() {
+        function ecDockRef(uid) { return db.ref('developer/dispatch_dashboard/user_prefs/' + uid + '/dock_width'); }
+        // database value -> 'full' / px / null (= default); undefined = nothing usable saved
+        function ecDockFromDb(v) {
+            if (v === 'full') return 'full';
+            if (v === 'default') return null;
+            if (typeof v === 'number' && isFinite(v) && v > 0) return Math.round(v);
+            return undefined;
+        }
+        function ecDockKeepLocal(uid) {
             try {
                 if (ecDockPref === null) localStorage.removeItem(EC_DOCK_KEY);
-                else localStorage.setItem(EC_DOCK_KEY, JSON.stringify({ uid: currentUserId, w: ecDockPref }));
+                else localStorage.setItem(EC_DOCK_KEY, JSON.stringify({ uid: uid, w: ecDockPref }));
             } catch (e) {}
+        }
+        function ecSaveDockPref() {
+            ecDockKeepLocal(currentUserId);
             if (!currentUserId) return;
-            db.ref('users/' + currentUserId + '/dispatch_dashboard/dock_width').set(ecDockPref)
+            ecDockRef(currentUserId).set(ecDockPref === null ? 'default' : ecDockPref)
                 .catch(err => console.warn('Driver buttons width save failed:', err));
         }
         // After sign in: this user's saved width (another person may have used this computer before)
         function ecLoadDockPref() {
             if (!currentUserId) return;
             const uid = currentUserId;
-            db.ref('users/' + uid + '/dispatch_dashboard/dock_width').once('value').then(snap => {
+            ecDockRef(uid).once('value').then(snap => {
+                const v = ecDockFromDb(snap.val());
+                if (v !== undefined) return v;
+                // nothing in the new place yet: the old place (most saves there were refused by the rules)
+                return db.ref('users/' + uid + '/dispatch_dashboard/dock_width').once('value')
+                    .then(old => ecDockFromDb(old.val()), () => undefined);
+            }).then(v => {
                 if (uid !== currentUserId) return;
-                const v = snap.val();
-                ecDockPref = v === 'full' ? 'full' : (isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : null);
-                try {
-                    if (ecDockPref === null) localStorage.removeItem(EC_DOCK_KEY);
-                    else localStorage.setItem(EC_DOCK_KEY, JSON.stringify({ uid: uid, w: ecDockPref }));
-                } catch (e) {}
+                if (v === undefined) {
+                    // Nothing saved for this user: keep this device's width if it is this user's, and save it
+                    let local = null;
+                    try {
+                        const saved = JSON.parse(localStorage.getItem(EC_DOCK_KEY) || 'null');
+                        if (saved && saved.uid === uid) local = ecDockFromDb(saved.w);
+                    } catch (e) {}
+                    ecDockPref = local === undefined ? null : local;
+                    if (ecDockPref !== null) ecSaveDockPref(); else ecDockKeepLocal(uid);
+                } else {
+                    ecDockPref = v;
+                    ecDockKeepLocal(uid);
+                }
                 ecApplyDock();
-            }).catch(err => console.warn('Driver buttons width load failed:', err));
+            }).catch(err => console.warn('Driver buttons width load failed (this device\'s width is kept):', err));
         }
         (function ecSetupDockGrip() {
             const dock = document.getElementById('driverBadges');
