@@ -6337,7 +6337,11 @@
             body.light-mode #driverBadges .driver-badge .badge-row .last-update { color: #141a26 !important; }
             #driverBadges .driver-badge .badge-row .last-update small { font-size: calc(12px * var(--ec-fs, 1)) !important; font-weight: 700; letter-spacing: 0; margin-left: 1px; }
             body.light-mode #driverBadges .driver-badge .last-update small { color: #6b7280 !important; }
-            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast { color: #dc2626 !important; }
+            /* 100 km/h and over: white text on the red box (was red on red) */
+            #driverBadges .driver-badge .badge-row .last-update.ec-fast,
+            #driverBadges .driver-badge .badge-row .last-update.ec-fast small,
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast,
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast small { color: #ffffff !important; opacity: 1; }
             body.light-mode #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #5b6270 !important; }
             body:not(.light-mode) #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #a3a9b6; }
             #driverBadges .ec-low-batt { display: none; } /* the battery shows on the card's bottom line instead */
@@ -6431,7 +6435,11 @@
             #driverBadges .driver-badge .badge-row .last-update,
             body:not(.light-mode) #driverBadges .driver-badge .badge-row .last-update { font-size: calc(13px * var(--ec-fs, 1)); font-weight: 800; }
             body.light-mode #driverBadges .driver-badge .badge-row .last-update { color: #141a26 !important; }
-            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast { color: #dc2626 !important; }
+            /* 100 km/h and over: white text on the red box (was red on red) */
+            #driverBadges .driver-badge .badge-row .last-update.ec-fast,
+            #driverBadges .driver-badge .badge-row .last-update.ec-fast small,
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast,
+            body.light-mode #driverBadges .driver-badge .badge-row .last-update.ec-fast small { color: #ffffff !important; opacity: 1; }
             body.light-mode #driverBadges .driver-badge.ec-st-idle .badge-row .last-update { color: #5b6270 !important; }
         }
     </style>
