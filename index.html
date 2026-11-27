@@ -6730,6 +6730,8 @@
         .ec-add-mi { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 4px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; font-weight: 700; max-width: 100%; }
         .ec-add-mi > span { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ec-add-mi img { width: 28px; height: 28px; flex: none; }
+        .ec-add-face { flex: none; height: 26px; max-width: 128px; padding: 0 4px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+        .ec-add-face option { color: #111827; background: #ffffff; }
         .ec-add-del { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(239, 68, 68, 0.18); color: #f87171; font-size: 11px; cursor: pointer; }
         @media (max-width: 600px) {
             .ec-add { padding: 0; align-items: stretch; }
@@ -11715,9 +11717,10 @@
                     `<path d="M-10.4 -7.4 q1.4 2.6 -0.2 3.6" stroke="#ff6b8b" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
                     `<rect x="-7.6" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/><rect x="4" y="-17.6" width="3.6" height="1.6" rx="0.8" fill="#fff6c2"/>`;
             } },
-            // --- Funny pack (2026-11). mode 'side' = drawn facing right, flipped when the van heads west;
-            //     mode 'up' = always upright (faces and food); the rest turn with the heading like the vans.
-            { id: 'snail', label: 'Snail', mode: 'side', len: 19, r: 22, svg: (c) =>
+            // --- Funny pack (2026-11). face 'right' = drawn side-on facing right: they tilt to follow the road with
+            //     the right side leading, and are mirrored (not turned upside down) when the van heads west (see ecIconFrame).
+            //     Icons without a face are drawn top-down, nose up, and spin all the way round like the vans.
+            { id: 'snail', label: 'Snail', face: 'right', len: 19, r: 22, svg: (c) =>
                 `<ellipse cx="0" cy="13" rx="18" ry="3" fill="#000000" fill-opacity="0.25"/>` +
                 `<path d="M-18 11 Q-19 6 -13 6 L7 6 Q11 -2 14 -4 Q19 -5 19 1 L18 11 Z" fill="#b5e48c" stroke="#5f8f3e" stroke-width="1.3"/>` +
                 `<path d="M14.5 -3 L13 -12 M17 -3 L19.5 -11" stroke="#5f8f3e" stroke-width="1.4" stroke-linecap="round"/>` +
@@ -11726,7 +11729,7 @@
                 `<path d="M15 2 Q17 4 19 2" stroke="#3d5f28" stroke-width="1" fill="none" stroke-linecap="round"/>` +
                 `<circle cx="-3" cy="-3" r="11" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
                 `<path d="M-3 -3 m0 -1.5 a1.5 1.5 0 1 1 -1.5 1.5 a3.5 3.5 0 1 1 3.5 3.5 a5.8 5.8 0 1 1 -5.8 -5.8 a8 8 0 1 1 8 8" stroke="#ffffff" stroke-opacity="0.75" stroke-width="1.4" fill="none" stroke-linecap="round"/>` },
-            { id: 'turtle', label: 'Turtle', mode: 'side', len: 19, r: 23, svg: (c) =>
+            { id: 'turtle', label: 'Turtle', face: 'right', len: 19, r: 23, svg: (c) =>
                 `<ellipse cx="0" cy="12" rx="19" ry="3" fill="#000000" fill-opacity="0.25"/>` +
                 `<path d="M-17 3 L-21 6 L-16 6 Z" fill="#7cb342"/>` +
                 `<rect x="-12" y="5" width="5" height="7" rx="2" fill="#7cb342"/><rect x="8" y="5" width="5" height="7" rx="2" fill="#7cb342"/>` +
@@ -11735,7 +11738,7 @@
                 `<path d="M-16 5 Q-14 -14 1 -14 Q16 -14 17 5 Z" fill="${c}" stroke="#ffffff" stroke-width="1.6"/>` +
                 `<path d="M-5 -10 L5 -10 L8 -3 L3 3 L-4 3 L-8 -3 Z M-5 -10 L-10 -6 M5 -10 L10 -6 M-8 -3 L-14 0 M8 -3 L15 0" stroke="#000000" stroke-opacity="0.25" stroke-width="1.1" fill="none"/>` +
                 `<rect x="-17" y="4" width="35" height="3.4" rx="1.7" fill="#689f38"/>` },
-            { id: 'sloth', label: 'Sloth', mode: 'side', len: 18, r: 22, svg: (c) =>
+            { id: 'sloth', label: 'Sloth', face: 'right', len: 18, r: 22, svg: (c) =>
                 `<path d="M-21 -13 Q0 -16 21 -12" stroke="#6d4c2f" stroke-width="3.2" fill="none" stroke-linecap="round"/>` +
                 `<ellipse cx="15" cy="-15.5" rx="3.6" ry="2" fill="#4caf50" transform="rotate(-20 15 -15.5)"/><ellipse cx="-14" cy="-15" rx="3.6" ry="2" fill="#4caf50" transform="rotate(15 -14 -15)"/>` +
                 `<path d="M-9 -1 L-10 -13 M8 -1 L9 -13" stroke="#8d6e4f" stroke-width="4" stroke-linecap="round"/>` +
@@ -11746,7 +11749,7 @@
                 `<circle cx="1.6" cy="4" r="0.8" fill="#ffffff"/><circle cx="6.6" cy="4" r="0.8" fill="#ffffff"/>` +
                 `<ellipse cx="4" cy="7" rx="1.3" ry="0.9" fill="#3b2a1a"/><path d="M2 9 Q4 10.6 6 9" stroke="#3b2a1a" stroke-width="0.9" fill="none" stroke-linecap="round"/>` +
                 `<path d="M-6 -4.5 Q2 -10 11 -4.5 Q2 -7 -6 -4.5 Z" fill="${c}"/><circle cx="2.5" cy="-8.4" r="1.6" fill="${c}"/>` },
-            { id: 'scooter', label: 'Grandma\'s scooter', mode: 'side', len: 18, r: 24, svg: (c) =>
+            { id: 'scooter', label: 'Grandma\'s scooter', face: 'right', len: 18, r: 24, svg: (c) =>
                 `<ellipse cx="0" cy="15" rx="18" ry="2.6" fill="#000000" fill-opacity="0.25"/>` +
                 `<path d="M-15 6 L-17 -21" stroke="#9e9e9e" stroke-width="1.1"/><path d="M-17 -21 L-10 -18.5 L-16.6 -16 Z" fill="#ff7a00"/>` +
                 `<rect x="-16" y="5" width="30" height="4.5" rx="2" fill="${c}" stroke="#ffffff" stroke-width="1"/>` +
@@ -11758,7 +11761,7 @@
                 `<circle cx="-7.5" cy="-16" r="4.8" fill="#f1c27d"/><circle cx="-11.5" cy="-19" r="2.8" fill="#d9d9d9"/><path d="M-12 -18 Q-8 -22.5 -3.2 -18" stroke="#d9d9d9" stroke-width="2.2" fill="none"/>` +
                 `<circle cx="-5.6" cy="-16.2" r="1.6" fill="none" stroke="#333333" stroke-width="0.7"/><circle cx="-2.6" cy="-16.2" r="1.3" fill="none" stroke="#333333" stroke-width="0.7"/>` +
                 `<circle cx="-11" cy="11" r="4.6" fill="#222222"/><circle cx="-11" cy="11" r="1.6" fill="#bdbdbd"/><circle cx="9.5" cy="11" r="4.6" fill="#222222"/><circle cx="9.5" cy="11" r="1.6" fill="#bdbdbd"/>` },
-            { id: 'trike', label: 'Kid\'s tricycle', mode: 'side', len: 17, r: 22, svg: (c) => {
+            { id: 'trike', label: 'Kid\'s tricycle', face: 'right', len: 17, r: 22, svg: (c) => {
                 let spokes = '';
                 for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; spokes += `<path d="M9 5 L${(9 + 8 * Math.cos(a)).toFixed(1)} ${(5 + 8 * Math.sin(a)).toFixed(1)}" stroke="#9e9e9e" stroke-width="0.7"/>`; }
                 return `<ellipse cx="0" cy="15" rx="17" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
@@ -11770,7 +11773,7 @@
                     `<path d="M3 -12 q-3 3 -5 1 M3 -12 q-2 4 -4 4" stroke="#ff4fa3" stroke-width="1.2" fill="none"/><path d="M9 -12 q3 3 5 1 M9 -12 q2 4 4 4" stroke="#4fc3ff" stroke-width="1.2" fill="none"/>` +
                     `<circle cx="7.5" cy="-14.3" r="1.6" fill="#ffd43b" stroke="#c99a06" stroke-width="0.6"/>`;
             } },
-            { id: 'toilet', label: 'Toilet', mode: 'up', len: 16, r: 22, svg: (c) =>
+            { id: 'toilet', label: 'Toilet', face: 'right', len: 16, r: 22, svg: (c) =>
                 `<ellipse cx="0" cy="18.5" rx="13" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
                 `<rect x="-9" y="-19" width="18" height="12" rx="2.4" fill="#ffffff" stroke="${c}" stroke-width="2"/>` +
                 `<rect x="5" y="-16.5" width="5" height="2" rx="1" fill="#b0bec5"/>` +
@@ -11790,7 +11793,7 @@
                 `<circle cx="-5.5" cy="-16.6" r="1.8" fill="#fff6c2"/><circle cx="5.5" cy="-16.6" r="1.8" fill="#fff6c2"/>` +
                 `<path d="M-7.6 -16.8 l-1.2 -1.6 M-6.3 -18 l-0.6 -1.9 M-4.8 -18.2 l0 -2 M7.6 -16.8 l1.2 -1.6 M6.3 -18 l0.6 -1.9 M4.8 -18.2 l0 -2" stroke="#2b2b2b" stroke-width="0.8" stroke-linecap="round"/>` +
                 `<path d="M-2 14.5 l2 1.6 l2 -1.6 l-2 -1.6 Z" fill="#ffffff"/>` },
-            { id: 'cupcake', label: 'Cupcake', mode: 'up', len: 15, r: 21, svg: (c) =>
+            { id: 'cupcake', label: 'Cupcake', face: 'right', len: 15, r: 21, svg: (c) =>
                 `<ellipse cx="0" cy="17.5" rx="10" ry="2.2" fill="#000000" fill-opacity="0.25"/>` +
                 `<path d="M-11 2 L11 2 L8 17 L-8 17 Z" fill="${c}" stroke="#ffffff" stroke-width="1.4"/>` +
                 `<path d="M-6 2 L-4.5 17 M0 2 V17 M6 2 L4.5 17" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.2"/>` +
@@ -11799,13 +11802,13 @@
                 `<path d="M-7 -1 l2 -1 M-1 -8 l1.8 0.6 M5 -2 l1.6 1.2 M3 -9.5 l-1.6 1 M-5 -8 l1 1.6" stroke-width="1.6" stroke-linecap="round" stroke="#4fc3ff"/>` +
                 `<path d="M-3 -4 l1.6 -0.8 M7.5 -6 l1.2 1.4" stroke-width="1.6" stroke-linecap="round" stroke="#ffd43b"/>` +
                 `<circle cx="1" cy="-15.5" r="3.4" fill="#e63946" stroke="#ffffff" stroke-width="1"/><path d="M1.6 -18.6 Q3 -22 6 -22" stroke="#2d6a4f" stroke-width="1.2" fill="none"/>` },
-            { id: 'hotdog', label: 'Hot dog', mode: 'up', len: 20, r: 22, svg: (c) =>
+            { id: 'hotdog', label: 'Hot dog', face: 'right', len: 20, r: 22, svg: (c) =>
                 `<ellipse cx="0" cy="10" rx="19" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
                 `<path d="M-19 0 Q-20 8 -12 8 L12 8 Q20 8 19 0 Z" fill="#e9b872" stroke="${c}" stroke-width="1.8"/>` +
                 `<rect x="-21" y="-5" width="42" height="9" rx="4.5" fill="#c1440e" stroke="#ffffff" stroke-width="1.2"/>` +
                 `<path d="M-15 -1 l3 -2.4 l3 2.4 l3 -2.4 l3 2.4 l3 -2.4 l3 2.4 l3 -2.4 l3 2.4 l3 -2.4" stroke="#ffd60a" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-linecap="round"/>` +
                 `<path d="M-19 -3 Q-20 -10 -12 -9 L12 -9 Q20 -10 19 -3" fill="none" stroke="#e9b872" stroke-width="3.6" stroke-linecap="round"/>` },
-            { id: 'clown', label: 'Clown', mode: 'up', len: 16, r: 22, svg: (c) =>
+            { id: 'clown', label: 'Clown', face: 'right', len: 16, r: 22, svg: (c) =>
                 `<circle cx="-13" cy="0" r="7" fill="${c}"/><circle cx="13" cy="0" r="7" fill="${c}"/><circle cx="-10" cy="-9" r="6" fill="${c}"/><circle cx="10" cy="-9" r="6" fill="${c}"/>` +
                 `<circle cx="0" cy="2" r="12" fill="#ffffff" stroke="#e0e0e0" stroke-width="1"/>` +
                 `<path d="M-3 -18 L0 -10.5 L3 -18 Z" fill="none"/><path d="M-5.5 -9.5 L0 -21 L5.5 -9.5 Z" fill="#ffd43b" stroke="#ffffff" stroke-width="1"/><circle cx="0" cy="-21.5" r="2" fill="#e63946"/>` +
@@ -11813,14 +11816,14 @@
                 `<circle cx="-5" cy="-1.4" r="1.2" fill="#111111"/><circle cx="5" cy="-1.4" r="1.2" fill="#111111"/>` +
                 `<path d="M-8 6 Q0 15 8 6 Q0 10 -8 6 Z" fill="#e63946"/>` +
                 `<circle cx="0" cy="3.5" r="3.6" fill="#e63946" stroke="#ffffff" stroke-width="0.8"/><circle cx="-1" cy="2.4" r="1" fill="#ffffff" fill-opacity="0.8"/>` },
-            { id: 'poop', label: 'Poop', mode: 'up', len: 16, r: 21, svg: (c) =>
+            { id: 'poop', label: 'Poop', face: 'right', len: 16, r: 21, svg: (c) =>
                 `<ellipse cx="0" cy="15.5" rx="16" ry="3" fill="none" stroke="${c}" stroke-width="2"/>` +
                 `<ellipse cx="0" cy="10" rx="15" ry="6" fill="#8b5a2b" stroke="#5c3a1a" stroke-width="1.2"/>` +
                 `<ellipse cx="0" cy="1.5" rx="11" ry="5.5" fill="#9c6634" stroke="#5c3a1a" stroke-width="1.2"/>` +
                 `<path d="M-7 -5 Q-7 -11 0 -11.5 Q2 -15 0 -19 Q8 -15 7 -7 Q7 -4 0 -3.6 Q-7 -3.6 -7 -5 Z" fill="#a8703a" stroke="#5c3a1a" stroke-width="1.2"/>` +
                 `<circle cx="-4" cy="0.5" r="2.6" fill="#ffffff"/><circle cx="4" cy="0.5" r="2.6" fill="#ffffff"/><circle cx="-3.6" cy="1" r="1.2" fill="#111111"/><circle cx="4.4" cy="1" r="1.2" fill="#111111"/>` +
                 `<path d="M-5 8 Q0 13 5 8 Z" fill="#3b1f0e"/><path d="M-3 8.6 Q0 10.4 3 8.6" fill="#ffffff"/>` },
-            { id: 'unicorn', label: 'Unicorn', mode: 'side', len: 18, r: 23, svg: (c) =>
+            { id: 'unicorn', label: 'Unicorn', face: 'right', len: 18, r: 23, svg: (c) =>
                 `<ellipse cx="0" cy="15" rx="15" ry="2.4" fill="#000000" fill-opacity="0.25"/>` +
                 `<path d="M-13 -1 Q-21 0 -19 9" stroke="#ff8fd8" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-13 1 Q-19 3 -17 10" stroke="#9b8cff" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
                 `<rect x="-10" y="5" width="3" height="10" rx="1.4" fill="#f5f5f5" stroke="#d6d6d6" stroke-width="0.7"/><rect x="-5" y="5" width="3" height="10" rx="1.4" fill="#ffffff" stroke="#d6d6d6" stroke-width="0.7"/>` +
@@ -11854,8 +11857,13 @@
         //       draws at once on any device and never needs the folder again)
         //   tx: an emoji typed from the device's own keyboard (v = the emoji; drawn with that device's emoji font)
         //   up: an uploaded picture, cut to a 96 px square (v = a small data: URL)
-        // All three draw upright in a round badge with a ring in the vehicle's colour.
+        // All three draw in a round badge with a ring in the vehicle's colour, and point the way the van is going
+        // (f = which way the picture itself faces, picked in My icons; see ecMineFace for the default).
         const EC_MINE_MAX = 40;
+        // Which way a picture faces -> how it turns (ecIconFrame). Most emoji (Twemoji and phone keyboards) face left.
+        const EC_MINE_FACES = [['left', 'Faces left ←'], ['right', 'Faces right →'], ['up', 'Points up ↑'], ['ne', 'Points up-right ↗'], ['still', 'Never turns']];
+        const EC_MINE_FACE_GUESS = { 'tw:1f680': 'ne', 'tw:2708': 'ne', 'tw:1f3ce': 'right' }; // rocket, plane, racing car
+        function ecMineFace(it) { return it.f || EC_MINE_FACE_GUESS[it.id] || 'left'; }
         const EC_MINE_SVG_MAX = 30000;   // characters; Twemoji files are 1-15 KB
         const EC_MINE_UP_MAX = 60000;    // characters of data: URL (a 96 px WebP is usually 3-10 KB)
         function ecMineItemOk(it) {
@@ -11870,7 +11878,9 @@
             } else if (it.k === 'up') {
                 if (!/^up:[a-z0-9]{4,24}$/.test(it.id) || it.v.length > EC_MINE_UP_MAX || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(it.v)) return null;
             } else return null;
-            return { id: it.id, k: it.k, label: label, v: it.v };
+            const out = { id: it.id, k: it.k, label: label, v: it.v };
+            if (EC_MINE_FACES.some(f => f[0] === it.f)) out.f = it.f;
+            return out;
         }
         function ecMineClean(list) {
             const out = [], seen = new Set();
@@ -11895,8 +11905,9 @@
             const it = list.find(x => x.id === id);
             if (!it) return null;
             const hit = ecMinePackCache.get(id);
-            if (hit && hit.v === it.v && hit.pack.label === it.label) return hit.pack;
-            const pack = { id: it.id, label: it.label, mode: 'up', len: 15, r: 20, mine: it.k, svg: (c, l) => ecMineSvg(it, c, l) };
+            const face = ecMineFace(it);
+            if (hit && hit.v === it.v && hit.pack.label === it.label && hit.pack.face === face) return hit.pack;
+            const pack = { id: it.id, label: it.label, face: face, len: 15, r: 20, mine: it.k, svg: (c, l) => ecMineSvg(it, c, l) };
             ecMinePackCache.set(id, { v: it.v, pack: pack });
             return pack;
         }
@@ -12175,6 +12186,8 @@
             document.getElementById('ecAddMine').innerHTML = !mine.length ? '' :
                 `<h4>My icons (${mine.length}/${EC_MINE_MAX})</h4><div class="ec-add-minelist">` + mine.map(m =>
                     `<span class="ec-add-mi"><img src="${ecCzIconUrl(m.id)}" alt="" width="34" height="34"><span>${ecEsc(m.label)}</span>` +
+                    `<select class="ec-add-face" data-v="${ecEsc(m.id)}" aria-label="Which way ${ecEsc(m.label)} faces" title="Which way the picture faces, so it points the way the van goes">` +
+                    EC_MINE_FACES.map(f => `<option value="${f[0]}"${ecMineFace(m) === f[0] ? ' selected' : ''}>${f[1]}</option>`).join('') + `</select>` +
                     `<button type="button" class="ec-add-del" data-add="del" data-v="${ecEsc(m.id)}" aria-label="Remove ${ecEsc(m.label)}" title="Remove">✕</button></span>`).join('') + '</div>';
         }
         function ecAddRenderGrid() {
@@ -12284,6 +12297,14 @@
         }
         function ecAddChange(e) {
             if (e.target && e.target.id === 'ecAddFile') ecAddPicture(e.target.files && e.target.files[0]);
+            else if (e.target && e.target.classList && e.target.classList.contains('ec-add-face')) {
+                // Which way one of My icons faces (so it points the way the van goes)
+                const id = e.target.dataset.v, f = e.target.value;
+                ecCustom.mine = (ecCustom.mine || []).map(m => m.id === id ? Object.assign({}, m, { f: f }) : m);
+                ecCustom = ecCustomClean(ecCustom);
+                ecCustomSave();
+                ecCustomApply();
+            }
         }
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && ecAdd.open) { e.preventDefault(); e.stopPropagation(); ecAddClose(); }
@@ -12370,6 +12391,42 @@
         }
 
         const EC_MARKER_Z = { online: 30, parked: 20, idle: 10 };
+
+        // ===== POINT THE WAY (2026-11): every icon points the way the van is going =====
+        // face = which way the icon's own picture points:
+        //   'up' (or none): drawn top-down, nose up (vans, rocket, duck...) -> spins all the way round with the heading
+        //   'ne': points up-right (rocket and plane emoji) -> spins all the way round, turned back 45° first
+        //   'right' / 'left': drawn side-on (snail, hot dog, most emoji) -> tilts to follow the road, front leading.
+        //       Heading east-ish it faces right, heading west-ish it is MIRRORED to face left, so it is never upside
+        //       down: at most a quarter turn (nose straight up going north, straight down going south).
+        //   'still': never turns (only mirrored so it faces the way it goes; My icons can pick this)
+        // No heading yet: side-on icons stay level as drawn; the rest point up.
+        // Returns tf (the icon's transform, with the size), inner (extra turn for the picture only, so speed lines and
+        // flames stay behind it), side (lines drawn for a right-facing icon) and linesTf (extra transform for the lines).
+        const ecFaceWest = new Map(); // driver id -> true when its side-on icon last faced west
+        function ecFacesWest(h, driverId) {
+            // Going about due north or south (within 15°) keeps the way it faced, so GPS wobble doesn't flip it back and forth
+            const nearPole = h <= 15 || h >= 345 || (h >= 165 && h <= 195);
+            const before = driverId ? ecFaceWest.get(driverId) : undefined;
+            const west = (nearPole && before !== undefined) ? before : h >= 180;
+            if (driverId) ecFaceWest.set(driverId, west);
+            return west;
+        }
+        function ecIconFrame(face, headingKey, driverId, scale) {
+            const has = headingKey !== 'n';
+            const h = has ? Number(headingKey) : 0;
+            face = face || 'up';
+            if (face === 'up' || face === 'ne')
+                return { tf: `rotate(${h}) scale(${scale})`, inner: face === 'ne' ? 'rotate(-45)' : '', side: false, linesTf: '' };
+            if (face === 'still') {
+                const west = has && ecFacesWest(h, driverId);
+                return { tf: `scale(${scale})`, inner: '', side: true, linesTf: west ? 'scale(-1 1)' : '' };
+            }
+            // Side-on: work in a right-facing frame (a left-facing picture is mirrored inside it), then tilt / mirror the frame
+            const west = has ? ecFacesWest(h, driverId) : face === 'left';
+            const rot = has ? (west ? h - 270 : h - 90) : 0;
+            return { tf: `${rot ? `rotate(${rot}) ` : ''}scale(${west ? -scale : scale} ${scale})`, inner: face === 'left' ? 'scale(-1 1)' : '', side: true, linesTf: '' };
+        }
         // use: 'online' (default look), 'parked' (blue P on the van) or 'idle' (not in use: same normal look, no P)
         // speed: km/h to show in a tag under the van (only for a moving Online van), or null
         function getDriverIcon(name, color, heading = null, use = 'online', speed = null, driverId = null) {
@@ -12390,15 +12447,9 @@
             const half = width / 2;
             const cy = Math.round(24 + R); // the van's centre (= the GPS spot); room for the icon at any angle below the name (45 for the normal van)
             const height = Math.round(cy + R + (speedText ? 22 : 0)); // room for the speed tag under the van
-            const headingKey = ecHeadingKey(heading);
-            const turn = headingKey === 'n' ? 0 : headingKey;
-            // Funny pack: 'side' icons (snail, unicorn...) stay level and face the way the van is going (flipped when
-            // it heads west); 'up' icons (faces, food) always stay upright; the rest turn with the heading like the vans
-            const mode = pack.mode || 'turn';
-            const west = Number(turn) > 180;
-            const iconTf = mode === 'turn' ? `rotate(${turn}) scale(${scale})` : (mode === 'side' && west ? `scale(${-scale} ${scale})` : `scale(${scale})`);
-            const behind = (draw) => mode === 'turn' ? draw(false) :
-                (mode === 'side' ? draw(true) : `<g transform="scale(${west ? -1 : 1} 1)">${draw(true)}</g>`);
+            // Point the icon the way the van is going (vans spin; side-on pictures tilt and mirror, never upside down)
+            const fr = ecIconFrame(pack.face, ecHeadingKey(heading), driverId, scale);
+            const behind = (draw) => fr.linesTf ? `<g transform="${fr.linesTf}">${draw(fr.side)}</g>` : draw(fr.side);
             const linesSvg = (look.lines ? behind(side => ecSpeedLinesSvg(pack.len, isLight, side)) : '') +
                 (look.flames ? behind(side => ecFlamesSvg(pack.len, side)) : '');
             const fast = speedText && Number(speed) >= EC_FAST_KMH;
@@ -12413,8 +12464,8 @@
                 `<g>` +
                 `<rect x="1" y="1" width="${width - 2}" height="19" rx="9.5" fill="${pillFill}" stroke="${safeColor}" stroke-width="1.5"/>` +
                 `<text x="${half}" y="14.5" text-anchor="middle" fill="${textColor}" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold">${safeName}</text>` +
-                `<g transform="translate(${half} ${cy}) ${iconTf}">` +
-                linesSvg + pack.svg(safeColor, isLight) + `</g>` +
+                `<g transform="translate(${half} ${cy}) ${fr.tf}">` +
+                linesSvg + (fr.inner ? `<g transform="${fr.inner}">${pack.svg(safeColor, isLight)}</g>` : pack.svg(safeColor, isLight)) + `</g>` +
                 `</g>` + parkedBadge + (look.zzz ? ecZzzSvg(Math.round(half - R - 14), cy + 4) : '') + speedTag +
                 `</svg>`;
             return {
