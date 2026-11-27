@@ -4483,10 +4483,6 @@
             background: var(--card2);
             outline: none;
         }
-        /* a point this driver was checked to in the last 15 minutes (the same point once per 15 minutes) */
-        .ec-eta-menu .ec-eta-option.is-used { display: flex; align-items: center; gap: 8px; color: var(--muted); }
-        .ec-eta-menu .ec-eta-option.is-used .ec-eta-opt-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-        .ec-eta-menu .ec-eta-option.is-used .ec-eta-opt-wait { flex: 0 0 auto; font-size: 11px; font-weight: 600; opacity: 0.85; }
         .ec-eta-menu .ec-eta-note {
             font-size: 12px;
             color: var(--muted);
@@ -11175,14 +11171,10 @@
         // ===== DRIVER ETA (long-press a driver in the map driver list) =====
         // Hold a driver row for 0.5 s -> pick a saved point or your current location ->
         // the road ETA from the driver's last GPS position shows beside the status dot for 15 minutes.
-        // Limit (Justin, 2026-11-26): the SAME point can be checked for the same driver once every 15 minutes, but a
-        // different point (or Current Location) can be picked any time, e.g. after picking a point by accident. The new
-        // ETA replaces the old label. Kept in this browser's localStorage (EC_ETA_RECENT_KEY).
+        // No limit (Justin, 2026-11-26): a driver can be checked again at any time; the new ETA replaces the old one.
         const EC_ETA_HOLD_MS = 500;
         const EC_ETA_DISPLAY_MS = 15 * 60 * 1000;
         const EC_ETA_STORAGE_KEY = 'ec_driver_eta';
-        const EC_ETA_RECENT_KEY = 'ec_driver_eta_recent'; // { driverId: { pointKey: time checked } }
-        const EC_ETA_SAME_POINT_MS = 15 * 60 * 1000;
         const EC_ETA_TRAFFIC_AWARE = false; // true = live traffic (Google bills traffic-aware requests at a higher SKU)
         const EC_ETA_MOVE_TOLERANCE_PX = 10;
         let ecEtaHold = null;          // { row, driverId, timer, x, y, pointerId, fired }
@@ -11200,37 +11192,6 @@
         }
         function ecEtaSave(obj) {
             try { localStorage.setItem(EC_ETA_STORAGE_KEY, JSON.stringify(obj)); } catch (e) {}
-        }
-        // Same point = same name (Current Location counts as one point)
-        function ecEtaPointKey(target) {
-            return target.kind === 'current' ? 'current' : 'p:' + String(target.name || '').trim().toLowerCase();
-        }
-        function ecEtaLoadRecent() {
-            try {
-                const obj = JSON.parse(localStorage.getItem(EC_ETA_RECENT_KEY) || '{}');
-                return (obj && typeof obj === 'object') ? obj : {};
-            } catch (e) { return {}; }
-        }
-        // ms left before this point can be checked again for this driver (0 = now)
-        function ecEtaSamePointWait(driverId, target) {
-            const forDriver = ecEtaLoadRecent()[String(driverId)];
-            const at = forDriver ? Number(forDriver[ecEtaPointKey(target)]) : NaN;
-            if (!isFinite(at)) return 0;
-            return Math.max(0, EC_ETA_SAME_POINT_MS - (Date.now() - at));
-        }
-        function ecEtaRememberPoint(driverId, target) {
-            const all = ecEtaLoadRecent();
-            const now = Date.now();
-            // drop old entries so this never grows
-            Object.keys(all).forEach(function(d) {
-                const pts = all[d] && typeof all[d] === 'object' ? all[d] : {};
-                Object.keys(pts).forEach(function(k) { if (!(now - Number(pts[k]) < EC_ETA_SAME_POINT_MS)) delete pts[k]; });
-                if (Object.keys(pts).length) all[d] = pts; else delete all[d];
-            });
-            const id = String(driverId);
-            all[id] = all[id] || {};
-            all[id][ecEtaPointKey(target)] = now;
-            try { localStorage.setItem(EC_ETA_RECENT_KEY, JSON.stringify(all)); } catch (e) {}
         }
         function ecEtaIsActive(entry) {
             return !!entry && isFinite(Number(entry.at)) && (Date.now() - Number(entry.at)) < EC_ETA_DISPLAY_MS;
@@ -11364,32 +11325,16 @@
             title.className = 'ec-eta-menu-title';
             title.textContent = 'ETA to';
             menu.appendChild(title);
-            function addOption(text, target) {
+            function addOption(text, onPick) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'ec-eta-option';
                 btn.setAttribute('role', 'menuitem');
-                const wait = ecEtaSamePointWait(driverId, target);
-                if (wait > 0) {
-                    // checked to this point in the last 15 minutes: greyed out with the minutes left
-                    const mins = Math.max(1, Math.ceil(wait / 60000));
-                    btn.classList.add('is-used');
-                    const nameEl = document.createElement('span');
-                    nameEl.className = 'ec-eta-opt-name';
-                    nameEl.textContent = text;
-                    const waitEl = document.createElement('span');
-                    waitEl.className = 'ec-eta-opt-wait';
-                    waitEl.textContent = mins + ' Min';
-                    btn.appendChild(nameEl);
-                    btn.appendChild(waitEl);
-                    btn.title = text + ': can be checked again in ' + mins + ' Min';
-                } else {
-                    btn.textContent = text;
-                    btn.title = text;
-                }
+                btn.textContent = text;
+                btn.title = text;
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    ecEtaRun(driverId, target);
+                    onPick();
                 });
                 menu.appendChild(btn);
             }
@@ -11402,13 +11347,17 @@
             } else {
                 points.forEach(function(sp) {
                     const name = String(sp.name || 'Point');
-                    addOption(name, { kind: 'point', name: name, lat: Number(sp.lat), lng: Number(sp.lng), radius: sp.radius });
+                    addOption(name, function() {
+                        ecEtaRun(driverId, { kind: 'point', name: name, lat: Number(sp.lat), lng: Number(sp.lng), radius: sp.radius });
+                    });
                 });
                 const divider = document.createElement('div');
                 divider.className = 'ec-eta-divider';
                 menu.appendChild(divider);
             }
-            addOption('Current Location', { kind: 'current' });
+            addOption('Current Location', function() {
+                ecEtaRun(driverId, { kind: 'current' });
+            });
             return menu;
         }
 
@@ -11437,16 +11386,6 @@
             el.appendChild(text);
             el.appendChild(actions);
             ecEtaOpenPopup(ecEtaFindRow(driverId), el);
-        }
-
-        function ecEtaSamePointNotice(driverId, target, waitMs) {
-            const drv = drivers[driverId];
-            const name = getDriverNickname(driverId) || (drv ? getDriverDisplayName(driverId, drv) : 'this driver');
-            const place = target.kind === 'current' ? 'your current location' : target.name;
-            const minutes = Math.max(1, Math.ceil(waitMs / 60000));
-            ecEtaNotice(driverId, 'Already Checked',
-                'The ETA for ' + name + ' to ' + place + ' was checked in the last 15 minutes. It can be checked again in ' +
-                minutes + ' Min. A different point can be picked any time.');
         }
 
         function ecEtaErrorMessage(err) {
@@ -11539,8 +11478,6 @@
             ecEtaClosePopup();
             const id = String(driverId);
             if (ecEtaPending[id]) return; // that driver's ETA is still being worked out
-            const wait = ecEtaSamePointWait(id, target);
-            if (wait > 0) { ecEtaSamePointNotice(id, target, wait); return; }
             try {
                 const drv = drivers[id];
                 const loc = drv && drv.lastLocation ? drv.lastLocation : null;
@@ -11565,7 +11502,6 @@
                     text = ecEtaFormatDuration(res.ms) + ' - ' + ecEtaFormatDistance(res.m);
                 }
                 const at = Date.now();
-                ecEtaRememberPoint(id, target);
                 const all = ecEtaLoad();
                 all[id] = { at: at, text: text };
                 ecEtaSave(all);
