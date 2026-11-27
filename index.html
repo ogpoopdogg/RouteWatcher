@@ -6453,43 +6453,54 @@
             #ecVoiceBtn, .ec-voice-btn { display: none !important; }
         }
 
-        /* Driver window on computers: each group of controls in its own box with its own colour
-           (Justin, 2026-11): Who's driving = purple, Time on route = gold, day/From/To/Driver + Show Track,
-           Clear Track, Show route = blue, Drove this van = green (amber on a past day, as before).
-           Phones keep the compact driver window. */
-        @media (min-width: 1100px) and (min-height: 560px) {
+        /* Driver window: each group of controls in its own box with its own colour (Justin, 2026-11; computer
+           first, then phones too): Who's driving = purple, Time on route = gold, day/From/To/Driver + Show Track,
+           Clear Track, Show route = blue, Drove this van = green (amber on a past day, as before). */
+        .driver-modal .modal-side .tc-driver-row:not([hidden]),
+        .driver-modal .modal-side .route-time-box,
+        .driver-modal .modal-side #historyQuery > div:first-child,
+        .driver-modal .modal-side .ec-who {
+            --ec-box: #7c3aed;
+            --ec-box-bg: rgba(124, 58, 237, 0.08);
+            margin: 0 !important;
+            padding: 12px 12px 12px 14px !important;
+            border-radius: 14px !important;
+            border: 2px solid var(--ec-box) !important;
+            border-left-width: 7px !important;
+            background: var(--ec-box-bg) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        }
+        .driver-modal .modal-side .route-time-box { --ec-box: #f2b705; --ec-box-bg: rgba(242, 183, 5, 0.08); }
+        .driver-modal .modal-side #historyQuery > div:first-child { --ec-box: #3b82f6; --ec-box-bg: rgba(59, 130, 246, 0.08); }
+        .driver-modal .modal-side .ec-who { --ec-box: #22b866; --ec-box-bg: rgba(34, 184, 102, 0.07); }
+        .driver-modal .modal-side .ec-who.is-past { --ec-box: #f7c948; --ec-box-bg: rgba(247, 201, 72, 0.08); }
+        body.light-mode .driver-modal .modal-side .tc-driver-row:not([hidden]) { --ec-box: #7c3aed; --ec-box-bg: #f6f1ff; }
+        body.light-mode .driver-modal .modal-side .route-time-box { --ec-box: #e0a800; --ec-box-bg: #fffaea; }
+        body.light-mode .driver-modal .modal-side #historyQuery > div:first-child { --ec-box: #2563eb; --ec-box-bg: #f1f6ff; }
+        body.light-mode .driver-modal .modal-side .ec-who { --ec-box: #1f9d55; --ec-box-bg: #f0faf4; }
+        body.light-mode .driver-modal .modal-side .ec-who.is-past { --ec-box: #c99a06; --ec-box-bg: #fffaeb; }
+        body.light-mode .driver-modal .modal-side .tc-driver-row:not([hidden]),
+        body.light-mode .driver-modal .modal-side .route-time-box,
+        body.light-mode .driver-modal .modal-side #historyQuery > div:first-child,
+        body.light-mode .driver-modal .modal-side .ec-who { box-shadow: 0 2px 6px rgba(15, 31, 58, 0.08); }
+        /* the old line above the day picker is not needed now that it sits in a box */
+        .driver-modal .modal-side #historyQuery { border-top: 0 !important; padding-top: 0 !important; gap: 14px !important; }
+        .driver-modal .modal-side .modal-header { gap: 14px; }
+        .driver-modal .modal-side .route-time-box { align-self: stretch !important; }
+        .driver-modal .modal-side .tc-driver-row label { color: var(--text); font-weight: 700; }
+        body.light-mode .driver-modal .modal-side .tc-driver-row label { color: #3b1d80 !important; }
+        /* Phones: same boxes, a bit tighter so the window stays compact */
+        @media (max-width: 600px) {
             .driver-modal .modal-side .tc-driver-row:not([hidden]),
             .driver-modal .modal-side .route-time-box,
             .driver-modal .modal-side #historyQuery > div:first-child,
             .driver-modal .modal-side .ec-who {
-                --ec-box: #7c3aed;
-                --ec-box-bg: rgba(124, 58, 237, 0.08);
-                margin: 0;
-                padding: 12px 12px 12px 14px;
-                border-radius: 14px;
-                border: 2px solid var(--ec-box);
-                border-left-width: 7px;
-                background: var(--ec-box-bg);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+                padding: 8px 10px 8px 11px !important;
+                border-radius: 12px !important;
+                border-left-width: 6px !important;
             }
-            .driver-modal .modal-side .route-time-box { --ec-box: #f2b705; --ec-box-bg: rgba(242, 183, 5, 0.08); }
-            .driver-modal .modal-side #historyQuery > div:first-child { --ec-box: #3b82f6; --ec-box-bg: rgba(59, 130, 246, 0.08); }
-            .driver-modal .modal-side .ec-who { --ec-box: #22b866; --ec-box-bg: rgba(34, 184, 102, 0.07); }
-            .driver-modal .modal-side .ec-who.is-past { --ec-box: #f7c948; --ec-box-bg: rgba(247, 201, 72, 0.08); }
-            body.light-mode .driver-modal .modal-side .tc-driver-row:not([hidden]) { --ec-box: #7c3aed; --ec-box-bg: #f6f1ff; }
-            body.light-mode .driver-modal .modal-side .route-time-box { --ec-box: #e0a800; --ec-box-bg: #fffaea; }
-            body.light-mode .driver-modal .modal-side #historyQuery > div:first-child { --ec-box: #2563eb; --ec-box-bg: #f1f6ff; }
-            body.light-mode .driver-modal .modal-side .ec-who { --ec-box: #1f9d55; --ec-box-bg: #f0faf4; }
-            body.light-mode .driver-modal .modal-side .ec-who.is-past { --ec-box: #c99a06; --ec-box-bg: #fffaeb; }
-            body.light-mode .driver-modal .modal-side .tc-driver-row:not([hidden]),
-            body.light-mode .driver-modal .modal-side .route-time-box,
-            body.light-mode .driver-modal .modal-side #historyQuery > div:first-child,
-            body.light-mode .driver-modal .modal-side .ec-who { box-shadow: 0 2px 6px rgba(15, 31, 58, 0.08); }
-            /* the old line above the day picker is not needed now that it sits in a box */
-            .driver-modal .modal-side #historyQuery { border-top: 0 !important; padding-top: 0 !important; gap: 14px !important; }
-            .driver-modal .modal-side .modal-header { gap: 14px; }
-            .driver-modal .modal-side .tc-driver-row label { color: var(--text); font-weight: 700; }
-            body.light-mode .driver-modal .modal-side .tc-driver-row label { color: #3b1d80 !important; }
+            .driver-modal .modal-side #historyQuery { gap: 8px !important; margin-top: 8px !important; }
+            .driver-modal .modal-side .modal-header { gap: 8px !important; }
         }
     </style>
 </head>
